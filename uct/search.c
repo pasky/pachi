@@ -25,6 +25,7 @@
 #include "uct/walk.h"
 #include "uct/prior.h"
 #include "uct/dynkomi.h"
+#include "uct/policy.h"
 #include "dcnn/dcnn.h"
 #include "pachi.h"
 
@@ -746,11 +747,8 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	/* We want to stop simulating, but are willing to keep trying
 	 * if we aren't completely sure about the winner yet. */
 	if (desired_done) {
-		if (u->policy->winner && u->policy->evaluate) {
-			uct_descent_t descent = uct_descent(ctx->t->root);
-			u->policy->winner(u->policy, ctx->t, &descent);
-			winner = descent.node;
-		}
+		if (u->policy->winner && u->policy->evaluate)
+			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
 		if (best)
 			bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
 		if (!uct_search_keep_looking(u, ctx->t, b, ti, &s->stop, best, best2, bestr, winner, i))

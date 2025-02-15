@@ -13,6 +13,7 @@
 #include "random.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
+#include "uct/policy.h"
 #include "uct/tree.h"
 #include "uct/policy/generic.h"
 
@@ -20,7 +21,7 @@
 
 typedef struct {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
-	 * paper calls 'p'. Original UCB has this on 2, but this seems to
+	 * paper calls 'p'. Original UCB has this on sqrt(2), but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	floating_t explore_p;
@@ -103,11 +104,11 @@ static inline floating_t fast_sqrt(unsigned int x)
 }
 
 #define URAVE_DEBUG if (0)
+
 static inline floating_t
-ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity)
+ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 {
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
-	tree_node_t *node = descent->node;
 
 	move_stats_t n = node->u, r = node->amaf;
 	if (p->uct->amaf_prior) {
@@ -171,30 +172,27 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int par
 		URAVE_DEBUG fprintf(stderr, "\t%s value = rave %f (prior %f)\n",
 			coord2sstr(node_coord(node)), r.value, node->prior.value);
 	}
-	descent->value.playouts = r.playouts + n.playouts;
-	descent->value.value = value;
 
 	return tree_node_get_value(tree, parity, value);
 }
 
-void
-ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
+static tree_node_t *
+ucb1rave_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, bool allow_pass)
 {
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
-		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
+		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
 #ifdef DISTRIBUTED
 	uct_t *u = p->uct;
 	int vwin = 0;
 	if (u->max_slaves > 0 && u->slave_index >= 0)
-		vwin = descent->node == tree->root ? b->root_virtual_win : b->virtual_win;
+		vwin = (node == tree->root ? b->root_virtual_win : b->virtual_win);
 	int child = 0;
 #endif
 
-	uctd_try_node_children(tree, descent, allow_pass, parity, u->tenuki_d, di, urgency) {
-		tree_node_t *ni = di.node;
-		urgency = ucb1rave_evaluate(p, tree, &di, parity);
+	uctd_try_node_children(tree, node, allow_pass, parity, u->tenuki_d, ni, urgency) {
+		urgency = ucb1rave_evaluate(p, tree, ni, parity);
 
 #ifdef DISTRIBUTED
 		/* In distributed mode, encourage different slaves to work on different
@@ -211,9 +209,9 @@ ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int pari
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
-	} uctd_set_best_child(di, urgency);
+	} uctd_set_best_child(ni, urgency);
 
-	uctd_get_best_child(descent);
+	return uctd_get_best_child(node);
 }
 
 

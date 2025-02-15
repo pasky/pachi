@@ -10,6 +10,7 @@
 #include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
+#include "uct/policy.h"
 #include "uct/policy/generic.h"
 
 tree_node_t *
@@ -51,17 +52,15 @@ uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone c
  * value (using prior and possibly rave), because the raw value is meaningless for
  * nodes evaluated rarely.
  * This function is called while the tree is updated by other threads */
-void
-uctp_generic_winner(uct_policy_t *p, tree_t *tree, uct_descent_t *descent)
+tree_node_t *
+uctp_generic_winner(uct_policy_t *p, tree_t *tree, tree_node_t *node)
 {
-	if (!p->evaluate)
-		return;
 	bool allow_pass = false; /* At worst forces some extra playouts at the end */
-	int parity = tree_node_parity(tree, descent->node);
+	int parity = tree_node_parity(tree, node);
 
-	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
-		urgency = p->evaluate(p, tree, &di, parity);
-	} uctd_set_best_child(di, urgency);
+	uctd_try_node_children(tree, node, allow_pass, parity, p->uct->tenuki_d, ni, urgency) {
+		urgency = p->evaluate(p, tree, ni, parity);
+	} uctd_set_best_child(ni, urgency);
 
-	uctd_get_best_child(descent);
+	return uctd_get_best_child(node);
 }
