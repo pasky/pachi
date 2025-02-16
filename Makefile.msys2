@@ -57,7 +57,7 @@ strip: FORCE
 	cd distribute  &&  strip pachi.exe
 	@echo "packing exe ..."
 	@cd distribute  &&  upx -o p.exe pachi.exe  &&  mv p.exe pachi.exe
-        ifndef MSYS2_STATIC
+        ifndef STATIC_BUILD
 		@echo "copying dlls ..."
 		@cd distribute; \
 		    mingw=`echo $$MINGW_PREFIX | tr '/' '.' `; \
