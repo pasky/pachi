@@ -22,9 +22,11 @@
 /* Engine state */
 static engine_t  *uct_engine = NULL;
 static engine_t  *external_joseki_engine = NULL;
+static enum stone my_color = S_NONE;
 static bool       undo_pending = false;
 static bool       fake_external_joseki_engine = false;
 static ownermap_t prev_ownermap;
+static int        saved_external_joseki_engine_moves[4];
 
 /* Globals */
 char *external_joseki_engine_cmd = NULL;
@@ -258,12 +260,14 @@ genmove(board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, engi
 static coord_t
 josekifix_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
+	my_color = color;
 	return genmove(b, ti, color, pass_all_alive, uct_engine->genmove);
 }
 
 static coord_t
 josekifix_engine_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
+	my_color = color;
 	return genmove(b, ti, color, pass_all_alive, uct_engine->genmove_analyze);
 }
 
@@ -367,10 +371,35 @@ josekifix_engine_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, 
 	 * uct engine however needs to be reset after first non-undo command. */
 	if (undo_pending && strcmp(cmd, "undo")) {
 		undo_pending = false;
+
+		/* Restore external engine counters */
+		for (int q = 0; q < 4; q++)
+			b->external_joseki_engine_moves_left_by_quadrant[q] = saved_external_joseki_engine_moves[q];
+
 		reset_uct_engine(b);
 	}
-	if (!strcmp(cmd, "undo"))
+	if (!strcmp(cmd, "undo")) {
 		undo_pending = true;
+
+		/* Save and rewind external engine counters, board will be cleared !
+		 * Attempt to preserve external engine counters across undo. We don't have enough information
+		 * to do a perfect job (for example if counter is 0 we can't know if it was 1 or 0 before that)
+		 * but we can make it work while the sequence is active by looking at the last move. */
+		for (int q = 0; q < 4; q++) {
+			int moves = b->external_joseki_engine_moves_left_by_quadrant[q];
+			move_history_t *h = b->move_history;
+			if (h->moves >= 1) {
+				move_t last = h->move[h->moves - 1];  // Can't use last_move(b) here
+				coord_t last2_coord = (h->moves >= 2 ? h->move[h->moves - 2].coord : pass);
+				if (moves && last.color == my_color && coord_quadrant(last2_coord) == q)
+					moves++;
+				if (moves > 15)	 /* XXX Assume we started at 15, which is mostly the case. */
+					moves = 0;
+			}
+			saved_external_joseki_engine_moves[q] = moves;
+			b->external_joseki_engine_moves_left_by_quadrant[q] = moves;
+		}
+	}
 
 	/* Forward command to external engine. */
 	external_joseki_engine->notify(external_joseki_engine, b, id, cmd, args, gtp);
