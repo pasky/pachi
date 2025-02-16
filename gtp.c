@@ -986,6 +986,8 @@ cmd_pachi_engine(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	int id = engine_name_to_id(arg);
 	if (id == E_MAX)
 		gtp_error_printf(gtp, "bad engine '%s'\n", arg);
+	else if (id == E_UCT && e->id == E_JOSEKIFIX)
+		;  // Ok  (UCT+Josekifix engine matches UCT)
 	else if (id != e->id)
 		die("GTP expects engine '%s', aborting.\n"
 		    "Try running 'pachi -e %s'\n", arg, arg);
