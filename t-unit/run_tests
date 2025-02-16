@@ -9,10 +9,10 @@ cd $dir
 for f in `git ls-files *.t | tac`; do
     grep -q 'auto-run off' $f  &&  continue
     
-    cmd="./pachi --kgs -d2 -u t-unit/$f"	# --kgs: needed by pass_is_safe.t
+    cmd="$PACHI --kgs -d2 -u t-unit/$f"	# --kgs: needed by pass_is_safe.t
     echo ""; echo "*******************************************************************";
     echo "$cmd"
-    (cd ..; $cmd) || die "Failed"
+    $cmd || die "Failed"
 done
 
-( cd ..; ./pachi -u t-unit/blank.t )
+$PACHI -u t-unit/blank.t

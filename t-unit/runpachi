@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run Pachi at root of build tree
+cd ..
+exec ./pachi "$@"

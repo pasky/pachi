@@ -21,7 +21,7 @@
 static bool josekifix_enabled = true;
 static bool josekifix_required = false;
 void disable_josekifix()      {  josekifix_enabled = false;  }
-void require_josekifix()      {  josekifix_required = true;  }
+void require_josekifix()      {  josekifix_enabled = true;  josekifix_required = true;  }
 bool get_josekifix_enabled()  {  return josekifix_enabled;   }
 bool get_josekifix_required() {  return josekifix_required;  }
 
