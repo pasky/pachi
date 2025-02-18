@@ -253,6 +253,12 @@ delete_engine(engine_t **e)
 void
 engine_reset(engine_t *e, board_t *b)
 {
+	/* Engine implements its own reset logic ? Don't pull rug under it. */
+	if (e->reset) {
+		e->reset(e, b);
+		return;
+	}
+
 	int engine_id = e->id;
 	options_t options;
 	
