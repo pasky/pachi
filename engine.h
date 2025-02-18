@@ -54,6 +54,7 @@ enum engine_id {
 typedef struct engine engine_t;
 
 typedef void (*engine_init_t)(engine_t *e, board_t *b);
+typedef void (*engine_reset_t)(engine_t *e, board_t *b);
 typedef bool (*engine_setoption_t)(engine_t *e, board_t *b, const char *optname, char *optval, char **err, bool setup, bool *reset);
 typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp);
 typedef void (*engine_notify_after_t)(engine_t *e, board_t *b, int id, char *cmd, gtp_t *gtp);
@@ -88,6 +89,8 @@ struct engine {
 
 	bool keep_on_clear;			    /* Do not reset engine on clear_board. */
 	bool keep_on_undo;			    /* Do not reset engine after undo. */
+
+	engine_reset_t		 reset;		    /* If present, engine own reset logic. */
 
 	engine_setoption_t       setoption;	    /* Set/change engine option. Don't call directly.
 						     * @optname/@optval: option name/value. @optval may be changed by engine.

@@ -275,6 +275,13 @@ josekifix_engine_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum 
 /**********************************************************************************************************/
 /* UCT plumbing */
 
+/* Reset uct engine, josekifix engine itself must not be reset. */
+static void
+josekifix_engine_reset(engine_t *e, board_t *b)
+{
+	engine_reset(uct_engine, b);
+}
+
 /* Forward setoption() calls.
  * Not terribly efficient, the way it works right now we'll reset engine 5 times if
  * there are 5 options that need a reset... */
@@ -445,6 +452,7 @@ josekifix_engine_init(engine_t *e, board_t *b)
 	e->keep_on_clear = true;	/* Do not reset engine on clear_board */
 	e->keep_on_undo = true;		/* Do not reset engine after undo */
 
+	e->reset = josekifix_engine_reset;
 	e->setoption = josekifix_engine_setoption;
 	e->board_print = josekifix_engine_board_print;
 	e->notify = josekifix_engine_notify;
