@@ -89,21 +89,31 @@ setup_dynkomi(uct_t *u, board_t *b, enum stone to_play)
 		u->t->extra_komi = 0;
 }
 
+#define tree_missing_dcnn_priors(t)  (!((t)->root->hints & TREE_HINT_DCNN))
+
 static void
 uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 {
-	if (u->t) {  /* Verify that we have sane state. */
-		assert(u->t && b->moves);
-		assert(node_coord(u->t->root) == last_move(b).coord);
-		assert(u->t->root_color == last_move(b).color);
-		if (color != stone_other(u->t->root_color))
-			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
+	/* Discard tree that can't be reused. */
+	if (u->t) {
+		/* Switching color to play ? Can't reuse tree of wrong color. */
+		bool wrong_color = (u->t->root_color != stone_other(color));
+		bool missing_dcnn_priors = (using_dcnn(b) && tree_missing_dcnn_priors(u->t));
+
+		if (wrong_color || missing_dcnn_priors || u->t->untrustworthy_tree)
+			reset_state(u);
+	}
+
+	/* Reusing tree ? Verify we have sane state. */
+	if (u->t) {
+		coord_t root_coord = node_coord(u->t->root);
+		assert(u->t->root_color == stone_other(color));
+		assert(is_pass(root_coord) || (root_coord == last_move(b).coord));
 #ifdef DISTRIBUTED
 		uct_htable_reset(u->t);
 #endif
 	} else  /* We need fresh state. */
 		setup_state(u, b, color);
-
 	ownermap_init(&u->ownermap);
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
 #ifdef DISTRIBUTED
@@ -609,11 +619,9 @@ uct_pondering_start(uct_t *u, board_t *main_board, enum stone color, coord_t our
 	if (our_move) {	          /* 0 never a real coord */
 		move_t m = move(our_move, stone_other(color));
 		int res = board_play(b, &m);  assert(res >= 0);
-
-		uct_prepare_move(u, b, color);
 	}
-	/* analyzing should be only case of switching color to play */
-	if (genmove_pondering(u))  assert(color == board_to_play(b));
+
+	uct_prepare_move(u, b, color);  /* Always clear ownermap */
 	
 	setup_dynkomi(u, b, color);
 
@@ -680,10 +688,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 	uct_pondering_stop(u);
 
 	if (u->t) {
-		bool unexpected_color = (color != board_to_play(b));  /* playing twice in a row ?? */
-		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
-		if (u->genmove_reset_tree || u->t->untrustworthy_tree ||
-		    unexpected_color || missing_dcnn_priors) {
+		if (u->genmove_reset_tree || u->t->untrustworthy_tree) {
 			u->initial_extra_komi = u->t->extra_komi;
 			reset_state(u);
 		}
@@ -788,16 +793,8 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	if (pondering(u))
 		uct_pondering_stop(u);
 	
-	if (u->t) {
-		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
-		bool switching_color_to_play = (color != stone_other(u->t->root_color));
-		if (missing_dcnn_priors || switching_color_to_play)
-			reset_state(u);
-	}
-	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
-	uct_prepare_move(u, b, color);  /* Always clear ownermap */
 	uct_pondering_start(u, b, color, 0, flags);
 }
 
