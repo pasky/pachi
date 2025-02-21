@@ -683,12 +683,13 @@ Spass pachipachi 2023-04-29])
 (;B[cq]C[[override\]
 name = "avalanche (avoid)"
 around = "last"
+external_engine
 
 
 Avoid for now ...
 
 Ex: doolam pachipachi 2018-02-15
-])
+      pachipachi drydry 2025-02-21 20:36])
 (;B[fp]
 ;W[]C[[override\]
 name = "small avalanche"
