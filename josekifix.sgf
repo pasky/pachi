@@ -157,15 +157,15 @@ name = "3-4 trick ladder jump"]
 ;W[fr]C[[override\]
 around = D3]))
 (;B[dr]
+;W[bp]C[[override\]
+]
+;B[co]
 ;W[fq]C[[override\]
 ]
 ;B[fr]
 ;W[gr]C[[override\]
 ]
 ;B[er]
-;W[bp]C[[override\]
-]
-;B[co]
 ;W[gq]C[[override\]
 ]
 ;B[bs]
@@ -181,12 +181,7 @@ B5, don't F1 !]
 ;B[bn]
 ;W[ar]C[[override\]
 ]
-;B[fs]
-;W[eo]C[[override\]
-
-
-after B makes an eye with F1 don't descend,
-E5 much better])
+;B[fs])
 (;B[eq]
 ;W[fp]C[[override\]
 name = "3-4 trick ladder extend"]
