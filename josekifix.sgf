@@ -206,7 +206,7 @@ E3 not always good:
 (;B[gq]
 (;W[cq]
 (;B[bq]
-;W[dq]
+(;W[dq]
 (;B[bo]
 ;W[fo]
 ;B[jq]
@@ -285,6 +285,16 @@ around = E4
 
 
 Ex: sbng pachipachi  2025-01-05 13:27])))
+(;W[gp]
+;B[dq]C[[override\]
+name = "3-4 pincer tsuke hustling"
+around = D3
+external_engine
+
+can answer tsuke with hane but gets tricked after H3 crosscut.
+D3 best.
+
+Ex: pachipachi drydry  2025-02-21 18:59]))
 (;B[dq]
 ;W[dp]
 ;B[eq]
