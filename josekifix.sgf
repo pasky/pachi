@@ -1916,11 +1916,17 @@ don't hane at D7, kata says bad
 urgs pachipachi 2023-07-21]))))
 (;W[ep]
 ;B[]C[[override\]
-name = "4-4 attach"
+name = "4-4 tsuke"
 around = C3
 
 
 magoa pachipachi 2023-04-23])
+(;W[dq]
+;B[]C[[override\]
+name = "4-4 tsuke"
+around = C3
+
+])
 (;W[eq]
 ;B[]C[[override\]
 name = "4-4 kosumi"
