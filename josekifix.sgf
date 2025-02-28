@@ -2181,10 +2181,12 @@ around = E3
 
 Ex: Kwetal pachipachi  2025-01-15 15:00])))))
 (;B[cn]
-;W[]C[[log\]
+;W[]C[[override\]
 name = "empty corner keima"
 around = D4
-])
+external_engine = lower_left lower_right
+
+Ex: globax pachipachi  2025-02-28 9:05])
 (;B[jj]TR[ij]
 ;W[ij]CR[je][hf][if][kf][lf][gg][mg][fh][nh][fi][ni][ej][oj][fk][nk][fl][nl][gm][mm][hn][in][kn][ln][jo]C[Demo
 
