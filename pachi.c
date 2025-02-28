@@ -463,13 +463,13 @@ int main(int argc, char *argv[])
 			case OPT_JOSEKIFIX:
 				require_josekifix();
 				break;
-#endif
 			case OPT_KATA_CONFIG:
 				katago_config = strdup(optarg);
 				break;
 			case OPT_KATA_MODEL:
 				katago_model = strdup(optarg);
 				break;
+#endif
 			case OPT_KGS:
 				options->kgs = gtp->kgs = true;
 				options->nopassfirst = true;           /* --nopassfirst */
