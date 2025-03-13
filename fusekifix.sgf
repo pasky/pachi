@@ -313,7 +313,13 @@ pachipachi tomsama 2023-04-23]))
 ;B[qo]
 ;W[ro]
 ;B[qq]
-;W[pl]
+;W[pl]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+P6 bad
+
+spring pachipachi  2025-03-13]
 ;B[pk]
 ;W[ol]
 ;B[rm]
