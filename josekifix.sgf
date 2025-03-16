@@ -1133,6 +1133,7 @@ ladder_other = G5
 ladder_other_setup_own = G4 F2
 ladder_other_setup_other = G3
 external_engine
+priority = 2
 
 Don't hane if opponent has ladder
 
