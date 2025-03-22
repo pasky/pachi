@@ -1891,7 +1891,7 @@ side fight
 ])))
 (;B[fq]
 (;W[]C[[override\]
-name = "hoshi direct 3-3 (invading)"
+name = "hoshi direct 3-3 keima block (invading)"
 around = C3
 
 
@@ -1901,20 +1901,31 @@ urgs pachipachi 2023-07-20])
 ;W[eq]
 ;B[fp]
 ;W[ep]
-;B[eo]
+;B[eo]C[[override\]
+name = "hoshi direct 3-3 breakout fight"
+around = D3
+external_engine
+]
 ;W[do]
-;B[bo]
+;B[bo]C[[override\]
+
+B4 bad
+
+pachipachi spring  2025-03-22 18:41]
 ;W[dn]
 ;B[en]
 ;W[em]
-;B[fo]C[[override\]
-name = "hoshi direct 3-3 shenanigans"
-around = D3
-external_engine
+;B[go]C[[override\]
 
 don't hane at D7, kata says bad
 
-urgs pachipachi 2023-07-21]))))
+urgs pachipachi 2023-07-21]
+;W[bp]
+;B[co]
+;W[bq]
+;B[cm]C[[override\]
+around = D4
+]))))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 tsuke"
