@@ -179,7 +179,7 @@ around = Q4]
 ])
 (;W[po]
 ;B[np]
-;W[qq]
+(;W[qq]
 ;B[qr]
 ;W[qp]
 ;B[rr]
@@ -236,6 +236,18 @@ normal sequence
 ;B[op]
 ;W[lq]
 ;B[pp]))
+(;W[no]
+;B[mo]
+;W[qq]
+;B[qr]
+;W[pr]
+;B[]C[[override\]
+name = "chinese crosscut"
+around = Q3
+
+matches low chinese as well
+
+sbng pachipachi  2025-03-23 08:46]))
 (;W[qn]
 ;B[qp]
 ;W[on]
