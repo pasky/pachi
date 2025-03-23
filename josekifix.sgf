@@ -1338,7 +1338,7 @@ pachipachi pilaf  2023-04-05
 ;B[dn]TR[cn]C[
 Following should take care to also match position with C6 instead of D6 ...]
 ;W[ip]
-;B[hp]C[[override\]
+(;B[hp]C[[override\]
 name = "4-4 shoulder hit"
 around = G2
 
@@ -1483,6 +1483,12 @@ Ex:  gomj pachipachi  2023-01-23  16:35
 name = "4-4 shoulder hit crosscut"
 
 Ex: niceguy0 pachipachi  2025-01-01 12:34]))
+(;B[gp]
+;W[]C[[override\]
+name = "4-4 shoulder hit hustling"
+around = F3
+
+pachipachi botplayer2  2025-03-22 20:22]))
 (;W[hp]
 ;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
