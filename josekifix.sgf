@@ -541,7 +541,7 @@ around = E3
 
 katago likes this one]))
 (;B[co]
-;W[cq]
+(;W[cq]
 ;B[bq]
 ;W[do]C[[override\]
 name = "magic sword mega mess"
@@ -565,6 +565,20 @@ around = D5
 
 
 spring pachipachi 2023-02-18])
+(;W[do]
+;B[dn]
+;W[cn]C[[override\]
+name = "magic sword cut"
+around = D4
+external_engine
+
+we push and cut.
+
+pachipachi Voutube  2025-05-19 19:55]
+;B[]C[[override\]
+
+
+defend push and cut (we are black).]))
 (;B[do]
 ;W[cq]
 ;B[bq]
