@@ -913,7 +913,29 @@ around = E2
 w goes for corner kill although not very good for him.
 G3 best here
 
-pachipachi jciloa  2023-05-12])))
+pachipachi jciloa  2023-05-12]))
+(;B[hq]
+;W[en]
+;B[eo]
+;W[fo]
+;B[do]
+;W[fp]
+;B[fn]
+;W[em]
+;B[fm]
+;W[el]
+(;B[hn]
+;W[]C[[override\]
+name = "3-4 2spc low pincer enclose"
+around = E5
+
+
+pachipachi Voutube  2025-05-19 20:06])
+(;B[ho]
+;W[]C[[override\]
+name = "3-4 2spc low pincer enclose"
+around = E5
+])))
 (;W[]
 ;B[fq]
 (;W[cq]
