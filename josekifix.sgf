@@ -1287,7 +1287,17 @@ E5 best, defending at C5 not so good.
 
 Ex: drydry pachipachi  2025-02-22 10:43]))
 (;B[cm]
-;W[jp]
+(;W[cq]
+;B[dq]
+;W[cp]
+;B[do]
+;W[dr]C[[override\]
+name = "4-4 okeima 3-3"
+around = C3
+
+
+Swissbot1 samzhang  2025-06-08 10:50])
+(;W[jp]
 ;B[eq]
 ;W[fp]
 ;B[]
@@ -1296,11 +1306,11 @@ Ex: drydry pachipachi  2025-02-22 10:43]))
 ;W[cp]
 ;B[do]
 ;W[bo]C[[override\]
-name = "3-3 okeima triangle invasion"
+name = "4-4 okeima 3-3 triangle invasion"
 around = B3
 
 
-pachipachi madalinG 2023-02-16])
+pachipachi madalinG 2023-02-16]))
 (;B[dn]
 (;W[cq]
 ;B[dq]
