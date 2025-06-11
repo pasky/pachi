@@ -129,6 +129,9 @@ worker_thread(void *ctx_)
 
 	/* Stuff that depends on ownermap. */
 	if (!ctx->tid && using_patterns()) {
+		/* Save initial ownermap. */
+		memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
+		
 		int dames = ownermap_dames(b, &u->ownermap);
 		float score = ownermap_score_est(b, &u->ownermap);
 		

@@ -107,7 +107,9 @@ typedef struct uct {
 	pattern_config_t pc;
 
 	/* Used within frame of single genmove. */
-	ownermap_t ownermap;
+	ownermap_t initial_ownermap;    /* pre-mcts ownermap (mcowner playouts only) */
+	ownermap_t ownermap;		/* global ownermap (initial ownermap + mcts playouts) */
+
 	int  raw_playouts_per_sec;  /* current raw playouts per second (mcowner) */
 	bool allow_pass;    /* allow pass in uct descent */
 

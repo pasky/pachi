@@ -114,6 +114,7 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #endif
 	} else  /* We need fresh state. */
 		setup_state(u, b, color);
+	ownermap_init(&u->initial_ownermap);
 	ownermap_init(&u->ownermap);
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
 #ifdef DISTRIBUTED
@@ -121,10 +122,12 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #endif
 }
 
-static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
-			 move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+static bool uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+			      ownermap_t *ownermap, move_queue_t *dead, char **msg, bool log);
+static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap,
+			 char **msg, bool log, move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
 			 bool unclear_kludge, char *label);
-static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
+static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap, char **msg,
 			  move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge);
 
 /* Does the board look like a final position, and do we win counting ?
@@ -134,6 +137,20 @@ static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_
 bool
 uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 		 move_queue_t *dead, char **msg, bool log)
+{
+	/* Try tree search ownermap first. */
+	ownermap_t *ownermap = &u->ownermap;
+	if (uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, false))
+		return uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, log);
+
+	/* Try mcowner ownermap instead, tree search can make some seki groups unclear. */
+	ownermap = &u->initial_ownermap;
+	return uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, log);
+}
+
+static bool
+uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+		  ownermap_t *ownermap, move_queue_t *dead, char **msg, bool log)
 {
 	mq_init(dead);
 	
@@ -149,12 +166,12 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	 * board_position_final() uses with_move() so copy board first. */
 	board_t b2;
 	if (b == u->main_board) {  board_copy(&b2, b);  b = &b2;  }
-	
+
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	move_queue_t dead_orig;
 	move_queue_t unclear_orig;
 	uct_mcowner_playouts(u, b, color);
-	ownermap_dead_groups(b, &u->ownermap, &dead_orig, &unclear_orig);
+	ownermap_dead_groups(b, ownermap, &dead_orig, &unclear_orig);
 
 #define init_pass_is_safe_groups()  do {	\
 		unclear = unclear_orig;		\
@@ -194,7 +211,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 			if (board_at(b, unclear.move[i]) == color)
 				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
 		unclear.moves = 0;                                          /* opponent's groups -> alive */
-		if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+		if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 				 dead, &dead_extra, &unclear, true, "(worst-case)"))
 			return true;
 		init_pass_is_safe_groups();  /* revert changes */
@@ -209,7 +226,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 			for (int i = 0; i < unclear_orig.moves; i++)
 				if (!(k & (1 << i)))
 					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
-			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+			if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 					 dead, &dead_extra, &unclear, true, ""))
 				return true;
 			init_pass_is_safe_groups();  /* revert changes */
@@ -218,19 +235,20 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	}
 	
 	/* Strict mode: don't pass until everything is clarified. */
-	return pass_is_safe(u, b, color, pass_all_alive, msg, log,
+	return pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 			    dead, &dead_extra, &unclear, false, "");
 }
 
 static bool
-pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
+pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+	     ownermap_t *ownermap, char **msg, bool log,
 	     move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
 	     bool unclear_kludge, char *label)
 {
 	move_queue_t guessed;  guessed = *dead_extra;
 	mq_append(dead, dead_extra);
 	
-	bool r = pass_is_safe_(u, b, color, pass_all_alive, msg, dead, unclear, unclear_kludge);
+	bool r = pass_is_safe_(u, b, color, pass_all_alive, ownermap, msg, dead, unclear, unclear_kludge);
 
 	/* smart pass: log guessed unclear groups if successful    (DEBUGL(2)) */
 	if (unclear_kludge && log && r && DEBUGL(2) && !DEBUGL(3)) {
@@ -251,7 +269,8 @@ pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char *
 }
 
 static bool
-pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
+pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+	      ownermap_t *ownermap, char **msg,
 	      move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge)
 {
 	bool check_score = !u->allow_losing_pass;
@@ -270,7 +289,7 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 	
 	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
-	floating_t final_score = board_official_score_details(b, dead, &dame, &seki, final_ownermap, &u->ownermap);
+	floating_t final_score = board_official_score_details(b, dead, &dame, &seki, final_ownermap, ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
 
 	floating_t score_est;
@@ -279,12 +298,12 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 	else {
 		/* Check score estimate first, official score is off if position is not final */
 		*msg = "losing on score estimate";
-		score_est = ownermap_score_est_color(b, &u->ownermap, color);
+		score_est = ownermap_score_est_color(b, ownermap, color);
 		if (check_score && score_est < 0)  return false;
 	}
 	
 	/* Don't go to counting if position is not final. */
-	if (!board_position_final_full(b, &u->ownermap, dead, unclear, score_est,
+	if (!board_position_final_full(b, ownermap, dead, unclear, score_est,
 				       final_ownermap, dame, final_score, msg))
 		return false;
 
