@@ -111,7 +111,15 @@ around = O14
 
 simple, don't get in trouble right away.
 
-Ex: arkgo pachipachi  2022-11-04]))
+Ex: arkgo pachipachi  2022-11-04])
+(;W[ne]
+;B[ng]
+;W[]C[[override\]
+name = "sanrensei jump boshi"
+around = O15
+
+
+Ex: SwissBot1 crm  2025-09-14 19:32]))
 (;B[kd]
 ;W[qc]C[[override\]
 name = "sanrensei 2-spc high pincer"
