@@ -702,12 +702,23 @@ add_override(board_t *b, move_t *m, char *move_str)
 		char *value = vars[i].value;
 
 		/* name = override_name */
-		if      (!strcmp(name, "name"))
+		if      (!strcmp(name, "name")) {
+			if (!value || !value[0]) {
+				board_print(b, stderr);
+				die("josekifix: override without name, aborting. (run with -d5 to see previous moves)\n");
+			}
+			
 			override.name = override_name = value;
+		}
 
 		/* around = coord		match pattern origin.
 		 * around = last		(use last move) */
 		else if (!strcmp(name, "around")) {
+			if (!value || !value[0]) {
+				board_print(b, stderr);
+				die("josekifix: \"%s\": override without around coord, aborting. (run with -d5 to see previous moves)\n",
+				    override_name);
+			}
 			if (strcmp(value, "last") && !valid_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",

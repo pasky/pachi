@@ -135,8 +135,11 @@ sub override_fill_defaults
 
 sub override_sanity_checks
 {
-    # don't check name missing here, let josekifix handle it (can show board position).
-    if ($override_vars{"name"} eq "") {  return;  }
+    # only warn if name missing, let pachi handle it (can show board position).
+    if ($override_vars{"name"} eq "") {
+	warn("sgfdump: $file: warning, override without name, will not load. run pachi to find board position.\n");
+	return;
+    }
     
     if ($override_vars{"around"} eq "")  {
 	die(sprintf("sgfdump: $file: \"%s\": 'around' missing, aborting.\n", $override_vars{"name"}));
