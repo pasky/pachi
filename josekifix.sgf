@@ -1179,6 +1179,18 @@ pachipachi huff  2023-04-27
 name = "4-4 keima keima slide pincer fix"
 around = E3
 ])))
+(;W[cr]
+;B[cq]C[[override\]
+name = "4-4 keima keima ogeima"
+around = D3
+external_engine
+
+
+D2 possible if b has ladder to capture F3, otherwise C3 better.
+dcnn blunder code makes it play D2 variation pretty badly  (boosts bad moves).
+
+Ex: SwissBot1 tamvss  2025-09-14 16:06
+])
 (;W[fo]
 (;B[]C[[override\]
 name = "4-4 keima direct jump"
