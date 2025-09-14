@@ -171,7 +171,7 @@ override_cmp(joseki_override_t *o1, joseki_override_t *o2)
 /* Load from file */
 
 static void
-ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *override)
+ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *override, char *idx)
 {
 	board_t b2;  board_copy(&b2, board);
 	board_t *b = &b2;
@@ -226,6 +226,16 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *ov
 		die("josekifix: \"%s\": ladder check at %s: wrong color, aborting. (run with -d5 to see previous moves)\n",
 		    override->name, check->coord);
 	}
+
+	/* Display ladder check board setup. */
+	
+	if (DEBUGL(3)) {
+		char *color = (check->own_color ? "own" : "other");
+		char *works = (check->works ? "" : "no");
+
+		fprintf(stderr, "  ladder check setup:  (%sladder_%s%s = %s)\n", works, color, idx, check->coord);
+		board_print(b, stderr);
+	}
 }
 
 /* Common sanity checks for [override] and [log] sections */
@@ -257,8 +267,8 @@ common_sanity_checks(board_t *b, joseki_override_t *override)
 		    override->name, around_str);
 	}
 		
-	if (override->ladder_check.coord)   ladder_sanity_check(b, &override->ladder_check, override);
-	if (override->ladder_check2.coord)  ladder_sanity_check(b, &override->ladder_check2, override);
+	if (override->ladder_check.coord)   ladder_sanity_check(b, &override->ladder_check, override, "");
+	if (override->ladder_check2.coord)  ladder_sanity_check(b, &override->ladder_check2, override, "2");
 	
 	/* Not checking hashes ... */
 
