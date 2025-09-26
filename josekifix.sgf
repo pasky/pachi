@@ -189,15 +189,27 @@ name = "3-4 trick ladder extend"]
 ;W[gq]C[[override\]
 ])))
 (;B[bp]
-;W[]C[[override\]
+(;W[]C[[override\]
 name = "3-4 not trick play"
-around = E4
+around = D4
 
 
 Ex: togoturn pachipachi  2018-02-19 
 
 E3 not always good:
-  nekomichan pachipachi 2022-12-14 12:31]))
+  nekomichan pachipachi 2022-12-14 12:31])
+(;W[dr]
+;B[eq]
+;W[br]
+;B[fq]
+;W[cs]C[[override\]
+name = "3-4 not trick play live"
+around = D4
+
+
+~3 pts mistake, but corner doesn't get killed later.
+
+Ex: gog swisspach1  2025-09-26 21:22])))
 (;B[gq]
 (;W[cq]
 (;B[bq]
