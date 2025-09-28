@@ -689,7 +689,7 @@ Ex: mss2 pachipachi  2025-01-01 18:32]))
 (;B[eq]
 (;W[fq]
 ;B[dq]
-;W[fp]
+(;W[fp]
 ;B[cn]
 ;W[jq]
 ;B[]
@@ -703,6 +703,13 @@ external_engine
 
 
 Spass pachipachi 2023-04-29])
+(;W[gp]
+;B[hq]
+;W[]C[[override\]
+name = "3-4 tsuke hane tiger mouth hustling"
+around = D3
+
+Ex: globax Swissbot3  2025-09-28 16:46]))
 (;W[dp]
 ;B[dq]
 ;W[co]
