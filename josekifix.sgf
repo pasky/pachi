@@ -691,18 +691,26 @@ Ex: mss2 pachipachi  2025-01-01 18:32]))
 ;B[dq]
 (;W[fp]
 ;B[cn]
-;W[jq]
+(;W[jq]
 ;B[]
 ;W[cl]
 ;B[en]
 ;W[do]
 ;B[dn]C[[override\]
-name = "3-4 tsuke hane and connect later peep"
+name = "3-4 tsuke hane connect later peep"
 around = C3
 external_engine
 
 
 Spass pachipachi 2023-04-29])
+(;W[jp]
+;B[hr]
+;W[]C[[override\]
+name = "3-4 tsuke hane connect high-extension under play"
+around = G4
+
+
+Ex: oldsan SwissBot3  2025-09-30 08:08]))
 (;W[gp]
 ;B[hq]
 ;W[]C[[override\]
