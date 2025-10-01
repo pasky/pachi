@@ -1874,7 +1874,12 @@ match low so works with pincer stones too
 
 Ex: pachipachi ziker  2018-02-22]
 (;B[eq]
-(;W[cp]
+(;W[cp]C[[override\]
+
+
+otherwise plays G3 in handicap games
+
+Ex: SwissBot6 tomura  2025-10-01]
 (;B[gq]
 ;W[]
 ;B[cl]
