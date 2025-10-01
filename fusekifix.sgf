@@ -163,17 +163,7 @@ R4 best, then P3 hane, Q5 atari + defend to keep it simple]
 ]
 ;W[op]
 ;B[qq]C[[override\]
-])
-(;W[mp]
-;B[kp]
-;W[pp]
-;B[qp]
-;W[]C[[override\]
-name = "chinese pincer crosscut"
-around = Q4
-
-
-pachipachi dsazx 2023-04-29]))
+]))
 (;B[pk]
 (;W[pp]
 ;B[qp]C[[override\]
@@ -280,7 +270,24 @@ around = Q3
 
 R5 mistake, defend first.
 
-Ex: fater pachipachi  2025-01-04 15:36])))
+Ex: fater pachipachi  2025-01-04 15:36])
+(;W[mp]
+(;B[jp]
+;W[]C[[override\]
+name = "chinese approach pincer"
+around = O4
+
+matches low chinese also
+
+Ex: SwissBot6 sunnyboy  2025-10-01 04:31])
+(;B[kp]
+;W[]C[[override\]
+name = "chinese approach tight pincer"
+around = P4
+
+matches low chinese also
+
+]))))
 (;W[dp]
 ;B[fq]
 ;W[cn]
