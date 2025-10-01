@@ -1695,7 +1695,7 @@ Ex:  mss2 pachipachi       2022-12-10 18:31]))
 ;W[cr]
 ;B[eq]
 ;W[cn]
-;B[]
+(;B[]
 ;W[fr]
 ;B[]C[[override\]
 name = "4-4 corner + outside hustling"
@@ -1705,6 +1705,13 @@ can easily screw up
 
 Ex: pachipachi sylpheed7  2023-04-08
 ])
+(;B[dm]
+;W[cm]C[[override\]
+name = "4-4 corner shoulder hit"
+around = D4
+
+
+Ex: mss2 SwissBot3  2025-10-01 04:01]))
 (;B[co]
 ;W[cr]C[[override\]
 name = "3-3 block overplay"
