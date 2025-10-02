@@ -1426,7 +1426,7 @@ pachipachi pilaf  2023-04-05
 ])))
 (;B[hq]
 (;W[fo]
-;B[dn]TR[cn]C[
+(;B[dn]TR[cn]C[
 Following should take care to also match position with C6 instead of D6 ...]
 ;W[ip]
 (;B[hp]C[[override\]
@@ -1580,6 +1580,29 @@ name = "4-4 shoulder hit hustling"
 around = F3
 
 pachipachi botplayer2  2025-03-22 20:22]))
+(;B[ho]
+(;W[]C[[override\]
+name = "4-4 keima pincer outside jump"
+around = E3
+
+])
+(;W[dn]
+(;B[en]
+;W[]C[[override\]
+name = "4-4 keima pincer outside jump press cut"
+around = E3
+external_engine_moves = 20
+
+
+Ex: SwissBot6 plung  2025-10-02
+])
+(;B[eo]
+;W[]C[[override\]
+name = "4-4 keima pincer outside jump press bad cut"
+around = E3
+
+
+E5 worse than E6 for black]))))
 (;W[hp]
 ;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
