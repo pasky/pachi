@@ -688,7 +688,7 @@ around = D3
 Ex: mss2 pachipachi  2025-01-01 18:32]))
 (;B[eq]
 (;W[fq]
-;B[dq]
+(;B[dq]
 (;W[fp]
 ;B[cn]
 (;W[jq]
@@ -718,6 +718,12 @@ name = "3-4 tsuke hane tiger mouth hustling"
 around = D3
 
 Ex: globax Swissbot3  2025-09-28 16:46]))
+(;B[er]
+;W[]C[[override\]
+name = "3-4 tsuke hane trick play"
+around = C3
+
+Ex: SwissBot1 yz01  2025-10-02]))
 (;W[dp]
 ;B[dq]
 ;W[co]
