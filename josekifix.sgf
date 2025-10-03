@@ -2029,7 +2029,16 @@ around = C3
 
 urgs pachipachi 2023-07-20])
 (;W[fr]
-;B[gr]
+(;B[ep]C[[override\]
+name = "avoid hoshi direct 3-3 breakout"
+around = D3
+external_engine
+
+
+avoid breakout fight (not great for b usually) and keep sente.
+
+Ex: bhk pachipachi  2025-10-03  18:14])
+(;B[gr]
 ;W[eq]
 ;B[fp]
 ;W[ep]
@@ -2037,7 +2046,8 @@ urgs pachipachi 2023-07-20])
 name = "hoshi direct 3-3 breakout fight"
 around = D3
 external_engine
-]
+
+we avoid this one now, too crazy...]
 ;W[do]
 ;B[bo]C[[override\]
 
@@ -2057,7 +2067,7 @@ urgs pachipachi 2023-07-21]
 ;W[bq]
 ;B[cm]C[[override\]
 around = D4
-]))))
+])))))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 tsuke"
