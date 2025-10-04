@@ -1956,7 +1956,29 @@ around = D3
 b may have a stone as near as J4 so match close to corner.
 crazy fight
 
-Ex: aguilar1 pachipachi  2025-01-01 16:30])))
+Ex: aguilar1 pachipachi  2025-01-01 16:30]))
+(;B[cj]
+;W[cn]
+;B[fp]
+(;W[]C[[override\]
+name = "4-4 keima extension double kakari trap"
+around = D6
+external_engine_moves = 20
+
+can be abused, often messes up C6 handling later on,
+so b gets a bit too much out of it.
+
+Ex: pachipachi miks  2025-10-03])
+(;W[gp]
+;B[fo]
+;W[cq]
+;B[cp]
+;W[dq]
+;B[ep]
+;W[eq]
+;B[go]
+;W[hp]
+;B[fk])))
 (;W[cq]
 (;B[]C[[override\]
 name = "hoshi direct 3-3"
