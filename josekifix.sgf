@@ -1494,19 +1494,26 @@ same, let kata handle it.
 pachipachi laercioskt  2024-08-20
 pachipachi globax 2023-06-26])
 (;B[eq]
-;W[fr]
-(;B[gp]
-;W[]C[[override\]
-name="4-4 shoulder hit cut"
+(;W[]C[[override\]
+name = "4-4 shoulder hit kick"
 around = F1
 
-])
-(;B[go]
-;W[]C[[override\]
-name="4-4 shoulder hit high cut"
-around = F1
+tenuki often better than F2])
+(;W[fr]
+;B[go]
+;W[gn]C[[override\]
+name="4-4 shoulder hit kick high cut"
+around = G3
+external_engine
 
-Ex: sbng pachipachi  2025-01-01 11:22]))
+Ex: sbng pachipachi  2025-01-01 11:22]
+;B[gp]
+;W[fp]
+;B[hn]
+;W[fm]C[[override\]
+
+
+Ex: sbng pachipachi  2025-10-05 12:30]))
 (;B[mq]C[[override\]
 name = "4-4 shoulder hit defense"
 around = J3
