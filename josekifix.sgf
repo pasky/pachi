@@ -902,7 +902,7 @@ around = C3
 
 maimaimai pachipachi  2023-05-23])))
 (;W[eo]
-;B[dq]
+(;B[dq]
 ;W[]C[[override\]
 name = "3-4 pincer kick"
 around = D3
@@ -910,7 +910,32 @@ around = D3
 gets tricky after w H4
 
 Ex: pachipachi Maeda  2025-01-19 14:30
-]))
+])
+(;B[dn]
+;W[hp]
+;B[iq]
+;W[hq]
+;B[hr]
+;W[gp]
+;B[gr]
+;W[cq]
+;B[bq]
+;W[dp]
+;B[co]
+;W[cr]
+;B[dj]
+;W[lq]
+;B[ip]
+;W[jr]
+;B[io]
+;W[]C[[override\]
+name = "3-4 pincer keima shoulder hit jump peep ignore fight"
+around = F4
+
+b doesn't answer K2 peep, plays J5 instead.
+w can die pretty easily if he screws up after J2.
+
+Ex: noaji pachipachi  2025-10-5 11:03])))
 (;B[hp]
 (;W[en]
 ;B[]C[[override\]
