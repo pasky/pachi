@@ -2195,11 +2195,38 @@ around = C3
 
 magoa pachipachi 2023-04-23])
 (;W[dq]
-;B[]C[[override\]
+(;B[]C[[override\]
 name = "4-4 tsuke"
 around = C3
 
 ])
+(;B[cq]
+;W[eq]
+;B[cr]
+;W[ep]
+;B[do]
+;W[iq]
+;B[kq]
+;W[io]
+;B[hp]
+;W[ip]
+;B[gq]
+(;W[go]
+;B[]C[[override\]
+name = "4-4 tsuke side peep"
+around = F2
+external_engine_moves = 10
+
+don't screw up
+
+Ex: Emil swisspach1  2025-09-02])
+(;W[fo]
+;B[]C[[override\]
+name = "4-4 tsuke side peep"
+around = F2
+external_engine_moves = 10
+
+])))
 (;W[eq]
 ;B[]C[[override\]
 name = "4-4 kosumi"
