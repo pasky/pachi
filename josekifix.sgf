@@ -1138,7 +1138,7 @@ around = A3
 
 ]))
 (;B[cm]
-;W[fq]
+(;W[fq]
 ;B[hq]
 ;W[cq]
 ;B[dq]
@@ -1167,6 +1167,20 @@ Ex: https://online-go.com/game/12678142]
 ;W[fo]C[[override\]
 around = D5
 ])
+(;W[cq]
+;B[dq]
+;W[cp]
+;B[co]
+;W[bo]
+;B[bn]
+;W[dr]
+;B[er]C[[override\]
+name = "hoshi + large keima 3-3 invasion block"
+around = B3
+
+don't play E5
+
+Ex: SwissBot3 miks  2025-10-07 11:52]))
 (;B[ch]
 ;W[cj]
 ;B[]
