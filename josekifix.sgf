@@ -995,7 +995,7 @@ name = "3-4 2spc low pincer enclose"
 around = E5
 ])))
 (;W[]
-;B[fq]
+(;B[fq]
 (;W[cq]
 ;B[dp]
 ;W[bp]C[[override\]
@@ -1030,6 +1030,33 @@ around = E4
 don't hane
 
 Song17 pachipachi 2023-04-15])))
+(;B[fp]
+(;W[eq]
+(;B[fq]
+;W[]C[[override\]
+name = "3-4 niken tobi enclosure invasion"
+around = D2
+
+Ex: pachipachi miks  2025-10-07 21:31])
+(;B[ep]
+;W[]C[[override\]
+name = "3-4 niken tobi enclosure invasion"
+around = D2
+
+]))
+(;W[dq]
+(;B[cq]
+;W[]C[[override\]
+name = "3-4 niken tobi enclosure invasion"
+around = D2
+
+])
+(;B[dp]
+;W[]C[[override\]
+name = "3-4 niken tobi enclosure invasion"
+around = D2
+
+]))))
 (;W[fp]
 (;B[]C[[override\]
 name = "3-4 two-space high approach"
