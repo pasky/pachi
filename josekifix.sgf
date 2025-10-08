@@ -1428,7 +1428,25 @@ Ex: drydry pachipachi  2025-02-22 10:43])
 name = "4-4 keima high play tsuke tsuke"
 around = C3
 
-Ex: pachipachi Kamyk 2025-10-08 13:09]))
+Ex: pachipachi Kamyk 2025-10-08 13:09])
+(;W[jp]
+;B[hq]
+;W[hp]
+;B[iq]
+;W[ip]
+;B[jq]
+;W[kq]
+;B[kr]
+;W[gq]
+;B[lq]
+;W[kp]
+;B[]C[[override\]
+name = "4-4 keima 3spc side invasion"
+around = J2
+external_engine_moves = 10
+
+
+Ex: pachipachi samzhang  2025-10-08 17:18]))
 (;B[cm]
 (;W[cq]
 ;B[dq]
