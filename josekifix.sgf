@@ -1359,7 +1359,7 @@ Ex: Kwetal pachipachi 2022-10-06
 ;W[cr]
 ;B[]C[[override\]
 name = "4-4 keima keima tsuke"
-around = E1
+around = B2
 
 
 many ways to screw up ...
@@ -1877,9 +1877,11 @@ around = C3
 ]))
 (;W[cr]
 ;B[]C[[override\]
-name = "4-4 keima pincer attach"
+name = "4-4 keima pincer tsuke"
 around = E1
+priority = 2
 
+(may also match 4-4 keima keima tsuke)
 
 Ex:  mss2 pachipachi       2022-12-10 18:31]))
 (;W[cq]
