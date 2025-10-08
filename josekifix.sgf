@@ -1509,7 +1509,7 @@ around = B2
 live, keep sente.
 (C5 + B4 possible too, sente also)]))
 (;W[dr]
-;B[hq]
+(;B[hq]
 ;W[cq]
 (;B[eq]
 ;W[er]
@@ -1540,6 +1540,21 @@ Don't hane, awful
 
 pachipachi pilaf  2023-04-05
 ]))
+(;B[cq]
+;W[hp]
+;B[cj]
+;W[ej]
+;B[dl]
+;W[ci]
+(;B[dj]
+;W[]C[[override\]
+name = "4-4 keima jump side reduction fight"
+around = C9
+
+
+Ex: pachipachi samzhang  2025-10-08 18:55])
+(;B[di]
+;W[])))
 (;W[eo]
 ;B[do]
 ;W[dr]
