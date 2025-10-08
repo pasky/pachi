@@ -2272,7 +2272,25 @@ name = "4-4 tsuke side peep"
 around = F2
 external_engine_moves = 10
 
-])))
+]))
+(;B[eq]
+;W[cq]
+;B[ep]
+;W[bo]
+;B[cn]
+;W[co]
+;B[dn]
+;W[do]
+;B[eo]
+;W[en]
+;B[bn]C[[override\]
+name = "4-4 tsuke fight"
+around = C3
+external_engine
+
+B6 better than D8
+
+Ex: pachipachi pws  2025-10-08 18:26]))
 (;W[eq]
 ;B[]C[[override\]
 name = "4-4 kosumi"
