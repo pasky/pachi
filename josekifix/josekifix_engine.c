@@ -148,16 +148,24 @@ set_fake_external_joseki_engine(void)
 coord_t
 external_joseki_engine_genmove(board_t *b)
 {
+	static coord_t cached_c = pass;
+	coord_t c = pass;
+
+	/* Return cached coord if we get called twice somehow (2 external engine overrides match ?)
+	 * We definitely don't want to genmove twice in a row. */
+	if (external_joseki_engine_genmoved)
+		return cached_c;
+	
 	external_joseki_engine_genmoved = true;
 
 	if (fake_external_joseki_engine) {	/* Fake engine ? Return first move available. */
-		coord_t c = b->f[0];
+		c = cached_c = b->f[0];
 		if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (fake)\n", coord2sstr(c));
 		return c;
 	}
 	
 	enum stone color = board_to_play(b);
-	coord_t c = external_joseki_engine->genmove(external_joseki_engine, b, NULL, color, false);
+	c = cached_c = external_joseki_engine->genmove(external_joseki_engine, b, NULL, color, false);
 	return c;
 }
 
