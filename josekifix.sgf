@@ -1555,6 +1555,15 @@ around = C9
 Ex: pachipachi samzhang  2025-10-08 18:55])
 (;B[di]
 ;W[])))
+(;W[dq]
+;B[cq]
+;W[cr]
+;B[]C[[override\]
+name = "4-4 keima jump tsuke"
+around = B2
+
+
+])
 (;W[eo]
 ;B[do]
 ;W[dr]
