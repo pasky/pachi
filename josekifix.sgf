@@ -1446,7 +1446,14 @@ around = J2
 external_engine_moves = 10
 
 
-Ex: pachipachi samzhang  2025-10-08 17:18]))
+Ex: pachipachi samzhang  2025-10-08 17:18])
+(;W[dm]
+;B[]C[[override\]
+name = "4-4 keima keima shoulder hit"
+around = C3
+
+
+Ex: pachipachi Alex1  2025-10-12 16:39]))
 (;B[cm]
 (;W[cq]
 ;B[dq]
