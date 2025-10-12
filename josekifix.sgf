@@ -728,13 +728,23 @@ external_engine
 
 Spass pachipachi 2023-04-29])
 (;W[jp]
-;B[hr]
+(;B[hr]
 ;W[]C[[override\]
 name = "3-4 tsuke hane connect high-extension under play"
 around = G4
 
 
-Ex: oldsan SwissBot3  2025-09-30 08:08]))
+Ex: oldsan SwissBot3  2025-09-30 08:08])
+(;B[hq]
+(;W[]C[[override\]
+name = "3-4 tsuke hane connect high-extension middle play"
+around = G3
+])
+(;W[hp]
+;B[gq]
+;W[fr]C[F2 now, better than G4
+
+Ex: pachipachi mip  2025-10-12 18:17]))))
 (;W[gp]
 ;B[hq]
 ;W[]C[[override\]
