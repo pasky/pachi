@@ -1891,7 +1891,18 @@ around = A6]
 ;B[cn]C[[override\]
 name = "3-4 trick from 4-4 connect"
 around = C3
-]))
+])
+(;W[co]
+;B[dn]
+;W[cn]
+;B[fo]
+;W[gp]
+;B[cm]
+;W[bm]
+;B[bl]C[[override\]
+
+
+Ex: gog pachipachi  2025-10-12 19:32]))
 (;W[cr]
 ;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
