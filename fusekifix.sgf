@@ -15,7 +15,7 @@ See josekifix.sgf for details.
 (;B[pd]
 (;W[]
 (;B[pp]
-;W[]
+(;W[]
 ;B[pj]
 ;W[nc]
 (;B[lc]
@@ -136,6 +136,22 @@ don't double kakari, deadly fight.
 
 Ex: pachipachi kenkong 2025-02-11 08:21
 ]))
+(;W[dp]
+;B[fq]
+;W[cn]
+;B[jp]
+;W[qn]
+;B[pn]
+;W[pm]
+;B[on]
+;W[]C[[override\]
+name = "hoshi kobayashi fuseki"
+around = Q4
+around2 = J3
+external_engine_moves = 20
+
+
+Ex: pachipachi samzhang  2025-10-12 12:48]))
 (;B[pq]
 (;W[]
 (;B[qk]
