@@ -1129,6 +1129,7 @@ static gtp_command_t gtp_commands[] =
 	{ "time_settings",		cmd_kgs_time_settings },
 	{ "tunit",			cmd_pachi_tunit },
 								/* GoGui commands */
+	{ "gogui-amaf_criticality",     cmd_gogui_amaf_criticality },
 	{ "gogui-analyze_commands",	cmd_gogui_analyze_commands },
 	{ "gogui-bad_selfatari",        cmd_gogui_bad_selfatari },
 	{ "gogui-best_moves",		cmd_gogui_best_moves },
