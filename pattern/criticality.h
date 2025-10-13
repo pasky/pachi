@@ -30,8 +30,6 @@ typedef struct {
 } criticality_t;
 
 
-/* Criticality playouts */
-
 /* Play games and fill ownermap, criticality. */
 void criticality_playouts(int threads, int games, board_t *b, enum stone color, ownermap_t *ownermap, criticality_t *crit);
 
@@ -40,7 +38,6 @@ void criticality_playouts(int threads, int games, board_t *b, enum stone color, 
 int criticality_playout(board_t *b, enum stone color, playout_t *playout, ownermap_t *ownermap, criticality_t *crit);
 
 
-/* Criticality */
 
 void criticality_init(criticality_t *crit);
 
@@ -80,6 +77,60 @@ void board_print_criticality(board_t *b, FILE *f, criticality_t *crit);
  *     2 | . O X X X X . O X O O . O O X . X X O |  2 |             . O O O O O O O           |
  *     1 | . . . . . . . . O). . . . . . . . . . |  1 |             . O O O O O O o .         |
  *       +---------------------------------------+    +---------------------------------------+   */
+
+
+
+/**************************************************************************************************/
+/* Move criticality:   (first-play criticality)
+ *
+ * Experiment applying previous formula to first-play instead of ownership:
+ * Measure how first-play at point and winning the game are correlated in playouts.
+ * I was curious to see how it compared to RAVE. In theory it should give an idea of how critical
+ * move is for winning the playout (if played early, late moves tend to confuse cause and effect).
+ *
+ * Compared to RAVE:
+ * - Both give similar results, RAVE also approximates first-play criticality. In theory this
+ *   is more mathematically sound but in practice RAVE has many advantages.
+ * - Flat playouts here, whereas tree search may have considerable impact on RAVE dynamics.
+ * - Doesn't reflect move frequency (other than filtering out least played moves).
+ * - Doesn't reflect move earlyness (other than filtering out last moves).
+ * - Selfatari filtering: (RAVE also with option filter_selfataris=1)
+ *   We exclude selfatari moves which were not selfataris when played (typically a case of confusing
+ *   cause and effect when they get good criticality). This prevents some pretty bad moves from
+ *   getting into the top ranks, limiting selfatari creep in the results.
+ * - Other details (no ko handling here ...) */
+
+typedef struct {
+	enum stone   color;
+	int          consider[BOARD_MAX_COORDS];		/* Both players must be able to play there. */
+	bool         is_selfatari[BOARD_MAX_COORDS];
+	move_stats_t playouts;
+	int          play_first[BOARD_MAX_COORDS];
+	int          play_first_wins[BOARD_MAX_COORDS];
+	float	     criticality[BOARD_MAX_COORDS];
+} move_criticality_t;
+
+
+/* Play games and fill ownermap, criticality. */
+void move_criticality_playouts(int threads, int games, board_t *b, enum stone color, ownermap_t *ownermap,
+			       move_criticality_t *crit, float bottom_moves_filter);
+
+/* Play single game and collect ownermap, move criticality data. 
+ * mcowner_compute_move_criticality() must be called after batch run. */
+int move_criticality_playout(board_t *b, enum stone color, playout_t *playout, ownermap_t *ownermap, move_criticality_t *crit);
+
+
+void move_criticality_init(move_criticality_t *crit, board_t *b, enum stone color);
+
+/* Data collect callback for batch_playout() */
+void move_criticality_collect_data(board_t *start_board, enum stone color,
+				   board_t *final_board, floating_t score, amafmap_t *map, void *data);
+
+/* Compute move criticality values after calls to mcowner_playout() */
+void move_criticality_compute(board_t *b, move_criticality_t *crit, float bottom_moves_filter);
+
+void move_criticality_print_stats(board_t *b, move_criticality_t *crit);
+
 
 
 

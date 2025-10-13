@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <limits.h>
 
 #define DEBUG
 
@@ -9,6 +10,11 @@
 #include "tactics/util.h"
 #include "mcowner.h"
 #include "criticality.h"
+
+/* Move criticality */
+#include "uct/tree.h"
+#include "tactics/util.h"
+#include "tactics/selfatari.h"
 
 
 /******************************************************************************************/
@@ -123,4 +129,152 @@ criticality_playouts(int threads, int games, board_t *b, enum stone color,
 	criticality_init(crit);
 	batch_playouts(threads, games, b, color, ownermap, false, criticality_collect_data, crit);
 	criticality_compute(b, crit);
+}
+
+
+
+/******************************************************************************************/
+/* Move criticality  (first-play criticality) */
+
+
+void
+move_criticality_init(move_criticality_t *crit, board_t *b, enum stone color)
+{
+	memset(crit, 0, sizeof(*crit));
+	crit->color = color;
+
+	/* Init consider map */
+	foreach_point(b) {
+		if (board_at(b, c) == S_NONE &&
+		    board_is_valid_play_no_suicide(b, color, c)) {
+			crit->consider[c] = 1;
+
+			if (!board_playing_ko_threat(b) && is_selfatari(b, color, c))
+				crit->is_selfatari[c] = 1;
+		}
+	} foreach_point_end;
+}
+
+/* We want to know how correlated "playing first at c" and "winning the game" are.
+ *    move_criticality(player) = cov(pl_play_first, pl_wins)
+ *                             = pl_play_first_pl_wins - pl_play_first * pl_wins
+ */
+static float
+move_criticality(move_criticality_t *crit, coord_t c)
+{
+	int games = crit->playouts.playouts;
+	float pl_play_first_pl_wins = (float)crit->play_first_wins[c] / games;
+	float pl_play_first = (float)crit->play_first[c] / games;
+	float pl_wins = (crit->color == S_BLACK ? crit->playouts.value : 1.0 - crit->playouts.value);
+	return (pl_play_first_pl_wins - pl_play_first * pl_wins);
+}
+
+/* Collect criticality data after each playout (must be thread-safe). */
+void
+move_criticality_collect_data(board_t *b, enum stone color,
+			      board_t *final_board, floating_t score, amafmap_t *map, void *data)
+{
+	move_criticality_t *crit = (move_criticality_t*)data;
+
+	floating_t result = (score > 0 ? 1.0 : (score < 0 ? 0.0 : 0.5));
+	enum stone winner_color = (score > 0 ? S_BLACK : S_WHITE);
+	stats_add_result(&crit->playouts, result, 1);
+
+	/* Find first play at each location. */
+	first_play_t fp;
+	int *first_move = amaf_first_play(map, b, &fp);
+
+	int start = map->game_baselen;
+	foreach_point(b) {
+		if (!crit->consider[c])
+			continue;
+
+		int first = first_move[c];
+		if (first == INT_MAX)  continue;
+
+		/* Move is only used if it was first played by the same color. */
+		int distance = first - start;
+		if (distance & 1)
+			continue;
+
+		/* Exclude selfatari moves which were not selfataris when played
+		 * (typically a case of amaf logic confusing cause and effect). */
+		if (crit->is_selfatari[c] && !amaf_is_selfatari(map, first))
+			continue;
+
+		/* Ignore last moves, matching moves at the very end leads to weird
+		 * artefacts like thinking a dame in an uncertain area is super
+		 * critical while actually playing there is just a sign the group
+		 * was captured / survived. Keep as much as possible though, some
+		 * life and death moves get played very late. */
+		if (distance > (map->gamelen - map->game_baselen) * 90/100)
+			continue;
+
+		__sync_fetch_and_add(&crit->play_first[c], 1);
+		if (winner_color == color)
+			__sync_fetch_and_add(&crit->play_first_wins[c], 1);
+	} foreach_point_end;
+}
+
+/* Compute move criticality values after calls to move_criticality_playout() */
+void
+move_criticality_compute(board_t *b, move_criticality_t *crit, float bottom_moves_filter)
+{
+	/* Find most played move. */
+	int playouts_max = 0;
+	foreach_point(b) {
+		if (!crit->consider[c])
+			continue;
+		playouts_max = MAX(playouts_max, crit->play_first[c]);
+	} foreach_point_end;
+
+	foreach_point(b) {
+		if (!crit->consider[c])
+			continue;
+
+		/* Filter out rarely played moves below filter. */
+		if (crit->play_first[c] < playouts_max * bottom_moves_filter)
+			continue;
+
+		crit->criticality[c] = move_criticality(crit, c);
+	} foreach_point_end;
+}
+
+void
+move_criticality_print_stats(board_t *b, move_criticality_t *crit)
+{
+	float criticality_min = 0.0, criticality_max = 0.0;
+	coord_t min_coord = pass, max_coord = pass;
+	foreach_point(b) {
+		if (!crit->consider[c])
+			continue;
+
+		float val = crit->criticality[c];
+		if (val > criticality_max) {  criticality_max = val;  max_coord = c;  }
+		if (val < criticality_min) {  criticality_min = val;  min_coord = c;  }
+	} foreach_point_end;
+
+	char *wr_color = (crit->playouts.value > 0.5 ? "black" : "white");
+	float wr       = MAX(crit->playouts.value, 1.0 - crit->playouts.value);
+	fprintf(stderr, "move criticality:  max: %s %.2f  min: %s %.2f  winrate %s %i%%\n",
+		coord2sstr(max_coord), criticality_max,
+		coord2sstr(min_coord), criticality_min,
+		wr_color, (int)(wr * 100));
+}
+
+int
+move_criticality_playout(board_t *b, enum stone color, playout_t *playout,
+			 ownermap_t *ownermap, move_criticality_t *crit)
+{
+	return batch_playout(b, color, playout, ownermap, true, move_criticality_collect_data, crit);
+}
+
+void
+move_criticality_playouts(int threads, int games, board_t *b, enum stone color,
+			  ownermap_t *ownermap, move_criticality_t *crit,
+			  float bottom_moves_filter)
+{
+	move_criticality_init(crit, b, color);
+	batch_playouts(threads, games, b, color, ownermap, true, move_criticality_collect_data, crit);
+	move_criticality_compute(b, crit, bottom_moves_filter);
 }
