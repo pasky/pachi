@@ -131,8 +131,11 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 	if (e->ownermap) {
 		printf("gfx/Point Criticality/gogui-point_criticality/Show point criticality (ownership criticality)\n");
-		if (debugging_commands)
+		printf("gfx/Move Criticality/gogui-move_criticality/Show move criticality (first-play criticality)\n");
+		if (debugging_commands) {
 			printf("gfx/Point Criticality At/gogui-point_criticality %%p/Show point criticality at given position\n");
+			printf("gfx/Move Criticality At/gogui-move_criticality %%p/Show move criticality at given position\n");
+		}
 	}
 	if (str_prefix("UCT", e->name)) {
 		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
@@ -778,6 +781,74 @@ cmd_gogui_point_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp
 
 	gtp_printf(gtp, "");
 	gogui_criticality_display(stdout, b, &g);
+	return P_OK;
+}
+
+
+/*************************************************************************************************/
+/* Move criticality:   (first-play criticality)
+ *
+ * Visualize how first-play at point and winning the game are correlated in playouts. */
+
+typedef struct {
+	coord_t            coord;
+	move_criticality_t crit;
+} gogui_move_crit_t;
+
+static void
+gogui_move_criticality_display(FILE *fh, board_t *b, gogui_move_crit_t *g)
+{
+	move_criticality_t *crit = &g->crit;
+	float *values = crit->criticality;
+
+	move_criticality_compute(b, crit, 0.20);
+
+	//gogui_signed_colormap_fixed_scale(fh, b, values, -0.8, 0.20);
+	gogui_signed_colormap_linear(fh, b, values);
+	//gogui_signed_colormap_cube(fh, b, values);
+	//gogui_signed_colormap_softmax(fh, b, values, 10.0);
+
+	gogui_criticality_text_display(fh, b, g->coord, crit->criticality, &crit->playouts);
+}
+
+/* Collect criticality data after each playout (must be thread-safe). */
+static void
+gogui_move_criticality_collect_data(board_t *b, enum stone color,
+				    board_t *final_board, floating_t score, amafmap_t *map, void *data)
+{
+	gogui_move_crit_t *g = (gogui_move_crit_t *)data;
+	move_criticality_t *crit = &g->crit;
+
+	move_criticality_collect_data(b, color, final_board, score, map, crit);
+
+	/* gogui live-gfx update */
+	if (crit->playouts.playouts % 1000 == 0) {
+		fprintf(stderr, "gogui-gfx:\n");
+		gogui_move_criticality_display(stderr, b, g);
+		fprintf(stderr, "\n");
+	}
+}
+
+/* Display move criticality colormap  (first-play criticality)
+ * This is for visualization purposes, doesn't reflect data used in tree search
+ * (see criticality.h for details). */
+enum parse_code
+cmd_gogui_move_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	enum stone color = board_to_play(b);
+	gogui_move_crit_t g;
+	move_criticality_init(&g.crit, b, color);
+	g.coord = pass;
+
+	/* Optional coord argument ? */
+	if (*gtp->next)
+		gtp_arg_coord(g.coord);
+
+	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, true,
+		       gogui_move_criticality_collect_data, &g);
+
+	gtp_printf(gtp, "");
+	gogui_move_criticality_display(stdout, b, &g);
 	return P_OK;
 }
 
