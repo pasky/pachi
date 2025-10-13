@@ -855,6 +855,27 @@ uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *b
 	}
 }
 
+/* Get RAVE best moves with at least @min_playouts.
+ * If @winrates is true @best_r returns winrates instead of visits.
+ * (moves remain in best-visited order) */
+void
+uct_get_rave_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts)
+{
+	tree_node_t* best_n[best->size];
+	best->d = (void**)best_n;
+
+	/* Find RAVE best moves */
+	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
+		if (n->amaf.playouts >= min_playouts)
+			best_moves_add_full(best, node_coord(n), n->amaf.playouts, n);
+
+	if (winrates)  /* Get RAVE winrates */
+		for (int i = 0; i < best->n; i++) {
+			tree_node_t *n = best->d[i];
+			best->r[i] = tree_node_get_value(u->t, 1, n->amaf.value);
+		}
+}
+
 /* Same as uct_get_best_moves() for node @parent.
  * XXX pass can be a valid move in which case you need best_n to check. 
  *     have another function which exposes best_n ? */

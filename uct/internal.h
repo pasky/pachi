@@ -168,6 +168,7 @@ void uct_pondering_stop(uct_t *u);
 void uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts);
 void uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *best,
 			   mq_t *seq, int max_depth, int min_playouts);
+void uct_get_rave_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
 void uct_tree_size_init(uct_t *u, size_t tree_size);
 

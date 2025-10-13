@@ -186,6 +186,22 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
+/* GoGui live gfx: RAVE best moves */
+static void
+uct_progress_gogui_rave_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
+{
+	/* RAVE best moves */
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
+	uct_get_rave_best_moves(u, &best, false, 200);
+	gogui_show_best_moves(stderr, b, color, &best);
+
+	/* Status bar */
+	fprintf(stderr, "TEXT ");
+	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
+}
+
 /* GoGui live gfx: RAVE AMAF criticality */
 static void
 uct_progress_gogui_rave_amaf_criticality(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
@@ -323,6 +339,7 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, board_t *b, enum stone color, in
 	if      (gogui_livegfx == UR_GOGUI_BEST)            uct_progress_gogui_best_moves(u, t, b, color, playouts);
 	else if (gogui_livegfx == UR_GOGUI_SEQ)             uct_progress_gogui_sequence(u, t, b, color, playouts);
 	else if (gogui_livegfx == UR_GOGUI_WR)              uct_progress_gogui_winrates(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_RAVE_BEST)       uct_progress_gogui_rave_best_moves(u, t, b, color, playouts);
 	else if (gogui_livegfx == UR_GOGUI_RAVE_AMAF_CRIT)  uct_progress_gogui_rave_amaf_criticality(u, t, b, color, playouts);
 	else    assert(0);
 
