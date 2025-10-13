@@ -272,6 +272,166 @@ gogui_show_pattern(board_t *b, coord_t coord, int maxd)
 
 
 /****************************************************************************************/
+/* Signed colormap functions:
+ * Display float values as colormap (positive = red, negative = blue).
+ * Different value scaling options are available (fixed, linear, softmax ...) */
+
+static void
+gogui_signed_colormap_find_min_max_coords(board_t *b, float *values, coord_t *min_coord, coord_t *max_coord)
+{
+	float min = 0, max = 0;
+	*min_coord = *max_coord = str2coord("A1");
+
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+
+		float val = values[c];  assert(!isnan(val));
+		if (val >= max) {  max = val;  *max_coord = c;  }
+		if (val <= min) {  min = val;  *min_coord = c;  }
+	} foreach_point_end;
+}
+
+/* Rescaling: fixed scale  (preserve intensity) */
+void
+gogui_signed_colormap_fixed_scale(FILE *f, board_t *b, float *orig_values,
+				  float min, float max)
+{
+	/* Make sure another thread doesn't change values while we work ! */
+	float values[BOARD_MAX_COORDS];
+	memcpy(values, orig_values, sizeof(values));
+
+#define rescale_pos(v)  ((v) / max)
+#define rescale_neg(v)  ((v) / min)
+	assert(min != 0);  assert(max != 0);
+
+	/* Dump colormap */
+	foreach_point_for_print(b) {
+		int rr = 0, gg = 0, bb = 0;
+		float val = values[c];  assert(!isnan(val));
+		if (val > 0) {  rr = rescale_pos(val) * 255;  rr = MIN(rr, 255);  }
+		if (val < 0) {  bb = rescale_neg(val) * 255;  bb = MIN(bb, 255);  }
+
+		assert(rr >= 0 && rr <= 255);   assert(gg >= 0 && gg <= 255);   assert(bb >= 0 && bb <= 255);
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+	} foreach_point_for_print_end;
+#undef rescale_pos
+#undef rescale_neg
+}
+
+/* Rescaling: linear  (highlight hot areas) */
+void
+gogui_signed_colormap_linear(FILE *f, board_t *b, float *orig_values)
+{
+	/* Make sure another thread doesn't change values while we work ! */
+	float values[BOARD_MAX_COORDS];
+	memcpy(values, orig_values, sizeof(values));
+
+	coord_t min_coord, max_coord;
+	gogui_signed_colormap_find_min_max_coords(b, values, &min_coord, &max_coord);
+	float min = values[min_coord];  if (min == 0)  min = -1.0;
+	float max = values[max_coord];  if (max == 0)  max =  1.0;
+
+#define rescale_pos(v)  ((v) / max)
+#define rescale_neg(v)  ((v) / min)
+
+	/* Dump colormap */
+	foreach_point_for_print(b) {
+		int rr = 0, gg = 0, bb = 0;
+		float val = values[c];
+		if (val > 0) {  rr = rescale_pos(val) * 255;  rr = MIN(rr, 255);  }
+		if (val < 0) {  bb = rescale_neg(val) * 255;  bb = MIN(bb, 255);  }
+
+		assert(rr >= 0 && rr <= 255);   assert(gg >= 0 && gg <= 255);   assert(bb >= 0 && bb <= 255);
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+	} foreach_point_for_print_end;
+#undef rescale_pos
+#undef rescale_neg
+}
+
+/* Rescaling: softmax  (sharpen) */
+void
+gogui_signed_colormap_softmax(FILE *f, board_t *b, float *orig_values,
+			      float sharpen_factor)  // 1.0 = linear
+{
+	/* Make sure another thread doesn't change values while we work ! */
+	float values[BOARD_MAX_COORDS];
+	memcpy(values, orig_values, sizeof(values));
+
+	coord_t min_coord, max_coord;
+	gogui_signed_colormap_find_min_max_coords(b, values, &min_coord, &max_coord);
+	float min = values[min_coord],  max = values[max_coord];
+
+	float sumexp = 0.0;
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		values[c] = expf(values[c] * sharpen_factor);
+		sumexp += values[c];
+	} foreach_point_end;
+
+	float inv_sumexp = 1.0 / sumexp;
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		values[c] *= inv_sumexp;
+	} foreach_point_end;
+
+	min = values[min_coord];
+	max = values[max_coord];
+#define rescale_pos(v)  (((v) - min) / (max - min))
+#define rescale_neg(v)  (1.0)	// not used, everything positive now
+
+	/* Dump colormap */
+	foreach_point_for_print(b) {
+		int rr = 0, gg = 0, bb = 0;
+		float val = values[c];
+		if (val > 0) {  rr = rescale_pos(val) * 255;  rr = MIN(rr, 255);  }
+		if (val < 0) {  bb = rescale_neg(val) * 255;  bb = MIN(bb, 255);  }
+
+		assert(rr >= 0 && rr <= 255);   assert(gg >= 0 && gg <= 255);   assert(bb >= 0 && bb <= 255);
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+	} foreach_point_for_print_end;
+#undef rescale_pos
+#undef rescale_neg
+}
+
+/* Rescaling: cube  (sharpen) */
+void
+gogui_signed_colormap_cube(FILE *f, board_t *b, float *orig_values)
+{
+	/* Make sure another thread doesn't change values while we work ! */
+	float values[BOARD_MAX_COORDS];
+	memcpy(values, orig_values, sizeof(values));
+
+	coord_t min_coord, max_coord;
+	gogui_signed_colormap_find_min_max_coords(b, values, &min_coord, &max_coord);
+	float min = values[min_coord];  if (min == 0)  min = -1.0;
+	float max = values[max_coord];  if (max == 0)  max =  1.0;
+
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		values[c] = values[c] * values[c] * values[c];
+	} foreach_point_end;
+
+	min = values[min_coord];
+	max = values[max_coord];
+#define rescale_pos(v)  ((v) / max)
+#define rescale_neg(v)  ((v) / min)
+
+	/* Dump colormap */
+	foreach_point_for_print(b) {
+		int rr = 0, gg = 0, bb = 0;
+		float val = values[c];
+		if (val > 0) {  rr = rescale_pos(val) * 255;  rr = MIN(rr, 255);  }
+		if (val < 0) {  bb = rescale_neg(val) * 255;  bb = MIN(bb, 255);  }
+
+		assert(rr >= 0 && rr <= 255);   assert(gg >= 0 && gg <= 255);   assert(bb >= 0 && bb <= 255);
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+	} foreach_point_for_print_end;
+#undef rescale_pos
+#undef rescale_neg
+}
+
+
+/****************************************************************************************/
 
 enum gogui_reporting gogui_livegfx = UR_GOGUI_NONE;
 

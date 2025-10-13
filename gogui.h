@@ -51,5 +51,11 @@ void gogui_show_best_moves(FILE *f, board_t *b, enum stone color, best_moves_t *
 void gogui_show_winrates(FILE *f, board_t *b, enum stone color, best_moves_t *best);
 void gogui_show_best_seq(FILE *f, board_t *b, enum stone color, mq_t *seq);
 
+/* Signed colormap functions */
+void gogui_signed_colormap_fixed_scale(FILE *f, board_t *b, float *values, float min, float max);
+void gogui_signed_colormap_linear(FILE *f, board_t *b, float *values);
+void gogui_signed_colormap_softmax(FILE *f, board_t *b, float *orig_values, float sharpen_factor);
+void gogui_signed_colormap_cube(FILE *f, board_t *b, float *orig_values);
+
 #endif
 
