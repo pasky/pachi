@@ -1147,6 +1147,7 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-josekifix_show_pattern",   cmd_gogui_josekifix_show_pattern },
 #endif
 	{ "gogui-livegfx",		cmd_gogui_livegfx },
+	{ "gogui-point_criticality",	cmd_gogui_point_criticality },
 	{ "gogui-pattern_best",		cmd_gogui_pattern_best },
 	{ "gogui-pattern_colors",	cmd_gogui_pattern_colors },
 	{ "gogui-pattern_features",	cmd_gogui_pattern_features },

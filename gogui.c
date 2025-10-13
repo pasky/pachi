@@ -11,6 +11,7 @@
 #include "uct/uct.h"
 #include "pattern/pattern.h"
 #include "pattern/pattern_engine.h"
+#include "pattern/criticality.h"
 #include "joseki/joseki_engine.h"
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
@@ -86,6 +87,10 @@ cmd_gogui_toggle_debugging_commands(board_t *b, engine_t *e, time_info_t *ti, gt
 enum parse_code
 cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
+	/* Show debugging commands by default ? */
+	if (debugging_commands == -1)
+		debugging_commands = DEBUGL(3);
+
 	gtp_printf(gtp, "");  /* gtp prefix */
 
 	if (e->best_moves) {
@@ -124,6 +129,11 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Set Spatial Size/gogui-spatial_size %%o/Set spatial pattern size for Show Spatial command\n");
 		printf("gfx/Show Spatial/gogui-show_spatial %%p/Show spatial pattern at selected coordinate\n");
 	}
+	if (e->ownermap) {
+		printf("gfx/Point Criticality/gogui-point_criticality/Show point criticality (ownership criticality)\n");
+		if (debugging_commands)
+			printf("gfx/Point Criticality At/gogui-point_criticality %%p/Show point criticality at given position\n");
+	}
 	if (str_prefix("UCT", e->name)) {
 		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
 		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves/Show best moves while engine is thinking\n");
@@ -131,10 +141,6 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates/Show best moves' winrates while engine is thinking\n");
 		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
-
-	/* Show debugging commands by default ? */
-	if (debugging_commands == -1)
-		debugging_commands = DEBUGL(3);
 
 	/* Debugging commands:
 	 * Can toggle from analyze window (gogui >= 1.4.12) */
@@ -680,6 +686,103 @@ cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	return P_OK;
 }
+
+
+/*************************************************************************************************/
+/* Point criticality:   (ownership criticality)
+ *
+ * Visualize how owning a point and winning the game are correlated in playouts. */
+
+static void
+gogui_criticality_text_display(FILE *fh, board_t *b, coord_t coord, float *criticality, move_stats_t *playouts)
+{
+	fprintf(fh, "TEXT  ");
+	if (fh == stderr)
+		fprintf(fh, "%i  ", playouts->playouts);
+
+	/* Display specific coord ? */
+	if (!is_pass(coord))
+		fprintf(fh, "%.2f  ", criticality[coord]);
+
+	coord_t min_coord, max_coord;
+	gogui_signed_colormap_find_min_max_coords(b, criticality, &min_coord, &max_coord);
+	float min = criticality[min_coord],  max = criticality[max_coord];
+	char *wr_color = (playouts->value > 0.5 ? "black" : "white");
+	float wr       = MAX(playouts->value, 1.0 - playouts->value);
+
+	/* Display min, max, winrate */
+	fprintf(fh, "[max %.2f %s]  [min %.2f %s]  wr %s %i%%\n",
+		max, coord2sstr(max_coord),
+		min, coord2sstr(min_coord),
+		wr_color, (int)(wr * 100));
+}
+
+typedef struct {
+	coord_t       coord;
+	criticality_t crit;
+} gogui_criticality_t;
+
+static void
+gogui_criticality_display(FILE *fh, board_t *b, gogui_criticality_t *g)
+{
+	criticality_t *crit = &g->crit;
+	float *values = crit->criticality;
+
+	criticality_compute(b, crit);
+
+	//gogui_signed_colormap_fixed_scale(fh, b, values, -0.8, 0.20);
+	gogui_signed_colormap_linear(fh, b, values);
+	//gogui_signed_colormap_cube(fh, b, values);
+	//gogui_signed_colormap_softmax(fh, b, values, 10.0);
+
+	gogui_criticality_text_display(fh, b, g->coord, crit->criticality, &crit->playouts);
+}
+
+/* Collect criticality data after each playout (must be thread-safe). */
+static void
+gogui_criticality_collect_data(board_t *b, enum stone color,
+			       board_t *final_board, floating_t score, amafmap_t *map, void *data)
+{
+	gogui_criticality_t *g = (gogui_criticality_t *)data;
+	criticality_t *crit = &g->crit;
+
+	criticality_collect_data(b, color, final_board, score, map, crit);
+
+	/* gogui live-gfx update */
+	if (crit->playouts.playouts % 1000 == 0) {
+		fprintf(stderr, "gogui-gfx:\n");
+		gogui_criticality_display(stderr, b, g);
+		fprintf(stderr, "\n");
+	}
+}
+
+#define GOGUI_CRITICALITY_PLAYOUTS 10000
+
+/* Display point criticality colormap  (ownership criticality)
+ * This is for visualization purposes, doesn't reflect criticality data used by ucb1amaf
+ * (see criticality.h for details). */
+enum parse_code
+cmd_gogui_point_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	enum stone color = board_to_play(b);
+	gogui_criticality_t g;
+	criticality_init(&g.crit);
+	g.coord = pass;
+
+	/* Optional coord argument ? */
+	if (*gtp->next)
+		gtp_arg_coord(g.coord);
+
+	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, false,
+		       gogui_criticality_collect_data, &g);
+
+	gtp_printf(gtp, "");
+	gogui_criticality_display(stdout, b, &g);
+	return P_OK;
+}
+
+
+/*************************************************************************************************/
 
 enum parse_code
 cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
