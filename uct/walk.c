@@ -186,6 +186,38 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
+/* GoGui live gfx: RAVE AMAF criticality */
+static void
+uct_progress_gogui_rave_amaf_criticality(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
+{
+	/* Find rave max playouts */
+	int max_playouts = 0;
+	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
+		if (!is_pass(node_coord(n)))
+			max_playouts = MAX(max_playouts, n->amaf.playouts);
+
+	/* Get average winrate */
+	float winrate = tree_node_get_value(u->t, 1, u->t->root->u.value);
+
+	/* Compute rave ratings				(same logic as gogui rave criticality	*/
+	float ratings[BOARD_MAX_COORDS];	/*	 but with real rave data)		*/
+	memset(ratings, 0, sizeof(ratings));
+
+	float top_moves_filter = 0.55;
+	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
+		if (!is_pass(node_coord(n)) &&
+		    n->amaf.playouts >= max_playouts * top_moves_filter) {
+			/* rating = rave winrate - average winrate */
+			ratings[node_coord(n)] = tree_node_get_value(u->t, 1, n->amaf.value) - winrate;
+		}
+
+	/* Colormap */
+	gogui_signed_colormap_linear(stderr, b, ratings);
+
+	/* Status bar */
+	gogui_criticality_text_display(stderr, b, pass, ratings, &u->t->root->u);
+}
+
 static void
 uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final, bool big)
 {
@@ -288,9 +320,10 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, board_t *b, enum stone color, in
 	/* GoGui reads live gfx commands on stderr. */
 	fprintf(stderr, "gogui-gfx:\n");
 
-	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, b, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, b, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, b, color, playouts);
+	if      (gogui_livegfx == UR_GOGUI_BEST)            uct_progress_gogui_best_moves(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_SEQ)             uct_progress_gogui_sequence(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_WR)              uct_progress_gogui_winrates(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_RAVE_AMAF_CRIT)  uct_progress_gogui_rave_amaf_criticality(u, t, b, color, playouts);
 	else    assert(0);
 
 	fprintf(stderr, "\n");

@@ -2,6 +2,7 @@
 #define PACHI_GOGUI_H
 
 #include "gtp.h"
+#include "stats.h"
 
 /* How many moves to display ? */
 #define GOGUI_NBEST 9
@@ -13,6 +14,7 @@ typedef enum gogui_reporting {
 	UR_GOGUI_BEST,
 	UR_GOGUI_SEQ,
 	UR_GOGUI_WR,
+	UR_GOGUI_RAVE_AMAF_CRIT
 } gogui_reporting_t;
 
 extern enum gogui_reporting gogui_livegfx;
@@ -60,6 +62,9 @@ void gogui_signed_colormap_fixed_scale(FILE *f, board_t *b, float *values, float
 void gogui_signed_colormap_linear(FILE *f, board_t *b, float *values);
 void gogui_signed_colormap_softmax(FILE *f, board_t *b, float *orig_values, float sharpen_factor);
 void gogui_signed_colormap_cube(FILE *f, board_t *b, float *orig_values);
+
+
+void gogui_criticality_text_display(FILE *fh, board_t *b, coord_t coord, float *criticality, move_stats_t *playouts);
 
 #endif
 
