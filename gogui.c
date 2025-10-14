@@ -146,6 +146,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq/Show best sequence while engine is thinking\n");
 		printf("gfx/Live gfx = Best Winrates/gogui-livegfx best_winrates/Show best moves' winrates while engine is thinking\n");
 		printf("gfx/Live gfx = RAVE Best Moves/gogui-livegfx rave_best/Show RAVE best moves while engine is thinking\n");
+		printf("gfx/Live gfx = RAVE Winrates/gogui-livegfx rave_winrates/Show RAVE winrates while engine is thinking\n");
 		printf("gfx/Live gfx = RAVE AMAF Criticality/gogui-livegfx rave_amaf_crit/Show RAVE AMAF criticality while engine is thinking\n");
 		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
@@ -453,11 +454,12 @@ static int
 gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 {
 	gogui_livegfx = UR_GOGUI_NONE;
-	if      (!strcmp(arg, "best_moves"))      gogui_livegfx = UR_GOGUI_BEST;
-	else if (!strcmp(arg, "best_seq"))        gogui_livegfx = UR_GOGUI_SEQ;
-	else if (!strcmp(arg, "best_winrates"))   gogui_livegfx = UR_GOGUI_WR;
-	else if (!strcmp(arg, "rave_best"))       gogui_livegfx = UR_GOGUI_RAVE_BEST;	
-	else if (!strcmp(arg, "rave_amaf_crit"))  gogui_livegfx = UR_GOGUI_RAVE_AMAF_CRIT;
+	if      (!strcmp(arg, "best_moves"))        gogui_livegfx = UR_GOGUI_BEST;
+	else if (!strcmp(arg, "best_seq"))          gogui_livegfx = UR_GOGUI_SEQ;
+	else if (!strcmp(arg, "best_winrates"))     gogui_livegfx = UR_GOGUI_WR;
+	else if (!strcmp(arg, "rave_best"))         gogui_livegfx = UR_GOGUI_RAVE_BEST;
+	else if (!strcmp(arg, "rave_winrates"))	    gogui_livegfx = UR_GOGUI_RAVE_WR;
+	else if (!strcmp(arg, "rave_amaf_crit"))    gogui_livegfx = UR_GOGUI_RAVE_AMAF_CRIT;
 	else if (*arg)  /* Invalid value */
 		return 0;
 	

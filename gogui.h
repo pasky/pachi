@@ -15,6 +15,7 @@ typedef enum gogui_reporting {
 	UR_GOGUI_SEQ,
 	UR_GOGUI_WR,
 	UR_GOGUI_RAVE_BEST,
+	UR_GOGUI_RAVE_WR,
 	UR_GOGUI_RAVE_AMAF_CRIT
 } gogui_reporting_t;
 
