@@ -324,8 +324,67 @@ matches low chinese also
 ;W[cn]
 (;B[jp]
 (;W[qn]
-;B[po]
+(;B[po]
 ;W[rp]
+(;B[ql]
+(;W[]C[[log\]
+name = "kobayashi low pincer"
+around = R4
+])
+(;W[pn]
+;B[qo]
+;W[ro]
+(;B[qq]
+;W[pl]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+P6 bad
+
+spring pachipachi  2025-03-13]
+;B[pk]
+;W[ol]
+;B[rm]
+;W[rn]
+;B[qj]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+spring pachipachi 2023-08-20
+])
+(;B[rm]
+;W[]C[[override\]
+name = "kobayashi low pincer trick play"
+around = R4
+
+pachipachi Beutlin 2023-04-25])))
+(;B[pl]
+(;W[]C[[log\]
+name = "kobayashi high pincer"
+around = R4])
+(;W[pn]
+;B[on]
+;W[om]
+;B[pm]
+;W[oo]
+;B[nn]
+;W[pp]
+;B[op]
+;W[qo]
+;B[no]
+;W[oq]
+;B[po]
+;W[pr]
+;B[qp]
+;W[qq]
+;B[pp]
+;W[np]C[[override\]
+name = "kobayashi high pincer"
+around = R4
+
+don't forget atari before defending
+
+pachipachi Beutlin 2023-04-24]))
 (;B[ro]
 ;W[qo]
 ;B[qp]
@@ -365,133 +424,53 @@ name = "kobayashi tobi double hane"
 around = R5
 
 
-pachipachi tomsama 2023-04-23]))
+pachipachi tomsama 2023-04-23])))
 (;B[ql]
+;W[]C[[override\]
+name = "kobayashi immediate low pincer"
+around = R4
+
+pachipachi Beutlin 2023-04-24])
+(;B[pl]
+;W[]C[[override\]
+name = "kobayashi immediate high pincer"
+around = R4
+
+prevent low kobayashi crosscut trick play (see b K3 variation)]))
+(;W[pn]
+;B[qo]
+;W[pj]
+;B[qn]
+(;W[lq]
+;B[]C[[override\]
+name = "kobayashi high approach invasion"
+around = N4])
+(;W[oq]
+;B[]C[[override\]
+name = "kobayashi high approach tsuke"
+around = R4
+
+Ex: TOSHI1011 pachipachi  2018-02-21])))
+(;B[ip]
 ;W[pn]
 ;B[qo]
-;W[ro]
-;B[qq]
-;W[pl]C[[override\]
-name = "kobayashi pincer tsuke"
-around = Q7
-
-P6 bad
-
-spring pachipachi  2025-03-13]
-;B[pk]
-;W[ol]
-;B[rm]
-;W[rn]
-;B[qj]C[[override\]
-name = "kobayashi pincer tsuke"
-around = Q7
-
-spring pachipachi 2023-08-20
-]))
-(;W[pn]
-;B[qo]
 ;W[pj]
 ;B[qn]
-;W[lq]
-;B[kq]
-;W[oq]
-;B[lp]C[[override\]
-name = "high kobayashi 2"
-around = P5
-
-]
-;W[mp]
-;B[lo]C[[override\]
-around = "last"
-]
-;W[pm]
-;B[qm]C[[override\]
-around = P5
-]
-;W[pl]
-;B[rk]C[[override\]
-around = Q6
-]))
-(;B[ip]
-(;W[pn]
-;B[qo]
-;W[pj]
-;B[qn]
-(;W[oq]
+;W[kq]
 ;B[mq]C[[override\]
-name = "high kobayashi"
-around = O4
-
-
-Ex: TOSHI1011 pachipachi  2018-02-21 ]
-;W[nq]
-;B[pr]C[[override\]
-]
-;W[pm]
-;B[qm]C[[override\]
-around = "last"
-])
-(;W[kq]
-;B[mq]C[[override\]
-name = "high kobayashi"
+name = "tight kobayashi high approach invasion"
 around = "last"
 
-]))
-(;W[qn]
-(;B[po]
-;W[rp]
-(;B[ql]
-(;W[]C[[log\]
-name = "kobayashi low pincer"
-around = R4
 ])
-(;W[pn]
-;B[qo]
-;W[ro]
-;B[rm]
-;W[]C[[override\]
-name = "kobayashi low pincer trick play"
-around = R4
-
-pachipachi Beutlin 2023-04-25]))
-(;B[pl]
-(;W[]C[[log\]
-name = "kobayashi high pincer"
-around = R4])
-(;W[pn]
-;B[on]
-;W[om]
-;B[pm]
-;W[oo]
-;B[nn]
-;W[pp]
-;B[op]
-;W[qo]
-;B[no]
-;W[oq]
-;B[po]
-;W[pr]
-;B[qp]
-;W[qq]
-;B[pp]
-;W[np]C[[override\]
-name = "kobayashi high pincer"
-around = R4
-
-don't forget atari before defending
-
-pachipachi Beutlin 2023-04-24])))
-(;B[ql]
-;W[]C[[override\]
-name = "kobayashi immediate pincer"
-around = R4
-
-pachipachi Beutlin 2023-04-24])))
 (;B[jq]
 ;W[qn]
 ;B[pl]
+;W[qq]C[can't play crosscut at R3 if b has K3.
+fixed in main branch (kobayashi immediate high pincer)
+]
+;B[qp]
 (;W[]C[[override\]
-name = "kobayashi crosscut trick"
+name = "low kobayashi crosscut trick play"
 around = R5
 around2 = M3
 
@@ -499,9 +478,7 @@ around2 = M3
 can't play crosscut at R3 if b has K3
 
 pachipachi kgsfan2021  2023-02-10])
-(;W[qq]
-;B[qp]
-;W[pp]
+(;W[pp]
 ;B[po]
 ;W[op]
 ;B[qr]
