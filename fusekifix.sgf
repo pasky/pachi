@@ -126,7 +126,15 @@ name = "sanrensei double pincer"
 around = O17
 
 
-Ex: yz01 pachipachi  2025-10-04]))
+Ex: yz01 pachipachi  2025-10-04])
+(;W[]
+;B[nd]
+;W[od]
+;B[]C[[override\]
+name = "sanrensei pincer tenuki fight"
+around = P19
+
+Ex: Kamyk pachipachi  2025-10-15 08:51]))
 (;B[kd]
 ;W[qc]C[[override\]
 name = "sanrensei 2-spc high pincer"
