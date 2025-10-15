@@ -332,7 +332,7 @@ name = "kobayashi low pincer"
 around = R4
 ])
 (;W[pn]
-;B[qo]
+(;B[qo]
 ;W[ro]
 (;B[qq]
 ;W[pl]C[[override\]
@@ -357,7 +357,15 @@ spring pachipachi 2023-08-20
 name = "kobayashi low pincer trick play"
 around = R4
 
-pachipachi Beutlin 2023-04-25])))
+pachipachi Beutlin 2023-04-25]))
+(;B[on]
+;W[om]
+;B[pm]
+;W[]C[[override\]
+name = "kobayashi low pincer cut"
+around = R4
+
+Ex: pachipachi Kamyk  2025-10-15 07:41])))
 (;B[pl]
 (;W[]C[[log\]
 name = "kobayashi high pincer"
@@ -366,7 +374,10 @@ around = R4])
 ;B[on]
 ;W[om]
 ;B[pm]
-;W[oo]
+(;W[]C[[override\]
+name = "kobayashi high pincer cut"
+around = R4])
+(;W[oo]
 ;B[nn]
 ;W[pp]
 ;B[op]
@@ -384,7 +395,7 @@ around = R4
 
 don't forget atari before defending
 
-pachipachi Beutlin 2023-04-24]))
+pachipachi Beutlin 2023-04-24])))
 (;B[ro]
 ;W[qo]
 ;B[qp]
