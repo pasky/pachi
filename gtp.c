@@ -997,6 +997,25 @@ cmd_pachi_engine(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+#ifdef JOSEKIFIX
+/* Usage: pachi-external_engine_mode q1 q2 q3 q4
+ * Set external joseki engine mode (one number per quadrant = number of moves left). */
+static enum parse_code
+cmd_pachi_external_engine_mode(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	int mode[4];
+	for (int i = 0; i < 4; i++) {
+		gtp_arg_number(mode[i]);
+		if (mode[i] < 0)
+			gtp_error(gtp, "must be positive numbers");
+	}
+
+	for (int i = 0; i < 4; i++)
+		b->external_joseki_engine_moves_left_by_quadrant[i] = mode[i];
+	return P_OK;
+}
+#endif
+
 static enum parse_code
 cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -1076,81 +1095,87 @@ cmd_kgs_time_settings(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 static gtp_command_t gtp_commands[] =
 {								/* Core GTP commands */
-	{ "boardsize",              cmd_boardsize },
-	{ "clear_board",            cmd_clear_board },
-	{ "echo",                   cmd_echo },
-	{ "final_score",            cmd_final_score },
-	{ "final_status_list",      cmd_final_status_list },
-	{ "fixed_handicap",         cmd_fixed_handicap },
-	{ "genmove",                cmd_genmove },
-	{ "known_command",          cmd_known_command },
-	{ "komi",                   cmd_komi },
-	{ "list_commands",          cmd_list_commands },
-	{ "name",                   cmd_name },
-	{ "place_free_handicap",    cmd_fixed_handicap },
-	{ "play",                   cmd_play },
-	{ "protocol_version",       cmd_protocol_version },
-	{ "quit",                   cmd_quit },
-	{ "set_free_handicap",      cmd_set_free_handicap },
-	{ "showboard",              cmd_showboard },
-	{ "time_left",              cmd_time_left },
-	{ "undo",                   cmd_undo },
-	{ "version",                cmd_version },
+	{ "boardsize",			cmd_boardsize },
+	{ "clear_board",		cmd_clear_board },
+	{ "echo",			cmd_echo },
+	{ "final_score",		cmd_final_score },
+	{ "final_status_list",		cmd_final_status_list },
+	{ "fixed_handicap",		cmd_fixed_handicap },
+	{ "genmove",			cmd_genmove },
+	{ "known_command",		cmd_known_command },
+	{ "komi",			cmd_komi },
+	{ "list_commands",		cmd_list_commands },
+	{ "name",			cmd_name },
+	{ "place_free_handicap",	cmd_fixed_handicap },
+	{ "play",			cmd_play },
+	{ "protocol_version",		cmd_protocol_version },
+	{ "quit",			cmd_quit },
+	{ "set_free_handicap",		cmd_set_free_handicap },
+	{ "showboard",			cmd_showboard },
+	{ "time_left",			cmd_time_left },
+	{ "undo",			cmd_undo },
+	{ "version",			cmd_version },
 								/* Aliases */
-	{ "predict",                cmd_pachi_predict },
-	{ "score_est",              cmd_pachi_score_est },
-	{ "time_settings",          cmd_kgs_time_settings },
-	{ "tunit",		    cmd_pachi_tunit },
-								/* GoGui commands */
-	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
-	{ "gogui-best_moves",       cmd_gogui_best_moves },
-	{ "gogui-color_palette",    cmd_gogui_color_palette },
-#ifdef DCNN
-	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
-	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
-	{ "gogui-dcnn_rating",      cmd_gogui_dcnn_rating },
+	{ "predict",			cmd_pachi_predict },
+	{ "score_est",			cmd_pachi_score_est },
+#ifdef JOSEKIFIX
+	{ "external_engine_mode",	cmd_pachi_external_engine_mode },
 #endif
-	{ "gogui-final_score",      cmd_gogui_final_score },
-	{ "gogui-influence",        cmd_gogui_influence },
-	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
-	{ "gogui-joseki_show_pattern", cmd_gogui_joseki_show_pattern },
+	{ "time_settings",		cmd_kgs_time_settings },
+	{ "tunit",			cmd_pachi_tunit },
+								/* GoGui commands */
+	{ "gogui-analyze_commands",	cmd_gogui_analyze_commands },
+	{ "gogui-best_moves",		cmd_gogui_best_moves },
+	{ "gogui-color_palette",	cmd_gogui_color_palette },
+#ifdef DCNN
+	{ "gogui-dcnn_best",		cmd_gogui_dcnn_best },
+	{ "gogui-dcnn_colors",		cmd_gogui_dcnn_colors },
+	{ "gogui-dcnn_rating",		cmd_gogui_dcnn_rating },
+#endif
+	{ "gogui-final_score",		cmd_gogui_final_score },
+	{ "gogui-influence",		cmd_gogui_influence },
+	{ "gogui-joseki_moves",		cmd_gogui_joseki_moves },
+	{ "gogui-joseki_show_pattern",	cmd_gogui_joseki_show_pattern },
 #ifdef JOSEKIFIX
 	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
-	{ "gogui-josekifix_set_coord",    cmd_gogui_josekifix_set_coord },
-	{ "gogui-josekifix_show_pattern", cmd_gogui_josekifix_show_pattern },
+	{ "gogui-josekifix_set_coord",      cmd_gogui_josekifix_set_coord },
+	{ "gogui-josekifix_show_pattern",   cmd_gogui_josekifix_show_pattern },
 #endif
-	{ "gogui-livegfx",          cmd_gogui_livegfx },
-	{ "gogui-pattern_best",     cmd_gogui_pattern_best },
-	{ "gogui-pattern_colors",   cmd_gogui_pattern_colors },
-	{ "gogui-pattern_features", cmd_gogui_pattern_features },
-	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
-	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
-	{ "gogui-score_est",        cmd_gogui_score_est },
-	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
-	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
-	{ "gogui-winrates",         cmd_gogui_winrates },
+	{ "gogui-livegfx",		cmd_gogui_livegfx },
+	{ "gogui-pattern_best",		cmd_gogui_pattern_best },
+	{ "gogui-pattern_colors",	cmd_gogui_pattern_colors },
+	{ "gogui-pattern_features",	cmd_gogui_pattern_features },
+	{ "gogui-pattern_gammas",	cmd_gogui_pattern_gammas },
+	{ "gogui-pattern_rating",	cmd_gogui_pattern_rating },
+	{ "gogui-score_est",		cmd_gogui_score_est },
+	{ "gogui-show_spatial",		cmd_gogui_show_spatial },
+	{ "gogui-spatial_size",		cmd_gogui_spatial_size },
+	{ "gogui-winrates",		cmd_gogui_winrates },
 								/* KGS commands */
-	{ "kgs-chat",               cmd_kgs_chat },
-	{ "kgs-game_over",          cmd_kgs_game_over },
-	{ "kgs-genmove_cleanup",    cmd_genmove },
-	{ "kgs-rules",              cmd_kgs_rules },
-	{ "kgs-time_settings",      cmd_kgs_time_settings },
+	{ "kgs-chat",			cmd_kgs_chat },
+	{ "kgs-game_over",		cmd_kgs_game_over },
+	{ "kgs-genmove_cleanup",	cmd_genmove },
+	{ "kgs-rules",			cmd_kgs_rules },
+	{ "kgs-time_settings",		cmd_kgs_time_settings },
 								/* Lizzie, Sabaki, etc */
-	{ "lz-analyze",             cmd_lz_analyze },
-	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
+	{ "lz-analyze",			cmd_lz_analyze },
+	{ "lz-genmove_analyze",		cmd_lz_genmove_analyze },
 								/* Pachi */
-	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
-	{ "pachi-engine",	    cmd_pachi_engine },
-	{ "pachi-evaluate",         cmd_pachi_evaluate },
-	{ "pachi-genmoves",         cmd_pachi_genmoves },
-	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
-	{ "pachi-gentbook",         cmd_pachi_gentbook },
-	{ "pachi-getoption",	    cmd_pachi_getoption },	/* Get engine option(s) */
-	{ "pachi-predict",          cmd_pachi_predict },
-	{ "pachi-result",           cmd_pachi_result },
-	{ "pachi-score_est",        cmd_pachi_score_est },
-	{ "pachi-setoption",	    cmd_pachi_setoption },	/* Set engine option */	
-	{ "pachi-tunit",            cmd_pachi_tunit },
+	{ "pachi-dumptbook",		cmd_pachi_dumptbook },
+	{ "pachi-engine",		cmd_pachi_engine },
+	{ "pachi-evaluate",		cmd_pachi_evaluate },
+	{ "pachi-genmoves",		cmd_pachi_genmoves },
+	{ "pachi-genmoves_cleanup",	cmd_pachi_genmoves },
+	{ "pachi-gentbook",		cmd_pachi_gentbook },
+	{ "pachi-getoption",		cmd_pachi_getoption },
+#ifdef JOSEKIFIX
+	{ "pachi-external_engine_mode", cmd_pachi_external_engine_mode },
+#endif
+	{ "pachi-predict",		cmd_pachi_predict },
+	{ "pachi-result",		cmd_pachi_result },
+	{ "pachi-score_est",		cmd_pachi_score_est },
+	{ "pachi-setoption",		cmd_pachi_setoption },
+	{ "pachi-tunit",		cmd_pachi_tunit },
 
 	{ 0, 0 }
 };

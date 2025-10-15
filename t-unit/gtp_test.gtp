@@ -28,6 +28,8 @@ predict b a1
 clear_board
 pachi-predict b a1
 pachi-engine uct
+pachi-external_engine_mode 0 0 0 0
+external_engine_mode 0 0 0 0
 
 boardsize 19
 clear_board
