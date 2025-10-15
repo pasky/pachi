@@ -481,42 +481,6 @@ name = "3-4 2spc low pincer"
 around = D3
 
 pachipachi akashic 2023-04-07])
-(;B[dn]
-(;W[cq]
-(;B[dq]
-;W[dp]
-;B[cr]
-;W[bq]
-;B[co]
-;W[]C[[override\]
-name = "3-4 keima trick"
-around = D5
-
-
-E3 now, black can't save his stones
-])
-(;B[bq]
-;W[dq]
-;B[hp]
-;W[]C[[override\]
-name = "3-4 ooo 2spc high pincer"
-around = D3
-
-unusual joseki
-
-Ex: PowaPig pachipachi 2023-04-09]))
-(;W[en]
-;B[em]
-;W[fn]
-;B[do]
-;W[gl]
-;B[eo]C[[override\]
-name = "high 3-4 center push keima"
-around = E5
-
-E7 not very good here
-
-huff pachipachi  2023-03-27]))
 (;B[hp]
 (;W[dm]
 (;B[eo]
@@ -709,7 +673,55 @@ name = "3-4 pincer tsuke on top"
 around = D3
 
 
-Ex: mss2 pachipachi  2025-01-01 18:32]))
+Ex: mss2 pachipachi  2025-01-01 18:32])
+(;W[em]
+;B[cm]
+;W[cq]
+;B[bq]
+;W[bp]
+;B[]C[[override\]
+name = "3-4 pincer 2spc jump crosscut"
+around = A5
+
+matches any pincer
+
+Ex: uppercut pachipachi  2025-10-15 10:27]))
+(;B[dn]
+(;W[cq]
+(;B[dq]
+;W[dp]
+;B[cr]
+;W[bq]
+;B[co]
+;W[]C[[override\]
+name = "3-4 keima trick"
+around = D5
+
+
+E3 now, black can't save his stones
+])
+(;B[bq]
+;W[dq]
+;B[hp]
+;W[]C[[override\]
+name = "3-4 ooo 2spc high pincer"
+around = D3
+
+unusual joseki
+
+Ex: PowaPig pachipachi 2023-04-09]))
+(;W[en]
+;B[em]
+;W[fn]
+;B[do]
+;W[gl]
+;B[eo]C[[override\]
+name = "high 3-4 center push keima"
+around = E5
+
+E7 not very good here
+
+huff pachipachi  2023-03-27]))
 (;B[eq]
 (;W[fq]
 (;B[dq]
