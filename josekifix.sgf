@@ -101,7 +101,7 @@ around = E2]
 ;B[is]
 ;W[jq]C[[override\]
 around = G2
-external_engine])
+external_engine = lower_left lower_right])
 (;B[es]
 ;W[cs]C[[override\]])))
 (;W[br]C[[override\]
@@ -283,6 +283,7 @@ globax pachipachi 2023-04-10]
 ;W[]C[[override\]
 name = "3-4 pincer attach extend side peep blunder"
 around = H2
+external_engine = lower_left
 
 J3 blunder, w gets captured so easily
 
@@ -919,7 +920,7 @@ Ex:  hellness pachipachi  2022-12-09 ])
 ;B[bm]
 ;W[ck]
 ;B[bl]C[[override\]
-name = "3-4 pincer keima katafix"
+name = "3-4 pincer keima cut katafix"
 around = B6
 
 
@@ -931,7 +932,7 @@ Ex:  pachipachi zeekmund  2022-12-26 ])
 ;B[en]
 ;W[gp]
 ;B[dm]C[[override\]
-name = "3-4 pincer keima"
+name = "3-4 pincer keima cut"
 around = D4
 
 babecool pachipachi 2023-02-20])
@@ -943,14 +944,14 @@ babecool pachipachi 2023-02-20])
 ;B[en]
 ;W[dm]
 ;B[dr]C[[override\]
-name = "3-4 pincer keima"
+name = "3-4 pincer keima cut descend"
 around = C3
 
 maimaimai pachipachi  2023-05-23])))
 (;W[eo]
 (;B[dq]
 ;W[]C[[override\]
-name = "3-4 pincer kick"
+name = "3-4 pincer jump kick"
 around = D3
 
 gets tricky after w H4
@@ -975,8 +976,9 @@ Ex: pachipachi Maeda  2025-01-19 14:30
 ;W[jr]
 ;B[io]
 ;W[]C[[override\]
-name = "3-4 pincer keima shoulder hit jump peep ignore fight"
+name = "3-4 pincer jump keima shoulder hit jump peep ignore fight"
 around = F4
+external_engine = lower_left
 
 b doesn't answer K2 peep, plays J5 instead.
 w can die pretty easily if he screws up after J2.
@@ -1030,14 +1032,14 @@ pachipachi jciloa  2023-05-12]))
 ;W[el]
 (;B[hn]
 ;W[]C[[override\]
-name = "3-4 2spc low pincer enclose"
+name = "3-4 2spc low pincer 2spc jump fight"
 around = E5
 
 
 pachipachi Voutube  2025-05-19 20:06])
 (;B[ho]
 ;W[]C[[override\]
-name = "3-4 2spc low pincer enclose"
+name = "3-4 2spc low pincer 2spc jump fight"
 around = E5
 ])))
 (;W[]
@@ -1579,6 +1581,7 @@ pachipachi pilaf  2023-04-05
 ;W[]C[[override\]
 name = "4-4 keima jump side reduction fight"
 around = C9
+external_engine = upper_left
 
 
 Ex: pachipachi samzhang  2025-10-08 18:55])
@@ -1603,6 +1606,7 @@ around = B2
 ;B[]C[[override\]
 name = "4-4 keima jump peep slide extend invasion"
 around = H4
+external_engine = lower_left lower_right
 
 Ex: kprist pachipachi  2025-10-08 12:23])
 (;W[ck]
@@ -1737,7 +1741,7 @@ half pachipachi  2023-05-15])))
 ;B[kp]C[[override\]
 name = "4-4 shoulder hit hustling"
 around = H3
-external_engine
+external_engine = lower_left lower_right
 
 
 ladyboy pachipachi 2023-04-21]
@@ -1757,7 +1761,7 @@ ladyboy pachipachi 2023-04-21]
 (;B[io]
 ;W[]C[[override\]
 name = "4-4 shoulder hit crosscut"
-
+external_engine = lower_left lower_right
 
 easy to screw up ...
 
@@ -1768,6 +1772,7 @@ Ex:  gomj pachipachi  2023-01-23  16:35
 ;B[io]
 ;W[]C[[override\]
 name = "4-4 shoulder hit crosscut"
+external_engine = lower_left lower_right
 
 Ex: niceguy0 pachipachi  2025-01-01 12:34]))
 (;B[gp]

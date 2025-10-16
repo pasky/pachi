@@ -124,6 +124,7 @@ Ex: SwissBot1 crm  2025-09-14 19:32])
 ;B[]C[[override\]
 name = "sanrensei double pincer"
 around = O17
+external_engine = upper_right
 
 
 Ex: yz01 pachipachi  2025-10-04])
@@ -307,6 +308,7 @@ Ex: fater pachipachi  2025-01-04 15:36])
 ;W[]C[[override\]
 name = "chinese approach pincer"
 around = O4
+external_engine = lower_right
 
 matches low chinese also
 
@@ -315,6 +317,7 @@ Ex: SwissBot6 sunnyboy  2025-10-01 04:31])
 ;W[]C[[override\]
 name = "chinese approach tight pincer"
 around = P4
+external_engine = lower_right
 
 matches low chinese also
 
@@ -555,6 +558,7 @@ YZ1509 special opening.]))
 ;B[]C[[override\]
 name = "magoa h4 play"
 around = "K4"
+external_engine = lower_left lower_right
 
 magoa pachipachi 2023-06-19
 ])
@@ -562,5 +566,4 @@ magoa pachipachi 2023-06-19
 ;B[]C[[override\]
 name = "magoa h4 play"
 around = "K4"
-
-])))
+external_engine = lower_left lower_right])))
