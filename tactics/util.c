@@ -181,6 +181,16 @@ rotate_quadrant(int q, int rot)
 	return q;
 }
 
+bool
+near_ambiguous_quadrant_coord(coord_t c)
+{
+	assert(!is_pass(c));
+	int x = coord_x(c);
+	int y = coord_y(c);
+	int mid = (the_board_rsize() + 1) / 2;
+	return (abs(x - mid) <= 1 || abs(y - mid) <= 1);
+}
+
 
 /***********************************************************************************************/
 /* fuseki */

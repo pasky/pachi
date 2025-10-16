@@ -238,6 +238,41 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *ov
 	}
 }
 
+static bool
+is_external_engine_override(joseki_override_t *override)
+{
+	if (!strcmp(override->next, "pass"))
+		return true;
+	for (int i = 0; i < 4; i++)
+		if (override->external_engine_mode[i])
+			return true;
+	return false;
+}
+
+/* Warn if external engine override, but quadrant it applies to is ambiguous.
+ * Happens if last move is close to quadrant boundary, and there's no explicit quadrant setting. 
+ * Stuff that add explicit settings like parse_external_engine() should do its own checks. */
+static void
+check_external_engine_override_ambiguous_quadrant(board_t *b, joseki_override_t *override)
+{
+	if (!is_external_engine_override(override))
+		return;
+
+	/* Explicit setting, good */
+	for (int i = 0; i < 4; i++)
+		if (override->external_engine_mode[i])
+			return;
+
+	/* Last move not in between 2 quadrants -> good */
+	assert(last_move(b).coord != pass);
+	if (!near_ambiguous_last_quadrant(b))
+		return;
+
+	/* Warn */
+	board_print(b, stderr);
+	fprintf(stderr, "josekifix: \"%s\": override with ambiguous quadrant(s)\nshould set it explicitly (ex: external_engine = lower_left)\n\n", override->name);
+}
+
 /* Common sanity checks for [override] and [log] sections */
 static char*
 common_sanity_checks(board_t *b, joseki_override_t *override)
@@ -310,6 +345,9 @@ override_sanity_checks(board_t *b, joseki_override_t *override)
 			override->name, override->next, coord2sstr(around));
 	}
 
+	/* If external engine override, check quadrant is not ambiguous */
+	check_external_engine_override_ambiguous_quadrant(b, override);
+	
 	// TODO if next move, check it's inside match pattern ...
 }
 
@@ -580,8 +618,15 @@ parse_external_engine(board_t *b, joseki_override_t *override, external_engine_s
 {
 	char *name = (override->name ? override->name : "");
 	
-        /* no value = current quadrant */
+        /* No value = current quadrant */
         if (!value || !value[0]) {
+		/* Explicit setting will bypass check_external_engine_override_ambiguous_quadrant(), check here. */
+		if (near_ambiguous_last_quadrant(b)) {  /* Warn */
+			board_print(b, stderr);
+			fprintf(stderr, "josekifix: \"%s\": override with ambiguous quadrant(s)\nshould set it explicitly (ex: external_engine = lower_left)\n\n",
+				override->name);
+		}
+
 		int q = last_quadrant(b);
                 override->external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
 		setting->quadrants[setting->n++] = q;

@@ -32,6 +32,10 @@ int diag_quadrant(int quad);
  * doesn't hold for center lines. Instead use:
  *     coord_quadrant(rotate_coord(c, rot))  */
 int rotate_quadrant(int q, int rot);
+/* Check if coord is on or close to quadrant boundary. */
+bool near_ambiguous_quadrant_coord(coord_t c);
+/* Ambiguous last coord quadrant ? */
+#define near_ambiguous_last_quadrant(b) (near_ambiguous_quadrant_coord(last_move(b).coord))
 
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
