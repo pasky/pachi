@@ -509,7 +509,18 @@ pachipachi kgsfan2021  2023-02-10])
 ;B[kr]C[
 
 tricked.
-because of K3 b can escape...])))))
+because of K3 b can escape...]))))
+(;B[qp]
+;W[dp]
+;B[fq]
+;W[cn]
+;B[kq]
+;W[pp]C[[override\]
+name = "mini chinese"
+around = O4
+around2 = K3
+external_engine = lower_right
+]))
 (;W[ec]
 ;B[cd]
 ;W[df]
