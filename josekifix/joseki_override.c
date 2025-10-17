@@ -52,7 +52,8 @@ static void
 set_external_engine_mode_quad(board_t *b, int quadrant, int moves)
 {
 	assert(quadrant >= 0 && quadrant <= 3);
-	b->external_joseki_engine_moves_left_by_quadrant[quadrant] = moves;
+	int *val = &b->external_joseki_engine_moves_left_by_quadrant[quadrant];
+	*val = MAX(*val, moves);  /* Preserve current setting if higher. */
 }
 
 #if 0
@@ -95,12 +96,8 @@ set_wanted_external_engine_mode(external_engine_mode_t *mode, board_t *b, joseki
 static void
 commit_wanted_external_engine_mode(external_engine_mode_t *mode, board_t *b)
 {
-	for (int q = 0; q < 4; q++) {
-		int moves = mode->moves[q];
-		
-		if (moves)	/* enable external joseki engine mode in this quadrant */
-			set_external_engine_mode_quad(b, q, moves);
-	}
+	for (int q = 0; q < 4; q++)
+		set_external_engine_mode_quad(b, q, mode->moves[q]);
 }
 
 
