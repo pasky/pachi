@@ -132,6 +132,57 @@ void move_criticality_compute(board_t *b, move_criticality_t *crit, float bottom
 void move_criticality_print_stats(board_t *b, move_criticality_t *crit);
 
 
+/**************************************************************************************************/
+/* AMAF criticality:
+ *
+ * Replicate RAVE logic with flat playouts and turn AMAF winrates into a kind of criticality.
+ * Useful to experiment / visualize RAVE dynamics in a simpler environment than full genmove
+ * tree search.
+ *
+ * Compared to other criticalities / RAVE:
+ * - AMAF criticality and move criticality are similar (both first-play criticalities)
+ * - This is not the rave criticality computed by ucb1amaf (a kind of point criticality).
+ * - Flat playouts here, whereas tree search may have considerable impact on RAVE dynamics.
+ * - This reflects AMAF winrates mostly, not so much number of AMAF playouts (other than filtering
+ *   out least played moves) which play a big role in RAVE dynamics.
+ * - Selfatari filtering: (RAVE also with option filter_selfataris=1)
+ *   We exclude selfatari moves which were not selfataris when played (typically a case of confusing
+ *   cause and effect when they get good criticality). This prevents some pretty bad moves from
+ *   getting into the top ranks, limiting selfatari creep in the results. */
+
+typedef struct {
+	enum stone   color;
+	int          consider[BOARD_MAX_COORDS];
+	bool         is_selfatari[BOARD_MAX_COORDS];
+	move_stats_t playouts;
+	move_stats_t amaf[BOARD_MAX_COORDS];   // from b perspective
+	float        rating[BOARD_MAX_COORDS];
+} amaf_criticality_t;
+
+
+/* Play games and fill ownermap, criticality. */
+void amaf_criticality_playouts(int threads, int games, board_t *b, enum stone color, ownermap_t *ownermap,
+			       amaf_criticality_t *crit, float bottom_moves_filter);
+
+/* Play single game and collect ownermap, amaf criticality data. 
+ * mcowner_compute_amaf_criticality() must be called after batch run. */
+int amaf_criticality_playout(board_t *b, enum stone color, playout_t *playout, ownermap_t *ownermap, amaf_criticality_t *crit);
+
+
+void amaf_criticality_init(amaf_criticality_t *r, board_t *b, enum stone color);
+
+/* Data collect callback for batch_playout() */
+void amaf_criticality_collect_data(board_t *start_board, enum stone color,
+				   board_t *final_board, floating_t score, amafmap_t *map, void *data);
+
+/* Compute amaf criticality values after calls to amaf_criticality_playout().
+ * @b: initial board
+ * @bottom_moves_filter: proportion of least played moves to discard.
+ *   for example 0.2 = discard moves with less than 20% of most played move's playouts.
+ *   important to get right as winrate alone doesn't mean much if move has few playouts. */
+void amaf_criticality_compute(board_t *b, amaf_criticality_t *crit, float bottom_moves_filter);
+
+void amaf_criticality_print_stats(board_t *b, amaf_criticality_t *crit);
 
 
 #endif

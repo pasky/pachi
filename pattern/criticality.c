@@ -278,3 +278,152 @@ move_criticality_playouts(int threads, int games, board_t *b, enum stone color,
 	batch_playouts(threads, games, b, color, ownermap, true, move_criticality_collect_data, crit);
 	move_criticality_compute(b, crit, bottom_moves_filter);
 }
+
+
+
+/******************************************************************************************/
+/* AMAF criticality */
+
+
+void
+amaf_criticality_init(amaf_criticality_t *r, board_t *b, enum stone color)
+{
+	memset(r, 0, sizeof(*r));
+	r->color = color;
+
+	/* Init consider map */
+	foreach_point(b) {
+		if (board_at(b, c) == S_NONE &&
+		    board_is_valid_play_no_suicide(b, color, c)) {
+			r->consider[c] = 1;
+
+			if (!board_playing_ko_threat(b) && is_selfatari(b, color, c))
+				r->is_selfatari[c] = 1;
+		}
+	} foreach_point_end;
+}
+
+/* Collect criticality data after each playout (must be thread-safe).
+ * Replicate ucb1amaf_update() logic with flat playouts. */
+void
+amaf_criticality_collect_data(board_t *b, enum stone color,
+			      board_t *final_board, floating_t score, amafmap_t *map, void *data)
+{
+	amaf_criticality_t *r = (amaf_criticality_t*)data;
+	assert(r->color == color);
+
+	floating_t result = (score > 0 ? 1.0 : (score < 0 ? 0.0 : 0.5));
+	stats_add_result(&r->playouts, result, 1);
+
+	/* Find first play at each location. */
+	first_play_t fp;
+	int *first_move = amaf_first_play(map, b, &fp);
+
+	int start = map->game_baselen;		/* Start of amaf range */
+	int max_threat_dist = amaf_ko_length(map, start);
+
+	foreach_point(b) {
+		if (!r->consider[c])
+			continue;
+		int first = first_move[c];
+		if (first == INT_MAX)  continue;
+		assert(first >= start && first < map->gamelen);
+
+		/* Move is only used if it was first played by the same color. */
+		int distance = first - start;
+		if (distance & 1)
+			continue;
+
+		/* Exclude selfatari moves which were not selfataris when played
+		 * (typically a case of amaf logic confusing cause and effect). */
+		if (r->is_selfatari[c] && !amaf_is_selfatari(map, first))
+			continue;
+
+		int weight = 1;
+		floating_t res = result;   // from black perspective
+
+		/* Don't give amaf bonus to a ko threat before taking the ko.
+		 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf */
+		if (distance <= max_threat_dist && distance % 6 == 4)
+			weight = 0;
+		else {
+			/* Give more weight to moves played earlier.
+			 * With distance_rave = 3 we get a boost of 2, 1 or 0 for endgame moves.
+			 * Final weight = 3, 2 or 1 */
+			weight += 3 * (map->gamelen - first) / (map->gamelen - start + 1);
+		}
+
+		if (weight)
+			stats_add_result(&r->amaf[c], res, weight);
+	} foreach_point_end;
+}
+
+/* Compute amaf criticality from collected data.
+ * @b must be initial board */
+void
+amaf_criticality_compute(board_t *b, amaf_criticality_t *r, float bottom_moves_filter)
+{
+	memset(r->rating, 0, sizeof(r->rating));
+	assert(is_player_color(r->color));
+
+	/* Find playouts_max first */
+	int playouts_max = 0;
+	foreach_point(b) {
+		if (!r->consider[c])
+			continue;
+		playouts_max = MAX(playouts_max, r->amaf[c].playouts);
+	} foreach_point_end;
+
+	/* Ratings */
+	foreach_point(b) {
+		if (!r->consider[c])
+			continue;
+
+		/* Filter out rarely played moves below filter. */
+		if (r->amaf[c].playouts < playouts_max * bottom_moves_filter)
+			continue;
+
+		/* move rating = winrate diff 
+		 *             = move amaf winrate - global winrate */
+		float diff = r->amaf[c].value - r->playouts.value;
+		if (r->color == S_WHITE)  // amaf.value is from b perspective
+			diff = -diff;
+		r->rating[c] = diff;
+	} foreach_point_end;
+}
+
+void
+amaf_criticality_print_stats(board_t *b, amaf_criticality_t *r)
+{
+	float   crit_min = 0.0,   crit_max = 0.0;
+	coord_t min_coord = pass, max_coord = pass;
+	foreach_point(b) {
+		float val = r->rating[c];
+		if (val > crit_max) {  crit_max = val;  max_coord = c;  }
+		if (val < crit_min) {  crit_min = val;  min_coord = c;  }
+	} foreach_point_end;
+
+	char *wr_color = (r->playouts.value > 0.5 ? "black" : "white");
+	float wr       = MAX(r->playouts.value, 1.0 - r->playouts.value);
+	fprintf(stderr, "amaf criticality:  max: %s %.2f  min: %s %.2f  winrate %s %i%%\n",
+		coord2sstr(max_coord), crit_max,
+		coord2sstr(min_coord), crit_min,
+		wr_color, (int)(wr * 100));
+}
+
+int
+amaf_criticality_playout(board_t *b, enum stone color, playout_t *playout,
+			 ownermap_t *ownermap, amaf_criticality_t *crit)
+{
+	return batch_playout(b, color, playout, ownermap, true, amaf_criticality_collect_data, crit);
+}
+
+void
+amaf_criticality_playouts(int threads, int games, board_t *b, enum stone color,
+			  ownermap_t *ownermap, amaf_criticality_t *crit,
+			  float bottom_moves_filter)
+{
+	amaf_criticality_init(crit, b, color);
+	batch_playouts(threads, games, b, color, ownermap, true, amaf_criticality_collect_data, crit);
+	amaf_criticality_compute(b, crit, bottom_moves_filter);
+}
