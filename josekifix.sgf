@@ -1084,7 +1084,36 @@ around = E4
 
 don't hane
 
-Song17 pachipachi 2023-04-15])))
+Song17 pachipachi 2023-04-15]))
+(;W[]
+;B[cl]
+;W[cn]
+;B[dm]
+;W[cq]
+;B[dp]
+;W[bp]
+;B[bo]
+;W[bq]
+;B[co]
+;W[er]
+;B[fr]
+;W[eq]
+;B[ep]
+;W[dq]
+;B[]
+;W[fp]
+;B[hq]
+;W[fo]
+;B[]
+;W[dn]
+;B[]C[[override\]
+name = "3-4 large keima 3pt extension invasion and cut"
+around = B5
+external_engine_moves = 5
+
+don't lose 5 b stones !
+
+Ex: Kamyk pachipachi  2025-10-17 12:20]))
 (;B[fp]
 (;W[eq]
 (;B[fq]
