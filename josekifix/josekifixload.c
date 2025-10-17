@@ -652,7 +652,8 @@ parse_external_engine(board_t *b, joseki_override_t *override, external_engine_s
 }
 
 /* external_engine_moves = n			specify number of moves for external engine mode
- * external_engine_moves = n1 n2 [...]		same for each quadrant if multiple quadrants have been enabled */
+ * external_engine_moves = n1 n2		same for each quadrant if multiple quadrants have been enabled
+ * external_engine_moves = n1 n2 n3 n4          (with no other setting) set all 4 quadrants in canonical order */
 static void
 parse_external_engine_moves(board_t *b, joseki_override_t *override, external_engine_setting_t *setting, char *value)
 {
@@ -693,13 +694,18 @@ parse_external_engine_moves(board_t *b, joseki_override_t *override, external_en
 		return;
 	}
 
-	/* Multiple values given: must match previous 'external_engine_mode' setting */
+	/* Multiple values given: must match previous 'external_engine_mode' setting (or specify all 4) */
+	if (!setting->n && n == 4) {  /* All 4 given and no other setting: use canonical order */
+		for (int i = 0; i < 4; i++)
+			override->external_engine_mode[i] = values[i];
+		return;
+	}
 	if (!setting->n)
 		die("josekifix: \"%s\": 'external_engine_moves' needs a corresponding 'external_engine' setting.\n", name);
 	if (n != setting->n)
 		die("josekifix: \"%s\": 'external_engine_moves' and 'external_engine' must specify same number of quadrants.\n", name);
-	assert(n == setting->n);
 	
+	assert(n == setting->n);
 	for (int i = 0; i < n; i++)
 		override->external_engine_mode[setting->quadrants[i]] = values[i];
 }
