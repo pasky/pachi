@@ -47,24 +47,18 @@ pachipachi past   Jul  7 22:24:51  2020 ]))
 (;W[lb]
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
-around = O18
-
+around = O19
 
 don't hane, deadly
 
-match low so don't care about T17 area])
+case with w S17 matched in next variation])
 (;W[rc]
 ;B[rd]
 ;W[lb]
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
-around = O18])
-(;W[]
-;B[rd]
-;W[lb]
-;B[kc]C[[override\]
-name = "sanrensei breakout fix"
-around = O18]))
+around = O19
+]))
 (;B[nd]
 ;W[]C[[override\]
 name = "sanrensei corner tight seal"
