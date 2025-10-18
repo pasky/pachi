@@ -133,6 +133,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Point Criticality/gogui-point_criticality/Show point criticality (ownership criticality)\n");
 		printf("gfx/Move Criticality/gogui-move_criticality/Show move criticality (first-play criticality)\n");
 		printf("gfx/AMAF Criticality/gogui-amaf_criticality/Show AMAF criticality (first-play criticality)\n");
+		printf("gfx/AMAF Playouts/gogui-amaf_playouts/Show number of AMAF playouts for each position\n");
 		if (debugging_commands) {
 			printf("gfx/Point Criticality At/gogui-point_criticality %%p/Show point criticality at given position\n");
 			printf("gfx/Move Criticality At/gogui-move_criticality %%p/Show move criticality at given position\n");
@@ -920,6 +921,113 @@ cmd_gogui_amaf_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	gtp_printf(gtp, "");
 	gogui_amaf_criticality_display(stdout, b, &g);
+	return P_OK;
+}
+
+
+/*************************************************************************************************/
+/* AMAF playouts  (most played moves) */
+
+static void
+gogui_amaf_playouts_text_display(FILE *fh, board_t *b, move_stats_t *playouts,
+				 best_moves_t *best,
+				 coord_t coord, int coord_playouts)
+{
+	fprintf(fh, "TEXT  ");
+	if (fh == stderr)
+		fprintf(fh, "%i  ", playouts->playouts);
+
+	/* Display specific coord ? */
+	if (!is_pass(coord))
+		fprintf(fh, "%i  ", coord_playouts);
+
+	char *wr_color = (playouts->value > 0.5 ? "black" : "white");
+	float wr       = MAX(playouts->value, 1.0 - playouts->value);
+
+	/* Display max, winrate */
+	fprintf(fh, "[max %i %s]  wr %s %i%%\n",
+		(int)best->r[0], coord2sstr(best->c[0]),
+		wr_color, (int)(wr * 100));
+}
+
+static void
+gogui_amaf_playouts_display(FILE *fh, board_t *b, move_stats_t *playouts, float amaf_playouts[], coord_t coord)
+{
+	/* Find most played moves */
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
+
+	foreach_point(b) {
+		best_moves_add(&best, c, amaf_playouts[c]);
+	} foreach_point_end;
+
+	/* Numeric display */
+        for (int i = 0; i < best.n; i++)
+                if (best.c[i] != pass)
+                        fprintf(fh, "LABEL %s %i\n", coord2sstr(best.c[i]), i + 1);
+	
+	/* Color dispay (intensity = playouts) */
+	float *values = amaf_playouts;
+	
+	//gogui_signed_colormap_fixed_scale(fh, b, values, -max_playouts, max_playouts);
+	gogui_signed_colormap_linear(fh, b, values);
+	//gogui_signed_colormap_square(fh, b, values);
+	//gogui_signed_colormap_softmax(fh, b, values, 10.0);
+
+	/* Status bar */
+	int coord_playouts = (!is_pass(coord) ? amaf_playouts[coord] : 0);
+	gogui_amaf_playouts_text_display(fh, b, playouts, &best, coord, coord_playouts);
+}
+
+static void
+cmd_gogui_amaf_playouts_display(FILE *fh, board_t *b, gogui_amaf_crit_t *g)
+{
+	amaf_criticality_t *crit = &g->crit;
+	float amaf_playouts[BOARD_MAX_COORDS] = { 0, };
+	foreach_point(b) {
+		amaf_playouts[c] = crit->amaf[c].playouts;
+	} foreach_point_end;
+	
+	gogui_amaf_playouts_display(fh, b, &crit->playouts, amaf_playouts, g->coord);
+}
+
+/* Collect criticality data after each playout (must be thread-safe). */
+static void
+gogui_amaf_playouts_collect_data(board_t *b, enum stone color,
+				 board_t *final_board, floating_t score, amafmap_t *map, void *data)
+{
+	gogui_amaf_crit_t *g = (gogui_amaf_crit_t *)data;
+	amaf_criticality_t *crit = &g->crit;
+
+	amaf_criticality_collect_data(b, color, final_board, score, map, crit);
+
+	/* gogui live-gfx update */
+	if (crit->playouts.playouts % 1000 == 0) {
+		fprintf(stderr, "gogui-gfx:\n");
+		cmd_gogui_amaf_playouts_display(stderr, b, g);
+		fprintf(stderr, "\n");
+	}
+}
+
+/* Display amaf most played moves */
+enum parse_code
+cmd_gogui_amaf_playouts(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	enum stone color = board_to_play(b);
+	gogui_amaf_crit_t g;
+	amaf_criticality_init(&g.crit, b, color);
+	g.coord = pass;
+
+	/* Optional coord argument ? */
+	if (*gtp->next)
+		gtp_arg_coord(g.coord);
+
+	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, true,
+		       gogui_amaf_playouts_collect_data, &g);
+
+	gtp_printf(gtp, "");
+	cmd_gogui_amaf_playouts_display(stdout, b, &g);
 	return P_OK;
 }
 

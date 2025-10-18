@@ -33,6 +33,7 @@ enum parse_code cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gt
 enum parse_code cmd_gogui_point_criticality(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_move_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_amaf_criticality(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_amaf_playouts(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_dcnn_best(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
