@@ -681,7 +681,7 @@ Ex: mss2 pachipachi  2025-01-01 18:32])
 ;B[bq]
 ;W[bp]
 ;B[]C[[override\]
-name = "3-4 pincer 2spc jump crosscut"
+name = "3-4 high pincer 2spc jump crosscut"
 around = A5
 
 matches any pincer
@@ -1029,7 +1029,7 @@ G3 best here
 pachipachi jciloa  2023-05-12]))
 (;B[hq]
 ;W[en]
-;B[eo]
+(;B[eo]
 ;W[fo]
 ;B[do]
 ;W[fp]
@@ -1048,7 +1048,17 @@ pachipachi Voutube  2025-05-19 20:06])
 ;W[]C[[override\]
 name = "3-4 2spc low pincer 2spc jump fight"
 around = E5
-])))
+]))
+(;B[cm]
+;W[dl]
+;B[dm]
+;W[em]
+;B[el]
+;W[]C[[override\]
+name = "3-4 low pincer 2spc jump crosscut"
+around = B5
+
+Ex: pachipachi tbpky  2025-10-18 20:07])))
 (;W[]
 (;B[fq]
 (;W[cq]
