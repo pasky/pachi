@@ -251,6 +251,18 @@ uct_progress_gogui_rave_amaf_criticality(uct_t *u, tree_t *t, board_t *b, enum s
 }
 
 static void
+uct_progress_gogui_rave_playouts(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
+{
+	float amaf_playouts[BOARD_MAX_COORDS] = { 0, };
+
+	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
+		if (!is_pass(node_coord(n)))
+			amaf_playouts[node_coord(n)] = n->amaf.playouts;
+
+	gogui_amaf_playouts_display(stderr, b, &u->t->root->u, amaf_playouts, pass);
+}
+
+static void
 uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final, bool big)
 {
 	int parity = (genmove_pondering(u) ? -1 : 1);
@@ -358,6 +370,7 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, board_t *b, enum stone color, in
 	else if (gogui_livegfx == UR_GOGUI_RAVE_BEST)       uct_progress_gogui_rave_best_moves(u, t, b, color, playouts);
 	else if (gogui_livegfx == UR_GOGUI_RAVE_WR)         uct_progress_gogui_rave_winrates(u, t, b, color, playouts);
 	else if (gogui_livegfx == UR_GOGUI_RAVE_AMAF_CRIT)  uct_progress_gogui_rave_amaf_criticality(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_RAVE_PLAYOUTS)   uct_progress_gogui_rave_playouts(u, t, b, color, playouts);
 	else    assert(0);
 
 	fprintf(stderr, "\n");

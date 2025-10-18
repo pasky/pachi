@@ -148,6 +148,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Live gfx = RAVE Best Moves/gogui-livegfx rave_best/Show RAVE best moves while engine is thinking\n");
 		printf("gfx/Live gfx = RAVE Winrates/gogui-livegfx rave_winrates/Show RAVE winrates while engine is thinking\n");
 		printf("gfx/Live gfx = RAVE AMAF Criticality/gogui-livegfx rave_amaf_crit/Show RAVE AMAF criticality while engine is thinking\n");
+		printf("gfx/Live gfx = RAVE AMAF Playouts/gogui-livegfx rave_playouts/Visualize RAVE playouts while engine is thinking\n");
 		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
 
@@ -460,13 +461,15 @@ gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 	else if (!strcmp(arg, "rave_best"))         gogui_livegfx = UR_GOGUI_RAVE_BEST;
 	else if (!strcmp(arg, "rave_winrates"))	    gogui_livegfx = UR_GOGUI_RAVE_WR;
 	else if (!strcmp(arg, "rave_amaf_crit"))    gogui_livegfx = UR_GOGUI_RAVE_AMAF_CRIT;
+	else if (!strcmp(arg, "rave_playouts"))     gogui_livegfx = UR_GOGUI_RAVE_PLAYOUTS;
 	else if (*arg)  /* Invalid value */
 		return 0;
 	
 	/* Override reportfreq to get decent update rates in GoGui. */
 	char *err;
 	char *option = "reportfreq=0.2s";
-	if (gogui_livegfx == UR_GOGUI_RAVE_AMAF_CRIT)  /* Except amaf criticality, slow */
+	if (gogui_livegfx == UR_GOGUI_RAVE_AMAF_CRIT ||	/* Except these, slow */
+	    gogui_livegfx == UR_GOGUI_RAVE_PLAYOUTS)
 		option = "reportfreq=1s";
 	bool r = engine_setoptions(e, b, option, &err);  assert(r);
 	return 1;
@@ -964,7 +967,7 @@ gogui_amaf_playouts_text_display(FILE *fh, board_t *b, move_stats_t *playouts,
 		wr_color, (int)(wr * 100));
 }
 
-static void
+void
 gogui_amaf_playouts_display(FILE *fh, board_t *b, move_stats_t *playouts, float amaf_playouts[], coord_t coord)
 {
 	/* Find most played moves */

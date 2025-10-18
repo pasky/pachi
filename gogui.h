@@ -16,7 +16,8 @@ typedef enum gogui_reporting {
 	UR_GOGUI_WR,
 	UR_GOGUI_RAVE_BEST,
 	UR_GOGUI_RAVE_WR,
-	UR_GOGUI_RAVE_AMAF_CRIT
+	UR_GOGUI_RAVE_AMAF_CRIT,
+	UR_GOGUI_RAVE_PLAYOUTS
 } gogui_reporting_t;
 
 extern enum gogui_reporting gogui_livegfx;
@@ -67,6 +68,7 @@ void gogui_signed_colormap_cube(FILE *f, board_t *b, float *orig_values);
 
 
 void gogui_criticality_text_display(FILE *fh, board_t *b, coord_t coord, float *criticality, move_stats_t *playouts);
+void gogui_amaf_playouts_display(FILE *fh, board_t *b, move_stats_t *playouts, float amaf_playouts[], coord_t coord);
 
 #endif
 
