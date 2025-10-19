@@ -1177,14 +1177,23 @@ around = C3
 
 pachipachi winkgs 2023-02-16]))
 (;W[fq]
-;B[dq]
+(;B[dq]
 ;W[cn]
 ;B[]C[[override\]
 name = "3-4 2spc low approach kosumi double approach"
 around = C3
 
 
-zzz010307 pachipachi  2023-05-28]))
+zzz010307 pachipachi  2023-05-28])
+(;B[hq]
+;W[cq]
+;B[dq]
+;W[dp]
+;B[]C[[override\]
+name = "3-4 2spc low approach pincer crosscut"
+around = E3
+
+Ex: pachipachi Versailles  2025-10-19 16:25])))
 (;B[dp]
 (;W[]
 (;B[cn]
