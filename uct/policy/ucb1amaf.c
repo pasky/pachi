@@ -216,23 +216,6 @@ ucb1rave_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, b
 	return uctd_get_best_child(node);
 }
 
-
-/* Return the length of the current ko (number of moves up to to the last ko capture),
- * 0 if the sequence is empty or doesn't start with a ko capture.
- *   B captures a ko
- *   W plays a ko threat
- *   B answers ko threat
- *   W re-captures the ko  <- return 4
- *   B plays a ko threat
- *   W connects the ko */
-static inline int ko_length(bool *ko_capture_map, int map_length)
-{
-	if (map_length <= 0 || !ko_capture_map[0]) return 0;
-	int length = 1;
-	while (length + 2 < map_length && ko_capture_map[length + 2]) length += 3;
-	return length;
-}
-
 void
 ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		enum stone node_color, enum stone player_color,
@@ -263,8 +246,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		}
 		stats_add_result(&node->u, result, 1);
 
-		bool *ko_capture_map = &map->is_ko_capture[move+1];
-		int max_threat_dist = b->threat_rave <= 0 ? ko_length(ko_capture_map, map->gamelen - (move+1)) : -1;
+		int max_threat_dist = (b->threat_rave <= 0 ? amaf_ko_length(map, move + 1) : -1);
 
 		assert(map->game_baselen >= 0);
 		for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {

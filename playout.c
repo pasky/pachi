@@ -46,6 +46,29 @@ amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp)
 	return first_play;
 }
 
+/* Return the length of the current ko (number of moves up to to the last ko capture),
+ * 0 if the sequence is empty or doesn't start with a ko capture.
+ *   B captures a ko
+ *   W plays a ko threat
+ *   B answers ko threat
+ *   W re-captures the ko  <- return 4
+ *   B plays a ko threat
+ *   W connects the ko */
+int
+amaf_ko_length(amafmap_t *map, int move)
+{
+	bool *ko_capture_map = &map->is_ko_capture[move];
+	int map_length = map->gamelen - move;
+
+	if (map_length <= 0 || !ko_capture_map[0])
+		return 0;
+
+	int length = 1;
+	while (length + 2 < map_length && ko_capture_map[length + 2])
+		length += 3;
+	return length;
+}
+
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)

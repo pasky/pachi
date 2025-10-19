@@ -102,6 +102,10 @@ void amaf_record_move(amafmap_t *amaf, board_t *b);
  * Only the playout part of the map is considered (map->game_baselen to the end). */
 int *amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp);
 
+/* Return the length of the current ko in the amaf record
+ * (number of moves up to to the last ko capture). */
+int amaf_ko_length(amafmap_t *map, int move);
+
 /* Run one simulation and return score from white's perspective:
  *   >0: white wins
  *   <0: black wins
