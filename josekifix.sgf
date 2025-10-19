@@ -1565,35 +1565,35 @@ pachipachi madalinG 2023-02-16]))
 ;B[er]
 ;W[cr]
 (;B[eq]
-(;W[bo]
-;B[bn]
-;W[bp]C[[override\]
-name = "3-3 block live"
+;W[bo]
+;B[bn]C[[override\]
+name = "4-4 keima jump 3-3 separate seal"
 around = A4
+external_engine
 
 
-live, keep sente.
-(C5 + B4 possible too, sente also)])
-(;W[fr]
-;B[cp]C[[override\]
-name = "hoshi 3-3 cut hack"
-around = D2
-
-
-gets in trouble early with F1,
-C4 good (kata)
-
-Ex: Rhomboid pachipachi 2022-11-20 ]))
+Ex: pachipachi tchichi  2025-10-19 11:55]
+;W[co]C[[override\]
+external_engine
+]
+;B[cn]
+;W[do]
+;B[eo]
+;W[en]
+;B[fo]
+;W[fr]
+;B[es]
+;W[cp]C[normal variation])
 (;B[fr]
 ;W[bo]
-;B[bn]
-;W[bp]C[[override\]
-name = "3-3 block live"
-around = B2
-
-
-live, keep sente.
-(C5 + B4 possible too, sente also)]))
+;B[bn]C[[override\]
+name = "4-4 keima jump 3-3 separate seal"
+around = A4
+external_engine
+]
+;W[co]C[[override\]
+external_engine
+]))
 (;W[dr]
 (;B[hq]
 ;W[cq]
