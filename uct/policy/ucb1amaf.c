@@ -241,14 +241,6 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 
-	/* Record of the random playout - for each intersection coord,
-	 * first_move[coord] is the index map->game of the first move
-	 * at this coordinate, or INT_MAX if the move was not played.
-	 * The parity gives the color of this move.
-	 */
-	int first_map[board_max_coords(final_board)+1];
-	int *first_move = &first_map[1]; // +1 for pass
-
 #if 0
 	for (tree_node_t *ni = node; ni; ni = ni->parent)
 		fprintf(stderr, "%s ", coord2sstr(node_coord(ni)));
@@ -256,13 +248,14 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			node_color, result, player_color);
 #endif
 
-	/* Initialize first_move */
-	for (int i = pass; i < board_max_coords(final_board); i++) first_move[i] = INT_MAX;
-	int move;
-	assert(map->gamelen > 0);
-	for (move = map->gamelen - 1; move >= map->game_baselen; move--)
-		first_move[map->game[move]] = move;
+	/* Record of the random playout - for each intersection coord,
+	 * first_move[coord] is the index map->game of the first move
+	 * at this coordinate, or INT_MAX if the move was not played.
+	 * The parity gives the color of this move. */
+	first_play_t fp;
+	int *first_move = amaf_first_play(map, final_board, &fp);
 
+	int move = map->game_baselen - 1;
 	while (node) {
 		if (!b->crit_amaf && !is_pass(node_coord(node))) {
 			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);

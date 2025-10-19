@@ -84,11 +84,23 @@ typedef struct {
 	int game_baselen;
 } amafmap_t;
 
+/* AMAF first play data */
+typedef struct {
+	int data[BOARD_MAX_COORDS + 1];  /* coords + pass */
+} first_play_t;
+
 
 void amaf_init(amafmap_t *map);
 
 /* Record last move in amafmap. */
 void amaf_record_move(amafmap_t *amaf, board_t *b);
+
+/* Find first play at each coord in amaf record:
+ *    int *first_play = amafmap_first_play(map, b, fp);
+ * For each coord + pass, first_play[coord] is the map index of the first play at this
+ * coordinate in the playout, or INT_MAX if the move was not played.
+ * Only the playout part of the map is considered (map->game_baselen to the end). */
+int *amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp);
 
 /* Run one simulation and return score from white's perspective:
  *   >0: white wins

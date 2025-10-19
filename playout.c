@@ -27,6 +27,25 @@ amaf_record_move(amafmap_t *amaf, board_t *b)
 	amaf->game[amaf->gamelen++] = last_move(b).coord;
 }
 
+/* Find first play at each location in the playout. */
+int *
+amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp)
+{
+	int *first_play = &fp->data[1];  /* Make room for pass */
+
+	/* Initialize first_play */
+	first_play[pass] = INT_MAX;
+	foreach_point(b) {
+		first_play[c] = INT_MAX;
+	} foreach_point_end;
+
+	assert(map->gamelen > 0);
+	for (int move = map->gamelen - 1; move >= map->game_baselen; move--)
+		first_play[map->game[move]] = move;
+
+	return first_play;
+}
+
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
