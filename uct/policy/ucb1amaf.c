@@ -238,7 +238,9 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	first_play_t fp;
 	int *first_move = amaf_first_play(map, final_board, &fp);
 
-	int move = map->game_baselen - 1;
+	/* Start of amaf range considered (start of playout range initially).
+	 * Index of current tree node move is (start - 1). */
+	int start = map->game_baselen;
 	while (node) {
 		if (!b->crit_amaf && !is_pass(node_coord(node))) {
 			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
@@ -246,7 +248,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		}
 		stats_add_result(&node->u, result, 1);
 
-		int max_threat_dist = (b->threat_rave <= 0 ? amaf_ko_length(map, move + 1) : -1);
+		int max_threat_dist = (b->threat_rave <= 0 ? amaf_ko_length(map, start) : -1);
 
 		assert(map->game_baselen >= 0);
 		for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {
@@ -255,22 +257,22 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			/* Use the child move only if it was first played by the same color. */
 			int first = first_move[node_coord(ni)];
 			if (first == INT_MAX) continue;
-			assert(first > move && first < map->gamelen);
-			int distance = first - (move + 1);
+			assert(first >= start && first < map->gamelen);
+			int distance = first - start;
 			if (distance & 1) continue;
 
 			int weight = 1;
 			floating_t res = result;
 
 			/* Don't give amaf bonus to a ko threat before taking the ko.
-			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf
-			 */
+			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf */
 			if (distance <= max_threat_dist && distance % 6 == 4) {
 				weight = - b->threat_rave;
 				res = 1.0 - res;
 			} else if (b->distance_rave != 0) {
-				/* Give more weight to moves played earlier */
-				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
+				/* Give more weight to moves played earlier.
+				 * For distance_rave = 3 we get final weight = 3, 2 or 1. */
+				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - start + 1);
 			}
 			if (weight)
 				stats_add_result(&ni->amaf, res, weight);
@@ -279,18 +281,12 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
 				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
-#if 0
-			board_t bb; bb.size = 9+2;
-			fprintf(stderr, "* %s<%" PRIhash "> -> %s<%" PRIhash "> [%d/%f => %d/%f]\n",
-				coord2sstr(node_coord(node)), node->hash,
-				coord2sstr(node_coord(ni)), ni->hash,
-				player_color, result, move, res);
-#endif
 		}
 		if (node->parent) {
-			assert(move >= 0 && map->game[move] == node_coord(node) && first_move[node_coord(node)] > move);
-			first_move[node_coord(node)] = move;
-			move--;
+			int tree_move = start - 1;
+			assert(tree_move >= 0 && map->game[tree_move] == node_coord(node) && first_move[node_coord(node)] > tree_move);
+			first_move[node_coord(node)] = tree_move;
+			start--;
 		}
 		node = node->parent;
 	}
