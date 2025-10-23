@@ -315,7 +315,19 @@ external_engine = lower_right
 
 matches low chinese also
 
-]))))
+])
+(;B[po]
+;W[jp]
+;B[]
+;W[pm]
+;B[ol]
+;W[on]C[[override\]
+name = "high chinese approach keep corner separate"
+around = O6
+
+P7 best but hard fight
+
+Ex: pachipachi sbng  2025-10-23 14:54]))))
 (;W[dp]
 ;B[fq]
 ;W[cn]
