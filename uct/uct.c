@@ -170,7 +170,7 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	move_queue_t dead_orig;
 	move_queue_t unclear_orig;
-	uct_mcowner_playouts(u, b, color);
+	assert(ownermap->playouts >= GJ_MINGAMES);
 	ownermap_dead_groups(b, ownermap, &dead_orig, &unclear_orig);
 
 #define init_pass_is_safe_groups()  do {	\

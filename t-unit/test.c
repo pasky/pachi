@@ -588,6 +588,7 @@ test_pass_is_safe(board_t *b, char *arg)
 	
 	char *msg;
 	move_queue_t dead;
+	uct_mcowner_playouts(u, b, color);
 	memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
 	int rres = uct_pass_is_safe(u, b, color, false, &dead, &msg, DEBUGL(2));
 

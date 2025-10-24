@@ -713,6 +713,9 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 {
 	uct_thread_ctx_t *ctx = s->ctx;
 
+	if (!u->tree_ready)
+		return false;
+
 	/* Never consider stopping if we played too few simulations.
 	 * Maybe we risk losing on time when playing in super-extreme
 	 * time pressure but the tree is going to be just too messed
