@@ -1130,6 +1130,7 @@ static gtp_command_t gtp_commands[] =
 	{ "tunit",			cmd_pachi_tunit },
 								/* GoGui commands */
 	{ "gogui-analyze_commands",	cmd_gogui_analyze_commands },
+	{ "gogui-bad_selfatari",        cmd_gogui_bad_selfatari },
 	{ "gogui-best_moves",		cmd_gogui_best_moves },
 	{ "gogui-color_palette",	cmd_gogui_color_palette },
 #ifdef DCNN

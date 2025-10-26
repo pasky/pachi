@@ -15,6 +15,7 @@
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
 #include "josekifix/override.h"
+#include "tactics/selfatari.h"
 
 #ifdef DCNN
 #include "dcnn/dcnn.h"
@@ -88,8 +89,10 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 #endif
 	
 	/* Debugging */
-	if (DEBUGL(3))
+	if (DEBUGL(3)) {
+		printf("gfx/Bad Selfatari/gogui-bad_selfatari\n");
 		printf("gfx/Color Palette/gogui-color_palette\n");
+	}
 	
 	return P_OK;
 }
@@ -340,6 +343,34 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Show all good/bad selfataris for color to play */
+enum parse_code
+cmd_gogui_bad_selfatari(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	enum stone to_play = board_to_play(b);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	
+	mq_t q;  mq_init(&q);
+	foreach_free_point(b) {
+		if (!is_selfatari(b, to_play, c))
+			continue;
+
+		char *color = "#00ff00";  // green
+		if (is_bad_selfatari(b, to_play, c)) {
+			color = "#ff0000";  // red
+			mq_add(&q, c);
+		}
+		printf("COLOR %s %s\n", color, coord2sstr(c));
+	} foreach_free_point_end;
+
+	printf("TEXT %s ", stone2str(to_play));
+	mq_sort(&q);
+	mq_print_file(&q, stdout, "");
+	printf("\n");
+
+	return P_OK;
+}
 
 enum parse_code
 cmd_gogui_livegfx(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
