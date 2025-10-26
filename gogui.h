@@ -23,6 +23,7 @@ enum parse_code cmd_gogui_analyze_commands(board_t *board, engine_t *engine, tim
 enum parse_code cmd_gogui_version(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_toggle_debugging_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_bad_selfatari(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_playout_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_livegfx(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_best_moves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_winrates(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);

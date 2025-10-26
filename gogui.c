@@ -126,6 +126,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Show Spatial/gogui-show_spatial %%p\n");
 	}
 	if (str_prefix("UCT", e->name)) {
+		printf("gfx/Playout Moves/gogui-playout_moves\n");
 		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
 		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
@@ -428,6 +429,27 @@ cmd_gogui_bad_selfatari(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	mq_print_file(&q, stdout, "");
 	printf("\n");
 
+	return P_OK;
+}
+
+static engine_t *playout_engine = NULL;
+
+static void
+init_playout_engine(board_t *b)
+{
+	char args[] = "runs=1000";
+	playout_engine = new_engine(E_REPLAY, args, b);
+}
+
+enum parse_code
+cmd_gogui_playout_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	if (!playout_engine)   init_playout_engine(b);
+
+	enum stone color = board_to_play(b);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_best_moves(stdout, playout_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	return P_OK;
 }
 

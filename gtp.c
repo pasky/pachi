@@ -1152,6 +1152,7 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-pattern_features",	cmd_gogui_pattern_features },
 	{ "gogui-pattern_gammas",	cmd_gogui_pattern_gammas },
 	{ "gogui-pattern_rating",	cmd_gogui_pattern_rating },
+	{ "gogui-playout_moves",	cmd_gogui_playout_moves },
 	{ "gogui-score_est",		cmd_gogui_score_est },
 	{ "gogui-show_spatial",		cmd_gogui_show_spatial },
 	{ "gogui-spatial_size",		cmd_gogui_spatial_size },

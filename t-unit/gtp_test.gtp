@@ -333,6 +333,7 @@ gogui-pattern_features J9
 gogui-pattern_gammas J9
 gogui-show_spatial J9
 gogui-spatial_size 6
+gogui-playout_moves
 gogui-color_palette
 gogui-bad_selfatari A1
 gogui-analyze_commands
