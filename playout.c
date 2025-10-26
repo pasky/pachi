@@ -69,31 +69,24 @@ playout_play_move(playout_setup_t *setup,
 {
 	coord_t coord = pass;
 	
-	if (is_pass(coord)) {
-		coord = policy->choose(policy, setup, b, color);
-		coord = playout_check_move(policy, b, coord, color);
-		// fprintf(stderr, "policy: %s\n", coord2sstr(coord));
-	}
+	coord = policy->choose(policy, setup, b, color);
+	coord = playout_check_move(policy, b, coord, color);
+	// fprintf(stderr, "policy: %s\n", coord2sstr(coord));
 
-	if (is_pass(coord)) {
-	play_random:
-		/* Defer to uniformly random move choice. */
-		/* This must never happen if the policy is tracking
-		 * internal board state, obviously. */
-		assert(!policy->setboard || policy->setboard_randomok);
-		board_play_random(b, color, &coord, random_permit_handler, policy);
-
-	} else {
+	if (!is_pass(coord)) {
 		move_t m = move(coord, color);
-		if (board_play(b, &m) < 0) {
-			if (PLDEBUGL(4)) {
-				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n", coord_x(coord), coord_y(coord));
-				board_print(b, stderr);
-			}
-			goto play_random;
+		int r = board_play(b, &m);
+		if (unlikely(r < 0)) {
+			board_print(b, stderr);
+			die("Picked playout move %s %s is ILLEGAL:\n", stone2str(color), coord2sstr(coord));
 		}
+		return coord;
 	}
 
+	/* Defer to uniformly random move choice if policy failed to produce a move.
+	 * This must never happen if the policy is tracking internal board state, obviously. */
+	assert(!policy->setboard || policy->setboard_randomok);
+	board_play_random(b, color, &coord, random_permit_handler, policy);
 	return coord;
 }
 
