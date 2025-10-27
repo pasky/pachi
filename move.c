@@ -25,7 +25,7 @@ valid_coord_for(char *s, int size)
 	char endc = (s + 1)[digits];
 	assert(size <= 25);				// 'z' last letter
 	
-	return (c1 != 'i' && isdigit(c2) && (isspace(endc) || endc == 0) &&
+	return (c1 != 'i' && isdigit(c2) && (!isalnum(endc)) &&
 		x >= 1    && x <= size   &&
 		y >= 1    && y <= size);
 }

@@ -654,41 +654,228 @@ test_final_score(board_t *b, char *arg)
 	return (rres == eres);
 }
 
+#define PLAYOUT_NBEST 20
+
+enum moggy_move_test {
+	MMT_NORMAL,
+	MMT_ABOVE,
+	MMT_BELOW,
+	MMT_MAX
+};
+
+typedef struct {
+	enum moggy_move_test type;
+	bool not;
+	mq_t q;
+	int pc;
+} moggy_move_test_t;
+
+static void
+print_moggy_move_test(moggy_move_test_t *test, int rank)
+{
+	if (rank != -1)
+		fprintf(stderr, "%i=", rank + 1);
+	if (test->not)
+		fprintf(stderr, "!");
+
+	mq_t *q = &test->q;
+	if (q->moves >= 2) {
+		fprintf(stderr, "(%s", coord2sstr(q->move[0]));
+		for (int j = 1; j < q->moves; j++)
+			fprintf(stderr, "|%s", coord2sstr(q->move[j]));
+		fprintf(stderr, ")");
+	} else {
+		assert(q->moves == 1);
+		fprintf(stderr, "%s", coord2sstr(q->move[0]));
+	}
+
+	if (test->type == MMT_ABOVE)
+		fprintf(stderr, ">=%i", test->pc);
+	if (test->type == MMT_BELOW)
+		fprintf(stderr, "<=%i", test->pc);
+	fprintf(stderr, " ");
+}
+
+static void
+moggy_moves_print_tests(moggy_move_test_t *global, int nglobal, moggy_move_test_t *ranked, int max)
+{
+	fprintf(stderr, "moggy moves ");
+	for (int i = 0; i < nglobal; i++)
+		print_moggy_move_test(&global[i], -1);
+
+	for (int i = 0; i < max; i++)
+		if (ranked[i].q.moves)
+			print_moggy_move_test(&ranked[i], i);
+	fprintf(stderr, "  ");
+}
+
+static bool
+moggy_move_test(moggy_move_test_t *test, coord_t c, float r)
+{
+	bool res = mq_has(&test->q, c);
+
+	if (test->type == MMT_ABOVE)
+		res = (res && r * 100 >= test->pc);
+	if (test->type == MMT_BELOW)
+		res = (res && r * 100 <= test->pc);
+	if (test->not)
+		res = !res;
+	return res;
+}
+
+static void
+moggy_moves_show_moves(coord_t *best_c, float *best_r, moggy_move_test_t *ranked, int max)
+{
+	fprintf(stderr, "playout moves:\n");
+	for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++) {
+		fprintf(stderr, "  %3s %5.1f%%        ", coord2sstr(best_c[i]), best_r[i] * 100);
+		/* Show ranked tests side by side */
+		if (i < max && ranked[i].q.moves) {
+			bool passed = moggy_move_test(&ranked[i], best_c[i], best_r[i]);
+			print_moggy_move_test(&ranked[i], -1);
+			fprintf(stderr, "%s", (passed ? "OK" : "FAILED"));
+		}
+		fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "\n");
+}
+
+static bool
+moggy_moves_check_result(coord_t *best_c, float *best_r,
+			 moggy_move_test_t *global, int nglobal,
+			 moggy_move_test_t *ranked, int max)
+{
+	/* Check results: global tests */
+	for (int n = 0; n < nglobal; n++)
+		if (!global[n].not) {  /* one match = good */
+			bool passed = false;
+			for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++)
+				if (moggy_move_test(&global[n], best_c[i], best_r[i]))
+					passed = true;
+			if (!passed)  return false;
+		} else  /* must match all moves */
+			for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++)
+				if (!moggy_move_test(&global[n], best_c[i], best_r[i]))
+					return false;
+
+	/* Check results: ranked tests */
+	assert(max <= PLAYOUT_NBEST);
+	for (int i = 0; i < max; i++) {
+		if (!ranked[i].q.moves)
+			continue;
+		if (!best_c[i] ||	/* If we're missing moves to test that's a fail. */
+		    !moggy_move_test(&ranked[i], best_c[i], best_r[i]))
+			return false;
+	}
+
+	return true;
+}
+
 /* Sample moves played by moggy in a given position.
  * Board last move matters quite a lot and must be set.
  * 
- * Syntax:  moggy moves
- */
+ * Syntax:  moggy moves coord [...]			expect coord among played moves
+ *          moggy moves !coord [...]			forbidden move
+ *          moggy moves coord>60 [...]			expect coord, played >= 60%
+ *          moggy moves coord<20 [...]			expect coord, played <= 20%
+ *          moggy moves 1=coord [...]			expect best move #1 = coord
+ *          moggy moves 1=!coord [...]			expect best move #1 != coord
+ *          moggy moves 1=coord>60 [...]		expect best move #1 = coord, played at least 60%
+ *          moggy moves 1=(coord1|coord2) [...]		expect best move #1 = coord1 or coord2
+ *          moggy moves 1=coord1 2=coord2 [...]		expect best move #1 = coord1, #2 = coord2
+ *          moggy moves					show playout best moves   */
 static bool
 test_moggy_moves(board_t *b, char *arg)
 {
-	int runs = 1000;
+	next_arg_opt(arg);
 
+	/* Tests that apply to all best moves */
+	moggy_move_test_t global[10];  memset(global, 0, sizeof(global));
+	int nglobal = 0;
+	/* Tests that apply only to some best move rank(s) */
+	moggy_move_test_t ranked[10];  memset(ranked, 0, sizeof(ranked));
+	
+	while (*arg) {
+		assert(nglobal < 10);
+		moggy_move_test_t *test = &global[nglobal++];
+		
+		if (isdigit(*arg)) {  /* Best move rank given */
+			int i = atoi(arg) - 1;
+			assert(i < 10 && i >= 0);
+			test = &ranked[i];
+			nglobal--;
+			while (isdigit(*arg))
+				arg++;
+			assert(*arg == '=');  arg++;
+		}
+
+		if (*arg == '!') {
+			test->not = true;
+			arg++;
+		}
+
+		mq_t *q = &test->q;
+		if (isalpha(*arg)) {  /* Single expected coord */
+			coord_t c = str2coord(arg);
+			arg += strlen(coord2sstr(c));
+			assert(board_at(b, c) == S_NONE);
+			mq_add(q, c);
+		} else if (*arg == '(') {  /* Set of expected coords */
+			arg++;
+			while (*arg && *arg != ')') {
+				if (!isalpha(*arg))  die("Invalid coord: '%s'\n", arg);
+				coord_t c = str2coord(arg);
+				assert(board_at(b, c) == S_NONE);
+				mq_add(q, c);
+				while (isalnum(*arg))
+					arg++;
+				assert(*arg == '|' || *arg == ')');
+				if (*arg == '|')
+					arg++;
+			}
+			assert(*arg == ')');  arg++;
+		} else die("Invalid arg: '%s'\n", arg);
+
+		if (*arg == '>' || *arg == '<') {
+			test->type = (*arg == '>' ? MMT_ABOVE : MMT_BELOW);
+			arg++;
+			if (*arg == '=')  arg++;
+			assert(isdigit(*arg));
+			test->pc = atoi(arg);
+			while (isdigit(*arg))
+				arg++;
+		}
+		
+		assert(!*arg);
+		next_arg_opt(arg);
+	}
 	args_end();
+	
 	if (!tunit_over_gtp) assert(last_move_set);
+
+	enum stone color = board_to_play(b);
 	board_print_test(b);
 
-	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
-	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
-	enum stone color = board_to_play(b);
-	
-	if (DEBUGL(2))
-		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
-			stone2str(color), runs);
+	/* Get playout best moves */
+	time_info_t ti = ti_none;
+	engine_t e;  engine_init(&e, E_REPLAY, "", b);
+	coord_t best_c[PLAYOUT_NBEST];
+	float   best_r[PLAYOUT_NBEST];
+	best_moves_setup(best, best_c, best_r, PLAYOUT_NBEST);
+	engine_best_moves(&e, b, &ti, color, &best);
 
-        int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
-	int *played = played_ + 1;		// allow storing pass
-	int most_played = 0;
-	replay_sample_moves(&e, b, color, played, &most_played);
+	/* Show playout moves */
+	if (DEBUGL(2))  moggy_moves_show_moves(best_c, best_r, ranked, 10);
 
-	/* Show moves stats */	
-	for (int k = most_played; k > 0; k--)
-		for (coord_t c = pass; c < board_max_coords(b); c++)
-			if (played[c] == k)
-				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c), (float)k * 100 / runs);
-	
+	/* Print test */
+	if (DEBUGL(1))  moggy_moves_print_tests(global, nglobal, ranked, 10);
+
+	bool ret = moggy_moves_check_result(best_c, best_r, global, nglobal, ranked, 10);
+	bool rres = ret, eres = true;
+	PRINT_RES();
+
 	engine_done(&e);
-	return true;   // Not much of a unit test right now =)
+	return ret;
 }
 
 static int
