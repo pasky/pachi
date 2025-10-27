@@ -9,6 +9,7 @@
 #include "playout.h"
 #include "stats.h"
 #include "mq.h"
+#include "engine.h"
 #include "pattern/pattern.h"
 
 typedef struct uct_prior uct_prior_t;
@@ -76,6 +77,7 @@ typedef struct uct {
 	int     dcnn_pondering_prior;      /* Prior next move guesses */
 	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
 	coord_t dcnn_pondering_mcts_c[20];
+	int     dcnn_pondering_mcts_n;
 	
 	int fuseki_end;
 	int yose_start;
@@ -163,7 +165,7 @@ typedef struct uct {
 bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, move_queue_t *dead, char **msg, bool log);
 void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
 void uct_pondering_stop(uct_t *u);
-void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
+void uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
 void uct_tree_size_init(uct_t *u, size_t tree_size);
 

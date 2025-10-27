@@ -388,12 +388,13 @@ boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue
 	int best_n = 12;
 	coord_t best_c[12];
 	float   best_r[12];
-	get_dcnn_best_moves(b, result, best_c, best_r, best_n);
+	best_moves_setup(best, best_c, best_r, 12);
+	get_dcnn_best_moves(b, result, &best);
 	
 	fprintf(stderr, "dcnn blunder: boosted [ ");
-	for (int i = 0; i < best_n; i++) {
+	for (int i = 0; i < best.n; i++) {
 		if (!mq_has(defense_moves, best_c[i]))  continue;
-		const char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
+		const char *str = coord2sstr(best_c[i]);
 		fprintf(stderr, "%s ", str);
 	}
 	if (moves > best_n)  fprintf(stderr, "... ] (%s) (%i moves)", name, moves);
@@ -512,8 +513,9 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 	if (changes && debugl) {
 		coord_t best_c[DCNN_BEST_N];
 		float   best_r[DCNN_BEST_N];
-		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
-		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
+		best_moves_setup(best, best_c, best_r, DCNN_BEST_N);
+		get_dcnn_best_moves(b, result, &best);
+		print_dcnn_best_moves(&best);
 	}
 	
 	return changes;

@@ -331,10 +331,9 @@ josekifix_engine_result(engine_t *e, board_t *b)
 }
 
 static void
-josekifix_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-			    coord_t *best_c, float *best_r, int nbest)
+josekifix_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
-	uct_engine->best_moves(uct_engine, b, ti, color, best_c, best_r, nbest);
+	uct_engine->best_moves(uct_engine, b, ti, color, best);
 }
 
 void

@@ -3,6 +3,7 @@
 
 #include "debug.h"
 #include "board.h"
+#include "engine.h"
 #include "pattern/spatial.h"
 
 #define JOSEKI_PATTERN_DIST	     9
@@ -53,8 +54,8 @@ josekipat_t *joseki_lookup_ignored(joseki_dict_t *jd, board_t *b, coord_t coord,
 josekipat_t *joseki_lookup_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color);
 int  joseki_list_moves(joseki_dict_t *jd, board_t *b, enum stone color, coord_t *coords, float *ratings);
 void joseki_rate_moves(joseki_dict_t *jd, board_t *b, enum stone color, float *map);
-void get_joseki_best_moves(board_t *b, coord_t *coords, float *ratings, int matches, coord_t *best_c, float *best_r, int nbest);
-void print_joseki_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
+void get_joseki_best_moves(board_t *b, coord_t *coords, float *ratings, int matches, best_moves_t *best);
+void print_joseki_best_moves(best_moves_t *best);
 void print_joseki_moves(joseki_dict_t *jd, board_t *b, enum stone color);
 
 

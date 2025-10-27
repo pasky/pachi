@@ -21,18 +21,14 @@
 #define PRIOR_BEST_N 20
 
 void
-get_node_prior_best_moves(tree_node_t *parent, coord_t *best_c, float *best_r, int nbest)
+get_node_prior_best_moves(tree_node_t *parent, best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	
 	float max = 0.0;
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		max = MAX(max, n->prior.playouts);
 
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
-		best_moves_add(node_coord(n), (float)n->prior.playouts / max, best_c, best_r, nbest);
+		best_moves_add(best, node_coord(n), (float)n->prior.playouts / max);
 }
 
 /* Display node's priors best moves. */
@@ -41,32 +37,29 @@ print_node_prior_best_moves(board_t *b, tree_node_t *parent)
 {
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
-	int nbest = PRIOR_BEST_N;
-	get_node_prior_best_moves(parent, best_c, best_r, nbest);
+	best_moves_setup(best, best_c, best_r, PRIOR_BEST_N);
 
-	int cols = best_moves_print(b, "prior =    ", best_c, nbest);
+	get_node_prior_best_moves(parent, &best);
+
+	int cols = best_moves_print(&best, "prior =    ");
 	
 	fprintf(stderr, "%*s[ ", cols, "");
-	for (int i = 0; i < nbest; i++)
+	for (int i = 0; i < best.size; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");	
 }
 
 static void
-get_prior_best_moves(prior_map_t *map, coord_t *best_c, float *best_r, int nbest)
+get_prior_best_moves(prior_map_t *map, best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	
 	float max = map->prior[pass].playouts;
 	foreach_free_point(map->b) {
 		max = MAX(max, map->prior[c].playouts);
 	} foreach_free_point_end;
 
-	best_moves_add(pass, (float)map->prior[pass].playouts / max, best_c, best_r, nbest);
+	best_moves_add(best, pass, (float)map->prior[pass].playouts / max);
 	foreach_free_point(map->b) {
-		best_moves_add(c, (float)map->prior[c].playouts / max, best_c, best_r, nbest);
+		best_moves_add(best, c, (float)map->prior[c].playouts / max);
 	} foreach_free_point_end;
 }
 
@@ -76,13 +69,14 @@ print_prior_best_moves(board_t *b, prior_map_t *map)
 {
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
-	int nbest = PRIOR_BEST_N;
-	get_prior_best_moves(map, best_c, best_r, nbest);
+	best_moves_setup(best, best_c, best_r, PRIOR_BEST_N);
 
-	int cols = best_moves_print(b, "prior =    ", best_c, nbest);
+	get_prior_best_moves(map, &best);
+
+	int cols = best_moves_print(&best, "prior =    ");
 
 	fprintf(stderr, "%*s[ ", cols, "");
-	for (int i = 0; i < nbest; i++)
+	for (int i = 0; i < best.size; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");	
 }
@@ -153,10 +147,12 @@ uct_prior_joseki(uct_t *u, tree_node_t *node, prior_map_t *map)
 		add_prior_value(map, coords[i], 1.0, ratings[i] * u->prior->joseki_eqex);
 
 	if (DEBUGL(2) && !node->parent && matches) {
+		coord_t best_c[20];		
 		float best_r[20];
-		coord_t best_c[20];
-		get_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
-		print_joseki_best_moves(b, best_c, best_r, 20);
+		best_moves_setup(best, best_c, best_r, 20);
+
+		get_joseki_best_moves(b, coords, ratings, matches, &best);
+		print_joseki_best_moves(&best);
 	}
 }
 
@@ -173,10 +169,12 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 
 	/* Show patterns best moves for root node if not using dcnn. */
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
+		coord_t best_c[20];		
 		float best_r[20];
-		coord_t best_c[20];
-		get_pattern_best_moves(b, probs, best_c, best_r, 20);
-		print_pattern_best_moves(map->b, best_c, best_r, 20);
+		best_moves_setup(best, best_c, best_r, 20);
+
+		get_pattern_best_moves(b, probs, &best);
+		print_pattern_best_moves(&best);
 	}		
 
 	if (UDEBUGL(5)) {

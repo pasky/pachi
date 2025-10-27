@@ -41,11 +41,11 @@ pattern_engine_matched_locally(engine_t *e)
 /* Print patterns for best moves */
 static void
 debug_pattern_best_moves(pattern_engine_t *pp, board_t *b, enum stone color,
-			 pattern_context_t *ct, coord_t *best_c, int nbest)
+			 pattern_context_t *ct, best_moves_t *best)
 {
 	fprintf(stderr, "\n");
-	for (int i = 0; i < nbest; i++) {
-		move_t m = move(best_c[i], color);
+	for (int i = 0; i < best->n; i++) {
+		move_t m = move(best->c[i], color);
 		pattern_t p;
 		pattern_match(b, &m, &p, ct, pp->matched_locally);
 
@@ -80,21 +80,23 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 
 	float best_r[20];
 	coord_t best_c[20];
-	get_pattern_best_moves(b, probs, best_c, best_r, 20);
-	print_pattern_best_moves(b, best_c, best_r, 20);
+	best_moves_setup(best, best_c, best_r, 20);
+	
+	get_pattern_best_moves(b, probs, &best);
+	print_pattern_best_moves(&best);
 
 	if (pp->debug_level >= 4)
-		debug_pattern_best_moves(pp, b, color, ct, best_c, 20);
+		debug_pattern_best_moves(pp, b, color, ct, &best);
 	if (pp->debug_level >= 5)
 		debug_pattern_all_moves(pp, b, probs, pats);
 
 	pattern_context_free(ct);
-	return best_c[0];
+	return (best.n ? best_c[0] : pass);
 }
 
 static void
 pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-			  coord_t *best_c, float *best_r, int nbest)
+			  best_moves_t *best)
 {
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
@@ -103,8 +105,8 @@ pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone c
 	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
-	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
-	print_pattern_best_moves(b, best_c, best_r, nbest);
+	get_pattern_best_moves(b, probs, best);
+	print_pattern_best_moves(best);
 
 	pattern_context_free(ct);
 }
@@ -145,16 +147,16 @@ typedef struct {
 static pattern_stats_t pattern_predict_stats;
 
 
-void pattern_engine_collect_stats(engine_t *e, board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games)
+void pattern_engine_collect_stats(engine_t *e, board_t *b, move_t *m, best_moves_t *best, int moves, int games)
 {
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 	pattern_stats_t *stats = &pattern_predict_stats;
 	
-	coord_t best = best_c[0];
-	if (is_pass(best))  return;
+	coord_t best_move = (best->n ? best->c[0] : pass);
+	if (is_pass(best_move))  return;
 	
-	int best_f = b->fmap[best];
-	assert(b->f[best_f] == best);
+	int best_f = b->fmap[best_move];
+	assert(b->f[best_f] == best_move);
 	pattern_t *best_pat = &pp->patterns[best_f];
 
 	/* Spatial hits by move number (best move) */

@@ -13,17 +13,20 @@
 static coord_t
 dcnn_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	float r[19 * 19];
+	float r[19 * 19];	
+	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
+
 	float best_r[DCNN_BEST_N];
 	coord_t best_moves[DCNN_BEST_N];
-	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
-	get_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
+	best_moves_setup(best, best_moves, best_r, DCNN_BEST_N);
+	get_dcnn_best_moves(b, r, &best);
 	
 	/* Make sure move is valid ... */
-	for (int i = 0; i < DCNN_BEST_N; i++) {
-		if (board_is_valid_play_no_suicide(b, color, best_moves[i]))
+	for (int i = 0; i < best.n; i++) {
+		if (is_pass(best_moves[i]) ||
+		    board_is_valid_play_no_suicide(b, color, best_moves[i]))
 			return best_moves[i];
-		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i]));
+		die("dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i]));
 	}
 	
 	assert(0);
@@ -31,13 +34,12 @@ dcnn_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pa
 }
 
 static void
-dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
-		coord_t *best_c, float *best_r, int nbest)
+dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	float r[19 * 19];
 	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
-	get_dcnn_best_moves(b, r, best_c, best_r, nbest);
-}	
+	get_dcnn_best_moves(b, r, best);
+}
 
 #define option_error engine_setoption_error
 

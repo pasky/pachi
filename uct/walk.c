@@ -60,13 +60,14 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	int nbest = 4;
 	float   best_r[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
+	best_moves_setup(best_can, best_c, best_r, nbest);
+	uct_get_best_moves(u, &best_can, true, 100);
 
 	fprintf(fh, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++) {
 		/* fix parity */
 		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
-		if (!is_pass(best_c[i]))
+		if (i < best_can.n)
 			fprintf(fh, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
 		else
 			fprintf(fh, "          ");
@@ -88,23 +89,31 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 
 	/* Best candidates */
 	int nbest = 20;
-	float   best_pl[nbest];	
-	float   best_wr[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(u, best_c, best_pl, nbest, false, 500);
-	uct_get_best_moves(u, best_c, best_wr, nbest, true,  500);
-	if (is_pass(best_c[0]))  return;
+	float   best_pl[nbest];
+	best_moves_setup(best, best_c, best_pl, nbest);
+	uct_get_best_moves(u, &best, false, 500);
+
+	coord_t best_c2[nbest];
+	float   best_wr[nbest];
+	best_moves_setup(best2, best_c2, best_wr, nbest);
+	uct_get_best_moves(u, &best2, true,  500);
+
+	if (!best.n)  return;
 
 	/* Priors */
-	float   best_pr[19 * 19];
 	coord_t best_cpr[19 * 19];
-	float   priors[BOARD_MAX_COORDS];  memset(priors, 0, sizeof(priors));
-	get_node_prior_best_moves(node, best_cpr, best_pr, 19 * 19);
-	for (int i = 0; i < 19 * 19; i++)
-		if (best_cpr[i] > 0)
-			priors[best_cpr[i]] = best_pr[i];
+	float   best_pr[19 * 19];
+	best_moves_setup(best_priors, best_cpr, best_pr, 19 * 19);
+	get_node_prior_best_moves(node, &best_priors);
 
-	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
+	float priors_[BOARD_MAX_COORDS + 1] = { 0, };
+	float *priors = &priors_[1];  /* Allow pass */
+	for (int i = 0; i < best_priors.n; i++)
+		priors[best_cpr[i]] = best_pr[i];
+
+	for (int i = 0; i < best.n; i++) {
+		//assert(best_c[i] == best_c2[i]);
 		fprintf(fh, "info move %s visits %i winrate %i prior %i order %i ",
 			coord2sstr(best_c[i]), (int)best_pl[i], (int)(best_wr[i] * 10000),
 			(int)(priors[best_c[i]] * 10000), i);
@@ -146,8 +155,9 @@ uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color,
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, false, 200);
-	gogui_show_best_moves(stderr, b, color, best_c, best_r, GOGUI_NBEST);
+	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
+	uct_get_best_moves(u, &best, false, 200);
+	gogui_show_best_moves(stderr, b, color, &best);
 }
 
 /* GoGui live gfx: show winrates */
@@ -156,13 +166,14 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
+	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
+	uct_get_best_moves(u, &best, true, 200);
 
 	int parity = (genmove_pondering(u) ? -1 : 1);
-	for (int i = 0; i < GOGUI_NBEST; i++)
+	for (int i = 0; i < best.n; i++)
 		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
 	
-	gogui_show_winrates(stderr, b, color, best_c, best_r, GOGUI_NBEST);
+	gogui_show_winrates(stderr, b, color, &best);
 }
 
 static void

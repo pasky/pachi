@@ -301,24 +301,20 @@ pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct)
 }
 
 void
-print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
+print_pattern_best_moves(best_moves_t *best)
 {
-	int cols = best_moves_print(b, "patterns = ", best_c, nbest);
+	int cols = best_moves_print(best, "patterns = ");
 
 	fprintf(stderr, "%*s[ ", cols, "");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
+	for (int i = 0; i < best->size; i++)
+		fprintf(stderr, "%-3i ", (int)(best->r[i] * 100));
 	fprintf(stderr, "]\n");
 }
 
 void
-get_pattern_best_moves(board_t *b, floating_t *probs, coord_t *best_c, float *best_r, int nbest)
+get_pattern_best_moves(board_t *b, floating_t *probs, best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	
 	for (int f = 0; f < b->flen; f++)
 		if (!isnan(probs[f]))
-			best_moves_add(b->f[f], probs[f], best_c, best_r, nbest);
+			best_moves_add(best, b->f[f], probs[f]);
 }

@@ -352,17 +352,19 @@ uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 		int nbest = u->dcnn_pondering_prior;
 		float best_r[nbest];
 		coord_t best_c[nbest];
-		get_node_prior_best_moves(t->root, best_c, best_r, nbest);
-		assert(t->root->hints & TREE_HINT_DCNN);
+		best_moves_setup(best, best_c, best_r, nbest);
 		
-		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++)
+		get_node_prior_best_moves(t->root, &best);
+		assert(t->root->hints & TREE_HINT_DCNN);
+
+		for (int i = 0; i < best.n; i++)
 			mq_add(&q, best_c[i], 0);
 	}
 	
 	{  /* Opponent best moves from genmove search */
-		int       nbest = u->dcnn_pondering_mcts;
 		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
+		int n = u->dcnn_pondering_mcts_n;
+		for (int i = 0; i < n; i++) {
 			mq_add(&q, best_c[i], 0);
 			mq_nodup(&q);
 		}

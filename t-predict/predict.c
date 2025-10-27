@@ -65,13 +65,13 @@ collect_move_stats(predict_stats_t *stats, board_t *b, bool guessed)
 
 /* Check Probabilities */
 static void
-collect_prob_stats(predict_stats_t *stats, move_t *m, coord_t *best_c, float *best_r)
+collect_prob_stats(predict_stats_t *stats, move_t *m, best_moves_t *best)
 {
-	for (int k = 0; k < PREDICT_TOPN; k++) {
-		int i = best_r[k] * 10;
+	for (int k = 0; k < best->n; k++) {
+		int i = best->r[k] * 10;
 		assert(i >= 0); assert(i < PREDICT_PROBS);
 
-		if (best_c[k] == m->coord)
+		if (best->c[k] == m->coord)
 			stats->by_prob[i].guessed++;
 		stats->by_prob[i].moves++;
 	}
@@ -79,13 +79,15 @@ collect_prob_stats(predict_stats_t *stats, move_t *m, coord_t *best_c, float *be
 
 /* Topn stats */
 static void
-collect_topn_stats(predict_stats_t *stats, move_t *m, coord_t *best_c)
+collect_topn_stats(predict_stats_t *stats, move_t *m, best_moves_t *best)
 {
 	int k; /* Correct move is kth guess */
-	for (k = 0; k < PREDICT_TOPN; k++)
-		if (best_c[k] == m->coord)
-			break;
-	for (int i = k; i < PREDICT_TOPN; i++)
+	for (k = 0; k < best->n; k++)
+		if (best->c[k] == m->coord)
+			goto found;
+	return;
+ found:
+	for (int i = k; i < best->size; i++)
 		stats->guessed_top[i]++;
 }
 
@@ -99,26 +101,27 @@ collect_avg_val(int i, float val, float prob_max, avg_stats_t *avg_stats, int to
 		assert(0);
 	}
 	avg_stats[i].probs_sum += val;
+	// XXX only valid if engine generates 20 moves each time
 	float avg = avg_stats[i].probs_sum / total;
 	avg_stats[i].devs_sum += DEVIATION_TERM(val, avg);
 }
 
 /* Average values */
 static void
-collect_avg_stats(predict_stats_t *stats, float *best_r, int moves)
+collect_avg_stats(predict_stats_t *stats, best_moves_t *best, int moves)
 {
-	for (int i = 0; i < PREDICT_TOPN; i++)
-		collect_avg_val(i, best_r[i], PROB_MAX, stats->avg_stats, moves);
+	for (int i = 0; i < best->n; i++)
+		collect_avg_val(i, best->r[i], PROB_MAX, stats->avg_stats, moves);
 }
 
 /* Average log values */
 #define RESCALE_LOG(p)  (log(1 + p * 1000))
 
 static void
-collect_avg_log_stats(predict_stats_t *stats, float *best_r, int moves)
+collect_avg_log_stats(predict_stats_t *stats, best_moves_t *best, int moves)
 {
-	for (int i = 0; i < PREDICT_TOPN; i++)
-		collect_avg_val(i, RESCALE_LOG(best_r[i]), RESCALE_LOG(PROB_MAX), stats->avg_log_stats, moves);
+	for (int i = 0; i < best->n; i++)
+		collect_avg_val(i, RESCALE_LOG(best->r[i]), RESCALE_LOG(PROB_MAX), stats->avg_log_stats, moves);
 }
 
 static void
@@ -133,29 +136,30 @@ collect_ko_threats_stats(predict_stats_t *stats, board_t *b, bool guessed)
 }
 
 static void
-collect_stats(engine_t *e, predict_stats_t *stats,
-	      board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games)
+collect_stats(engine_t *e, predict_stats_t *stats, board_t *b,
+	      move_t *m, best_moves_t *best, int moves, int games)
 {
 	/* Run engine specific hook if present */
 	if (e->collect_stats)
-		e->collect_stats(e, b, m, best_c, best_r, moves, games);
-	
-	bool guessed = (best_c[0] == m->coord);
+		e->collect_stats(e, b, m, best, moves, games);
+
+	coord_t best_move = (best->n ? best->c[0] : pass);
+	bool guessed = (best_move == m->coord);
 	
 	/* Stats by move number */
 	collect_move_stats(stats, b, guessed);
 
 	/* Average values */
-	collect_avg_stats(stats, best_r, moves);
+	collect_avg_stats(stats, best, moves);
 
 	/* Average log values */
-	collect_avg_log_stats(stats, best_r, moves);
+	collect_avg_log_stats(stats, best, moves);
 
 	/* Check Probabilities */
-	collect_prob_stats(stats, m, best_c, best_r);
+	collect_prob_stats(stats, m, best);
 
 	/* Topn stats */
-	collect_topn_stats(stats, m, best_c);
+	collect_topn_stats(stats, m, best);
 
 	/* Ko threats stats */
 	collect_ko_threats_stats(stats, b, guessed);
@@ -338,26 +342,27 @@ predict_move(board_t *b, engine_t *e, time_info_t *ti, move_t *m, int games)
 
 	// Not bothering with timer here for now.
 
-	float   best_r[PREDICT_TOPN];
-	coord_t best_c[PREDICT_TOPN];
-	for (int i = 0; i < PREDICT_TOPN; i++)
-		best_c[i] = pass;
 	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
-	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
-	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
+	coord_t best_c[PREDICT_TOPN];
+	float   best_r[PREDICT_TOPN];
+	best_moves_setup(best, best_c, best_r, PREDICT_TOPN);
+	
+	engine_best_moves(e, b, ti_genmove, color, &best);
+	//print_dcnn_best_moves(b, &best);
 
 	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord));
-	if (best_c[0] == m->coord)
+	coord_t best_move = (best.n ? best.c[0] : pass);
+	if (best_move == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_move));
 	else
 		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]), coord2sstr(m->coord));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_move), coord2sstr(m->coord));
 
 	// Collect stats
 	static int moves = 0;
 	static predict_stats_t stats = { 0, };
-	collect_stats(e, &stats, b, m, best_c, best_r, ++moves, games);
+	collect_stats(e, &stats, b, m, &best, ++moves, games);
 
 	// Play correct expected move
 	if (board_play(b, m) < 0)

@@ -42,7 +42,7 @@ uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, enum stone color, coord_t our_move, int flags);
 static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
-static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,bool winrates, int min_playouts);
+static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, best_moves_t *best, bool winrates, int min_playouts);
 
 
 /* Maximal simulation length. */
@@ -601,13 +601,14 @@ uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord
 	int      nbest =  u->dcnn_pondering_mcts;
 	coord_t *best_c = u->dcnn_pondering_mcts_c;
 	float    best_r[nbest];
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
-	
+	best_moves_setup(best, best_c, best_r, nbest);
+
 	if (!(u->t && color == stone_other(u->t->root_color)))  return;
-	tree_node_t *best = tree_get_node(u->t->root, next_move);
-	if (!best)  return;
-	uct_get_best_moves_at(u, best, best_c, best_r, nbest, false, 100);
+	tree_node_t *best_node = tree_get_node(u->t->root, next_move);
+	if (!best_node)  return;
+	uct_get_best_moves_at(u, best_node, &best, false, 100);
+	
+	u->dcnn_pondering_mcts_n = best.n;
 }
 
 /* Start pondering at the end of genmove.
@@ -821,37 +822,36 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
  * XXX pass can be a valid move in which case you need best_n to check. 
  *     have another function which exposes best_n ? */
 static void
-uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,
+uct_get_best_moves_at(uct_t *u, tree_node_t *parent, best_moves_t *best,
 		      bool winrates, int min_playouts)
 {
-	tree_node_t* best_n[nbest];
-	for (int i = 0; i < nbest; i++)  {
-		best_c[i] = pass;  best_r[i] = 0;  best_n[i] = NULL;
-	}
+	tree_node_t* best_n[best->size];
+	best->d = (void**)best_n;
 	
 	/* Find best moves */
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		if (n->u.playouts >= min_playouts)
-			best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_n, nbest);
+			best_moves_add_full(best, node_coord(n), n->u.playouts, n);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_n[i]; i++)
-			best_r[i] = tree_node_get_value(u->t, 1, best_n[i]->u.value);
+		for (int i = 0; i < best->n; i++) {
+			tree_node_t *n = best->d[i];
+			best->r[i] = tree_node_get_value(u->t, 1, n->u.value);
+		}
 }
 
 /* Get best moves with at least @min_playouts.
  * If @winrates is true @best_r returns winrates instead of visits.
  * (moves remain in best-visited order) */
 void
-uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts)
+uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts)
 {
-	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates, min_playouts);
+	uct_get_best_moves_at(u, u->t->root, best, winrates, min_playouts);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
 static void
-uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-	       coord_t *best_c, float *best_r, int nbest)
+uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	uct_t *u = (uct_t*)e->data;
 	uct_pondering_stop(u);
@@ -860,9 +860,9 @@ uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
+	uct_get_best_moves(u, best, true, 100);
 
-	if (u->t)	
+	if (u->t)
 		reset_state(u);
 }
 

@@ -227,15 +227,15 @@ gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 }
 
 void
-gogui_show_winrates(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
+gogui_show_winrates(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
 	/* best move */
-	if (best_c[0] != pass)
-		fprintf(f, "VAR %s %s\n", (color == S_WHITE ? "w" : "b"), coord2sstr(best_c[0]) );
-	
-	for (int i = 0; i < nbest; i++)
-		if (best_c[i] != pass)
-			fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), (int)(roundf(best_r[i] * 100)));
+	if (best->n && !is_pass(best->c[0]))
+		fprintf(f, "VAR %s %s\n", (color == S_WHITE ? "w" : "b"), coord2sstr(best->c[0]) );
+
+	for (int i = 0; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			fprintf(f, "LABEL %s %i\n", coord2sstr(best->c[i]), (int)(roundf(best->r[i] * 100)));
 }
 
 void
@@ -251,60 +251,55 @@ gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n)
 
 /* Display best moves graphically in GoGui. */
 void
-gogui_show_best_moves(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
         /* best move */
-        if (best_c[0] != pass)
-                fprintf(f, "VAR %.1s %s\n", stone2str(color), coord2sstr(best_c[0]));
+        if (best->n && !is_pass(best->c[0]))
+                fprintf(f, "VAR %.1s %s\n", stone2str(color), coord2sstr(best->c[0]));
         
-        for (int i = 1; i < n; i++)
-                if (best_c[i] != pass)
-                        fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), i + 1);
+        for (int i = 1; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			fprintf(f, "LABEL %s %i\n", coord2sstr(best->c[i]), i + 1);
 }
 
 /* Display best moves graphically in GoGui. */
 static void
-gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color,
-			     coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
-	float vals[BOARD_MAX_COORDS];
-	for (int i = 0; i < BOARD_MAX_COORDS; i++)
-		vals[i] = 0;
+	float vals[BOARD_MAX_COORDS] = { 0, };
+	
+	for (int i = 0; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			vals[best->c[i]] = best->r[i];
 
-	for (int i = 0; i < n; i++)
-		if (best_c[i] != pass)
-			vals[best_c[i]] = best_r[i];
+	int size = board_rsize(b);
+	for (int y = size; y >= 1; y--)
+		for (int x = 1; x <= size; x++) {
+			coord_t c = coord_xy(x, y);
+			int rr, gg, bb;
+			value2color(vals[c], &rr, &gg, &bb);
 
-	for (int y = 19; y >= 1; y--)
-	for (int x = 1; x <= 19; x++) {		
-		coord_t c = coord_xy(x, y);			
-		int rr, gg, bb;
-		value2color(vals[c], &rr, &gg, &bb);
-		
-		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
-	}
+			fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+		}
 }
 
 static void
-rescale_best_moves(coord_t *best_c, float *best_r, int n, int rescale)
+rescale_best_moves(best_moves_t *best, int rescale)
 {
+	int n = best->n;
+	
 	if (rescale & GOGUI_RESCALE_LINEAR) {
-		for (int i = 0; i < n; i++)
-			if (best_c[i] == pass) {  n = i; break;  }
 		for (int i = 0; i < n; i++) {
-			best_r[i] = (float)(n-i)/n;
+			best->r[i] = (float)(n-i)/n;
 			//fprintf(stderr, "linear: %i\n", (int)(best_r[i] * 100));
 		}
 	}       
 
 	if (rescale & GOGUI_RESCALE_LOG) {
-		for (int i = 0; i < n; i++)
-			if (best_c[i] == pass) {  n = i; break;  }
-
 		float max = log(1.0 * 1000);
 		for (int i = 0; i < n; i++) {
-			best_r[i] = log(best_r[i] * 1000) / max;
-			if (best_r[i] < 0)  best_r[i] = 0.;
+			best->r[i] = log(best->r[i] * 1000) / max;
+			if (best->r[i] < 0)  best->r[i] = 0.;
 			//fprintf(stderr, "log: %i\n", (int)(best_r[i] * 100));
 		}
 	}	
@@ -319,27 +314,32 @@ gogui_best_moves(FILE *f, engine_t *e, board_t *b, time_info_t *ti,
 	
 	coord_t best_c[n];
 	float   best_r[n];
-	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, n);	
-	rescale_best_moves(best_c, best_r, n, rescale);
+	best_moves_setup(best, best_c, best_r, n);
+
+	engine_best_moves(e, b, ti_genmove, color, &best);
+	rescale_best_moves(&best, rescale);
 	
-	if      (gfx_type == GOGUI_BEST_WINRATES)  gogui_show_winrates(f, b, color, best_c, best_r, n);
-	else if (gfx_type == GOGUI_BEST_MOVES)     gogui_show_best_moves(f, b, color, best_c, best_r, n);
-	else if (gfx_type == GOGUI_BEST_COLORS)    gogui_show_best_moves_colors(f, b, color, best_c, best_r, n);
+	if      (gfx_type == GOGUI_BEST_WINRATES)  gogui_show_winrates(f, b, color, &best);
+	else if (gfx_type == GOGUI_BEST_MOVES)     gogui_show_best_moves(f, b, color, &best);
+	else if (gfx_type == GOGUI_BEST_COLORS)    gogui_show_best_moves_colors(f, b, color, &best);
 	else    assert(0);
 }
 
 enum parse_code
 cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
+	int size = board_rsize(b);
 	enum stone color = board_to_play(b);
-	float   best_r[GOGUI_MANY] = { 0.0, };
+	float   best_r[GOGUI_MANY];
 	coord_t best_c[GOGUI_MANY];
+	best_moves_setup(best, best_c, best_r, GOGUI_MANY);
+	
 	for (int i = 0; i < GOGUI_MANY; i++)
-		best_c[i] = coord_xy(i%19 +1, 18 - i/19 + 1);
+		best_c[i] = coord_xy(i%size +1, size-1 - i/size + 1);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
-	rescale_best_moves(best_c, best_r, GOGUI_MANY, GOGUI_RESCALE_LINEAR);
-	gogui_show_best_moves_colors(stdout, b, color, best_c, best_r, GOGUI_MANY);
+	rescale_best_moves(&best, GOGUI_RESCALE_LINEAR);
+	gogui_show_best_moves_colors(stdout, b, color, &best);
 	return P_OK;
 }
 

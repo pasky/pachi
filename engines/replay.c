@@ -112,8 +112,7 @@ replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 }
 
 static void
-replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-		  coord_t *best_c, float *best_r, int nbest)
+replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	replay_t *r = (replay_t*)e->data;
 	
@@ -126,7 +125,8 @@ replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	replay_sample_moves(e, b, color, played, &most_played);
 	
 	for (coord_t c = pass; c < board_max_coords(b); c++)
-		best_moves_add(c, (float)played[c] / r->runs, best_c, best_r, nbest);
+		if (played[c])
+			best_moves_add(best, c, (float)played[c] / r->runs);
 }
 
 static void

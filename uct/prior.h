@@ -3,6 +3,7 @@
 
 #include "move.h"
 #include "stats.h"
+#include "engine.h"
 
 typedef struct tree_node tree_node_t;
 typedef struct uct uct_t;
@@ -55,6 +56,6 @@ add_prior_value(prior_map_t *map, coord_t c, floating_t value, int playouts)
 
 /* Display node's priors best moves */
 void print_node_prior_best_moves(board_t *b, tree_node_t *parent);
-void get_node_prior_best_moves(tree_node_t *parent, coord_t *best_c, float *best_r, int nbest);
+void get_node_prior_best_moves(tree_node_t *parent, best_moves_t *best);
 
 #endif
