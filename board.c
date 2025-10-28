@@ -393,17 +393,17 @@ board_print_target_move(board_t *b, FILE *f, coord_t target_move)
 
 
 static void
-board_handicap_stone(board_t *board, int x, int y, move_queue_t *q)
+board_handicap_stone(board_t *board, int x, int y, mq_t *q)
 {
 	move_t m = move(coord_xy(x, y), S_BLACK);
 
 	int r = board_play(board, &m);  assert(r >= 0);
 
-	if (q)  mq_add(q, m.coord, 0);
+	if (q)  mq_add(q, m.coord);
 }
 
 void
-board_handicap(board_t *board, int stones, move_queue_t *q)
+board_handicap(board_t *board, int stones, mq_t *q)
 {
 	assert(stones >= 0 && stones <= 9);
 	int margin = 3 + (board_rsize(board) >= 13);
@@ -627,7 +627,7 @@ final_ownermap_printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 }
 
 void
-board_print_official_ownermap(board_t *b, move_queue_t *dead)
+board_print_official_ownermap(board_t *b, mq_t *dead)
 {
 	int dame, seki;
 	int ownermap[board_max_coords(b)];
@@ -641,7 +641,7 @@ board_print_official_ownermap(board_t *b, move_queue_t *dead)
  * (only distinguishes between dames/sekis if @po is not NULL) 
  * final ownermap values:  FO_DAME  S_BLACK  S_WHITE  S_OFFBOARD */
 floating_t
-board_official_score_details(board_t *b, move_queue_t *dead,
+board_official_score_details(board_t *b, mq_t *dead,
 			     int *dame, int *seki, int *ownermap, ownermap_t *po)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
@@ -695,7 +695,7 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 }
 
 floating_t
-board_official_score(board_t *b, move_queue_t *dead)
+board_official_score(board_t *b, mq_t *dead)
 {
 	int dame, seki;
 	int ownermap[board_max_coords(b)];
@@ -704,7 +704,7 @@ board_official_score(board_t *b, move_queue_t *dead)
 
 /* Returns static buffer */
 char *
-board_official_score_str(board_t *b, move_queue_t *dead)
+board_official_score_str(board_t *b, mq_t *dead)
 {
 	static char buf[32];
 	floating_t score = board_official_score(b, dead);
@@ -716,7 +716,7 @@ board_official_score_str(board_t *b, move_queue_t *dead)
 }
 
 floating_t
-board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
+board_official_score_color(board_t *b, mq_t *dead, enum stone color)
 {
 	floating_t score = board_official_score(b, dead);
 	return (color == S_WHITE ? score : -score);

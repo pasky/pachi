@@ -809,7 +809,7 @@ found:;
 
 		coord_t lib2;
 		/* Can we get liberties by capturing a neighbor? */
-		move_queue_t ccq;  mq_init(&ccq);
+		mq_t ccq;  mq_init(&ccq);
 		if (board_at(b, group) == color &&
 		    can_countercapture(b, group, &ccq)) {
 			lib2 = mq_pick(&ccq);

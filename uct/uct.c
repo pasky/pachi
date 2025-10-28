@@ -123,12 +123,12 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 }
 
 static bool uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
-			      ownermap_t *ownermap, move_queue_t *dead, char **msg, bool log);
+			      ownermap_t *ownermap, mq_t *dead, char **msg, bool log);
 static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap,
-			 char **msg, bool log, move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+			 char **msg, bool log, mq_t *dead, mq_t *dead_extra, mq_t *unclear,
 			 bool unclear_kludge, char *label);
 static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap, char **msg,
-			  move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge);
+			  mq_t *dead, mq_t *unclear, bool unclear_kludge);
 
 /* Does the board look like a final position, and do we win counting ?
  * (if allow_losing_pass was set we don't care about score)
@@ -136,7 +136,7 @@ static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_
  * (possibly guessed if there are unclear groups). */
 bool
 uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
-		 move_queue_t *dead, char **msg, bool log)
+		 mq_t *dead, char **msg, bool log)
 {
 	/* Try tree search ownermap first. */
 	ownermap_t *ownermap = &u->ownermap;
@@ -150,7 +150,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 
 static bool
 uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
-		  ownermap_t *ownermap, move_queue_t *dead, char **msg, bool log)
+		  ownermap_t *ownermap, mq_t *dead, char **msg, bool log)
 {
 	mq_init(dead);
 	
@@ -168,8 +168,8 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (b == u->main_board) {  board_copy(&b2, b);  b = &b2;  }
 
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	move_queue_t dead_orig;
-	move_queue_t unclear_orig;
+	mq_t dead_orig;
+	mq_t unclear_orig;
 	assert(ownermap->playouts >= GJ_MINGAMES);
 	ownermap_dead_groups(b, ownermap, &dead_orig, &unclear_orig);
 
@@ -179,11 +179,11 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 		mq_init(&dead_extra);		\
 	} while (0)
 
-	move_queue_t unclear;
-	move_queue_t dead_extra;
+	mq_t unclear;
+	mq_t dead_extra;
 	init_pass_is_safe_groups();
 	
-	if (DEBUGL(2) && log && unclear.moves)  mq_print_line("unclear groups: ", &unclear);
+	if (DEBUGL(2) && log && unclear.moves)  mq_print_line(&unclear, "unclear groups: ");
 
 	/* Guess unclear groups ?
 	 * By default Pachi is fairly pedantic at the end of the game and will 
@@ -209,7 +209,7 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (guess_unclear_ok && unclear.moves) {
 		for (int i = 0; i < unclear.moves; i++)
 			if (board_at(b, unclear.move[i]) == color)
-				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
+				mq_add(&dead_extra, unclear.move[i]);       /* own groups -> dead */
 		unclear.moves = 0;                                          /* opponent's groups -> alive */
 		if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 				 dead, &dead_extra, &unclear, true, "(worst-case)"))
@@ -225,7 +225,7 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 			
 			for (int i = 0; i < unclear_orig.moves; i++)
 				if (!(k & (1 << i)))
-					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
+					mq_add(&dead_extra, unclear_orig.move[i]); /* picked groups -> dead */
 			if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 					 dead, &dead_extra, &unclear, true, ""))
 				return true;
@@ -242,17 +242,17 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 static bool
 pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	     ownermap_t *ownermap, char **msg, bool log,
-	     move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+	     mq_t *dead, mq_t *dead_extra, mq_t *unclear,
 	     bool unclear_kludge, char *label)
 {
-	move_queue_t guessed;  guessed = *dead_extra;
+	mq_t guessed;  guessed = *dead_extra;
 	mq_append(dead, dead_extra);
 	
 	bool r = pass_is_safe_(u, b, color, pass_all_alive, ownermap, msg, dead, unclear, unclear_kludge);
 
 	/* smart pass: log guessed unclear groups if successful    (DEBUGL(2)) */
 	if (unclear_kludge && log && r && DEBUGL(2) && !DEBUGL(3)) {
-		mq_print("pass ok assuming dead: ", &guessed);
+		mq_print(&guessed, "pass ok assuming dead: ");
 		fprintf(stderr, "%s\n", label);
 	}
 
@@ -260,7 +260,7 @@ pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (unclear_kludge && log && DEBUGL(3)) { /* log everything */
 		fprintf(stderr, "  pass %s ", (r ? "ok" : "no"));
 		int n = 0;
-		n += mq_print("assuming dead: ", &guessed);
+		n += mq_print(&guessed, "assuming dead: ");
 		fprintf(stderr, "%*s -> %-7s %s %s\n", abs(50-n), "",
 			board_official_score_str(b, dead), (r ? "" : *msg), label);
 	}
@@ -271,7 +271,7 @@ pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 static bool
 pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	      ownermap_t *ownermap, char **msg,
-	      move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge)
+	      mq_t *dead, mq_t *unclear, bool unclear_kludge)
 {
 	bool check_score = !u->allow_losing_pass;
 
@@ -438,7 +438,7 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 }
 
 static void
-uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
+uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
 	

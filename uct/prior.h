@@ -33,7 +33,7 @@ typedef struct prior_map {
 	move_stats_t *prior;
 	/* [board_size2(b)] array, whether to compute
 	 * prior for the given value. */
-	move_queue_t *consider;
+	mq_t *consider;
 } prior_map_t;
 
 /* @value is the value, @playouts is its weight. */

@@ -587,7 +587,7 @@ test_pass_is_safe(board_t *b, char *arg)
 	PRINT_TEST(b, "pass_is_safe %s ?\n", stone2str(color));
 	
 	char *msg;
-	move_queue_t dead;
+	mq_t dead;
 	uct_mcowner_playouts(u, b, color);
 	memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
 	int rres = uct_pass_is_safe(u, b, color, false, &dead, &msg, DEBUGL(2));
@@ -619,7 +619,7 @@ test_final_score(board_t *b, char *arg)
 	args_end();
 
 	engine_t *e = new_engine(E_UCT, "", b);
-	move_queue_t dead;
+	mq_t dead;
 	engine_dead_groups(e, b, &dead);
 		
 	float rres = board_official_score(b, &dead);
@@ -804,16 +804,16 @@ test_genmove(board_t *b, char *arg)
 	next_arg(arg);
 
 	char* args[30];  int n;
-	move_queue_t wanted;    mq_init(&wanted);
-	move_queue_t unwanted;  mq_init(&unwanted);
+	mq_t wanted;    mq_init(&wanted);
+	mq_t unwanted;  mq_init(&unwanted);
 	for (n = 0; *arg; n++) {
 		args[n] = arg;
-		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		mq_t *q = (*arg == '!' ? &unwanted : &wanted);
 		if (*arg == '!')  arg++;
-		if (!strcmp(arg, "pass"))   {  mq_add(q, pass, 0);    next_arg_opt(arg);  continue;  }
-		if (!strcmp(arg, "resign")) {  mq_add(q, resign, 0);  next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "pass"))   {  mq_add(q, pass);    next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "resign")) {  mq_add(q, resign);  next_arg_opt(arg);  continue;  }
 		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
-		mq_add(q, str2coord(arg), 0);
+		mq_add(q, str2coord(arg));
 		next_arg_opt(arg);
 	}
 	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
@@ -897,15 +897,15 @@ test_dcnn_blunder(board_t *b, char *arg)
 	next_arg(arg);
 
 	char* args[30];  int n;
-	move_queue_t wanted;    mq_init(&wanted);
-	move_queue_t unwanted;  mq_init(&unwanted);
+	mq_t wanted;    mq_init(&wanted);
+	mq_t unwanted;  mq_init(&unwanted);
 	for (n = 0; *arg; n++) {
 		args[n] = arg;
-		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		mq_t *q = (*arg == '!' ? &unwanted : &wanted);
 		if (*arg == '!')  arg++;
 		if (!strcmp(arg, "pass") || !strcmp(arg, "resign"))  die("Can't have pass or resign here.\n");
 		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
-		mq_add(q, str2coord(arg), 0);
+		mq_add(q, str2coord(arg));
 		next_arg_opt(arg);
 	}
 	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
@@ -933,7 +933,7 @@ test_dcnn_blunder(board_t *b, char *arg)
 #endif
 
 	/* Get blunders */
-	move_queue_t blunders;  mq_init(&blunders);
+	mq_t blunders;  mq_init(&blunders);
 	get_dcnn_blunders(boosted, b, color, result, &ownermap, &blunders);
 	//fprintf(stderr, "found %i\n", blunders.moves);
 

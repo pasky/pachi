@@ -40,7 +40,7 @@ uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone c
 	 * (endgame situation that can't be clarified ...)
 	 * Call expensive uct_pass_is_safe() only if pass is indeed the best move. */
 	char *msg;
-	move_queue_t dead;
+	mq_t dead;
 	if (is_pass(node_coord(nbest)) &&
 	    !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive, &dead, &msg, false) &&
 	    nbest2 && !board_is_one_point_eye(b, node_coord(nbest2), color))

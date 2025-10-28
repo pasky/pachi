@@ -290,7 +290,7 @@ engine_ownermap(engine_t *e, board_t *b)
 }
 
 static void
-print_dead_groups(board_t *b, move_queue_t *dead)
+print_dead_groups(board_t *b, mq_t *dead)
 {
 	if (!DEBUGL(1)) return;
 
@@ -305,7 +305,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 
 /* Ask engine for dead stones */
 void
-engine_dead_groups(engine_t *e, board_t *b, move_queue_t *q)
+engine_dead_groups(engine_t *e, board_t *b, mq_t *q)
 {
 	mq_init(q);
 

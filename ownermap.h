@@ -56,11 +56,11 @@ enum stone ownermap_color(ownermap_t *ownermap, coord_t c, floating_t thres);
 float ownermap_estimate_point(ownermap_t *ownermap, coord_t c);
 
 /* Find dead / unclear groups. */
-void ownermap_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear);
+void ownermap_dead_groups(board_t *b, ownermap_t *ownermap, mq_t *dead, mq_t *unclear);
 /* Estimate status of stones on board based on ownermap stats. */
 void ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge);
 /* Add groups of given status to mq. */
-void groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_queue_t *mq);
+void groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, mq_t *mq);
 
 /* Score estimate based on board ownermap. (positive: W wins) */
 float ownermap_score_est(board_t *b, ownermap_t *ownermap);
@@ -76,7 +76,7 @@ int ownermap_dames(board_t *b, ownermap_t *ownermap);
 /* Is board position final ? */
 bool board_position_final(board_t *b, ownermap_t *ownermap, char **msg);
 bool board_position_final_full(board_t *b, ownermap_t *ownermap,
-			       move_queue_t *dead, move_queue_t *unclear, float score_est,
+			       mq_t *dead, mq_t *unclear, float score_est,
 			       int *final_ownermap, int final_dames, float final_score, char **msg);
 
 /* Don't allow passing earlier than that:

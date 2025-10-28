@@ -215,7 +215,7 @@ pattern_max_rating(board_t *b, enum stone color, floating_t *probs, pattern_t *p
 {
 	floating_t max = -100000;
 	floating_t total = 0;
-	move_queue_t maxed_moves;  mq_init(&maxed_moves);
+	mq_t maxed_moves;  mq_init(&maxed_moves);
 
 	if (pats)	/* Save pattern for each move */
 		for (int f = 0; f < b->flen; f++) {
@@ -228,7 +228,7 @@ pattern_max_rating(board_t *b, enum stone color, floating_t *probs, pattern_t *p
 			max = MAX(max, probs[f]);
 			
 			if (maxed_move)		/* Save maxed moves */
-				mq_add(&maxed_moves, f, 0);
+				mq_add(&maxed_moves, f);
 		}
 	else		/* Fast path */
 		for (int f = 0; f < b->flen; f++) {
@@ -242,7 +242,7 @@ pattern_max_rating(board_t *b, enum stone color, floating_t *probs, pattern_t *p
 			max = MAX(max, probs[f]);
 
 			if (maxed_move)		/* Save maxed moves */
-				mq_add(&maxed_moves, f, 0);
+				mq_add(&maxed_moves, f);
 		}
 
 	/* Maxed moves always get top rating. */

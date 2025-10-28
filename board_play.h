@@ -29,17 +29,17 @@ static void
 board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
 {
 	/* Liberties we know about. */
-	move_queue_t visited;  mq_init(&visited);
+	mq_t visited;  mq_init(&visited);
 	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
-		mq_add(&visited, gi->lib[i], 0);
-	mq_add(&visited, avoid, 0);
+		mq_add(&visited, gi->lib[i]);
+	mq_add(&visited, avoid);
 
 	foreach_in_group(board, group) {
 		coord_t coord2 = c;
 		foreach_neighbor(board, coord2, {
 			if (board_at(board, c) != S_NONE || mq_has(&visited, c))
 				continue;
-			mq_add(&visited, c, 0);
+			mq_add(&visited, c);
 			gi->lib[gi->libs++] = c;
 			if (unlikely(gi->libs >= GROUP_KEEP_LIBS))
 				return;

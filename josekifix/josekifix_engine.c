@@ -349,7 +349,7 @@ josekifix_engine_analyze(engine_t *e, board_t *b, enum stone color, int start)
 }
 
 static void
-josekifix_engine_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
+josekifix_engine_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
 	uct_engine->dead_groups(uct_engine, b, dead);
 }

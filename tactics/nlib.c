@@ -14,7 +14,7 @@
 
 
 void
-group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag)
+group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 {
 	enum stone color = to_play;
 	assert(color != S_OFFBOARD && color != S_NONE
@@ -52,8 +52,7 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_que
 			if (immediate_liberty_count(b, board_group_info(b, group).lib[i]) == 2)
 				break;
 		/* Play at middle point. */
-		mq_add(q, board_group_info(b, group).lib[i], tag);
-		mq_nodup(q);
+		mq_add_nodup(q, board_group_info(b, group).lib[i]);
 		return;
 	}
 #endif
@@ -81,7 +80,7 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_que
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, true /* XXX */);
+			can_atari_group(b, g2, stone_other(color), to_play, q, true /* XXX */);
 		});
 	} foreach_in_group_end;
 }

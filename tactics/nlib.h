@@ -6,6 +6,6 @@
 #include "board.h"
 #include "debug.h"
 
-void group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag);
+void group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q);
 
 #endif

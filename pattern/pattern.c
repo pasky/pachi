@@ -344,11 +344,11 @@ pattern_match_capture(board_t *b, move_t *m)
 {
 	enum stone other_color = stone_other(m->color);
 	coord_t last_move = last_move(b).coord;
-	move_queue_t can_cap;  mq_init(&can_cap);
+	mq_t can_cap;  mq_init(&can_cap);
 
 	foreach_atari_neighbor(b, m->coord, other_color) {
 		if (can_capture(b, g, m->color))
-			mq_add(&can_cap, g, 0);
+			mq_add(&can_cap, g);
 	} foreach_atari_neighbor_end;
 	if (!can_cap.moves)  return -1;
 
@@ -374,7 +374,7 @@ pattern_match_capture(board_t *b, move_t *m)
 		/* Capture group contiguous to new group in atari ? */
 		foreach_atari_neighbor(b, last_move, m->color) {
 			group_t own_atari = g;
-			move_queue_t q;
+			mq_t q;
 			countercapturable_groups(b, own_atari, &q);
 			for (int i = 0; i < q.moves; i++)
 				if (capg == q.move[i])
@@ -484,17 +484,17 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m,
 		if (!cutting_stones(b, atariable))		break;
 		if (!cutting_stones(b, other))			break;
 		
-		move_queue_t mq;
+		mq_t mq;
 		coord_t lib = board_group_info(b, atariable).lib[0];
 		can_countercapture(b, atariable, &mq);
-		mq_add(&mq, lib, 0);
+		mq_add(&mq, lib);
 		
 		/* try possible replies, must work for all of them */
 		for (int i = 0; i < mq.moves; i++) {
 			with_move(b, mq.move[i], other_color, {
 				group_t g = group_at(b, other);
 				if (g && board_group_info(b, g).libs == 2 &&
-				    can_capture_2lib_group(b, g, NULL, 0))
+				    can_capture_2lib_group(b, g, NULL))
 					found = true;
 				else {  found = false; mq.moves = 0;  }
 			});
@@ -507,7 +507,7 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m,
  *   @check_capture:  that are capturable
  *   @not_in:         not in this set (optional) */
 static void
-atari_and_cap_find_nearby_targets(move_queue_t *targets, bool check_capturable, move_queue_t *not_in,
+atari_and_cap_find_nearby_targets(mq_t *targets, bool check_capturable, mq_t *not_in,
 				  board_t *b, move_t *m, group_t atariable, ownermap_t *ownermap)
 {
 	enum stone color = m->color;
@@ -529,10 +529,10 @@ atari_and_cap_find_nearby_targets(move_queue_t *targets, bool check_capturable, 
 			    board_group_info(b, g).libs != 2 ||
 			    !cutting_stones(b, g) || ownermap_color(ownermap, g, 0.67) == color ||
 			    (not_in && mq_has(not_in, g)) ||
-			    (check_capturable && !can_capture_2lib_group(b, g, NULL, 0)))
+			    (check_capturable && !can_capture_2lib_group(b, g, NULL)))
 				continue;
 
-			mq_add(targets, g, 0);  mq_nodup(targets);
+			mq_add_nodup(targets, g);
 		}
 	}
 }
@@ -540,23 +540,23 @@ atari_and_cap_find_nearby_targets(move_queue_t *targets, bool check_capturable, 
 /* Atari has been played, play defense and see if there are 2 lib targets that become capturable */
 static bool
 cutting_stones_and_can_capture_nearby_after_atari_(board_t *b, move_t *m, group_t atariable, ownermap_t *ownermap,
-						   move_queue_t *cap_targets)
+						   mq_t *cap_targets)
 {
 	bool found = false;
 	enum stone color = m->color;
 	enum stone other_color = stone_other(m->color);
 
 	/* Find all 2 libs targets nearby which were not capturable initially */
-	move_queue_t targets;
+	mq_t targets;
 	atari_and_cap_find_nearby_targets(&targets, false, cap_targets, b, m, atariable, ownermap);
 	if (!targets.moves)  return false;
 	//fprintf(stderr, "found %i targets\n", targets.moves);
 	
 	/* Find possible atari answers */
-	move_queue_t q;
+	mq_t q;
 	coord_t lib = board_group_info(b, atariable).lib[0];
 	can_countercapture(b, atariable, &q);
-	mq_add(&q, lib, 0);
+	mq_add(&q, lib);
 
 	/* Play defense and check if we can capture any target now */
 	for (int k = 0; !found && k < targets.moves; k++) {
@@ -572,13 +572,13 @@ cutting_stones_and_can_capture_nearby_after_atari_(board_t *b, move_t *m, group_
 				bool can_capture_target =
 					(!g ||
 					 ((board_group_info(b, g).libs == 1 && can_capture(b, g, color)) ||
-					  (board_group_info(b, g).libs == 2 && can_capture_2lib_group(b, g, NULL, 0))));
+					  (board_group_info(b, g).libs == 2 && can_capture_2lib_group(b, g, NULL))));
 
 				group_t g2 = group_at(b, atariable);
 				bool can_capture_atariable = 
 					(!g2 ||
 					 ((board_group_info(b, g2).libs == 1 && can_capture(b, g2, color)) ||
-					  (board_group_info(b, g2).libs == 2 && can_capture_2lib_group(b, g2, NULL, 0))));
+					  (board_group_info(b, g2).libs == 2 && can_capture_2lib_group(b, g2, NULL))));
 				
 				//if (can_capture_target)    fprintf(stderr, "can capture target\n");
 				//if (can_capture_atariable) fprintf(stderr, "can capture atariable\n");
@@ -598,7 +598,7 @@ static bool
 cutting_stones_and_can_capture_nearby_after_atari(board_t *b, move_t *m, group_t atariable, ownermap_t *ownermap)
 {
 	/* Note what 2-libs groups nearby are already capturable right now. */
-	move_queue_t cap_targets;
+	mq_t cap_targets;
 	atari_and_cap_find_nearby_targets(&cap_targets, true, NULL, b, m, atariable, ownermap);
 	//fprintf(stderr, "found %i capturable targets\n", cap_targets.moves);
 
@@ -768,7 +768,7 @@ safe_diag_neighbor_reaches_two_opp_groups(board_t *b, move_t *m,
 		/* Can be captured ? Not good */
 		if (board_group_info(b, g).libs == 1) continue;
 		if (board_group_info(b, g).libs == 2 &&
-		    can_capture_2lib_group(b, g, NULL, 0)) continue;
+		    can_capture_2lib_group(b, g, NULL)) continue;
 
 		group_t gs[4];  memcpy(gs, groups, sizeof(gs));
 		int found = 0;
@@ -798,7 +798,7 @@ move_can_be_captured(board_t *b, move_t *m)
 		group_t g = group_at(b, m->coord);
 		if (!g) break;
 		if (board_group_info(b, g).libs == 2 &&
-		    can_capture_2lib_group(b, g, NULL, 0)) break;
+		    can_capture_2lib_group(b, g, NULL)) break;
 		safe = true;
 	});
 	return !safe;
@@ -1016,10 +1016,10 @@ pattern_match_defence(board_t *b, move_t *m)
 		if (board_at(b, o) != other_color)  return -1;
 		group_t go = group_at(b, o);
 		if (board_group_info(b, go).libs == 2 &&
-		    can_capture_2lib_group(b, go, NULL, 0))
+		    can_capture_2lib_group(b, go, NULL))
 			return PF_DEFENCE_SILLY;
 		
-		if (can_capture_2lib_group(b, g, NULL, 0))
+		if (can_capture_2lib_group(b, g, NULL))
 			return PF_DEFENCE_LINE2;
 		return -1;
 	});
@@ -1179,7 +1179,7 @@ pattern_match_l1_blunder_punish(board_t *b, move_t *m)
 			with_move(b, below, other_color, {    // opp plays below (may not be 2nd-line lib)
 				group_t g = group_at(b, last);
 				if (!g || board_group_info(b, g).libs != 2)  break;
-				if (can_capture_2lib_group(b, g, NULL, 0))
+				if (can_capture_2lib_group(b, g, NULL))
 					found = true;
 			});
 		});
@@ -1196,14 +1196,14 @@ pattern_match_l1_blunder_punish(board_t *b, move_t *m)
 			with_move(b, libs[2], other_color, {     // opp plays 3rd-line lib
 				group_t g = group_at(b, last);
 				if (!g || board_group_info(b, g).libs != 2)  break;
-				if (can_capture_2lib_group(b, g, NULL, 0))
+				if (can_capture_2lib_group(b, g, NULL))
 					noescape = true;
 			});
 			if (!noescape)  break;
 		    
 			group_t g = group_at(b, last);
 			if (!g || board_group_info(b, g).libs != 2)  break;		
-			if (can_capture_2lib_group(b, g, NULL, 0))
+			if (can_capture_2lib_group(b, g, NULL))
 				found = true;
 		});
 	}

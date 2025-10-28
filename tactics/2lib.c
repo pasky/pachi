@@ -82,8 +82,7 @@ defense_is_hopeless(board_t *b, group_t group, enum stone owner,
 
 void
 can_atari_group(board_t *b, group_t group, enum stone owner,
-		enum stone to_play, move_queue_t *q,
-		int tag, bool use_def_no_hopeless)
+		enum stone to_play, mq_t *q, bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
@@ -187,8 +186,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		}
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib, tag);
-		mq_nodup(q);
+		mq_add_nodup(q, lib);
 	}
 
 	if (DEBUGL(7)) {
@@ -196,12 +194,12 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		snprintf(label, 256, "final %s %s liberties to play by %s = ",
 			stone2str(owner), coord2sstr(group),
 			stone2str(to_play));
-		mq_print_line(label, q);
+		mq_print_line(q, label);
 	}
 }
 
 void
-group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -213,7 +211,7 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q,
 	if (use_miaisafe && miai_2lib(b, group, color))
 		return;
 
-	can_atari_group(b, group, color, to_play, q, tag, use_def_no_hopeless);
+	can_atari_group(b, group, color, to_play, q, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -226,26 +224,25 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q,
 			if (board_group_info(b, g2).libs == 1 &&
 			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], tag);
-				mq_nodup(q);
+				mq_add_nodup(q, board_group_info(b, g2).lib[0]);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)  continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, use_def_no_hopeless);
+			can_atari_group(b, g2, stone_other(color), to_play, q, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
 
 
 bool
-can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
+can_capture_2lib_group(board_t *b, group_t g, mq_t *q)
 {
 	assert(board_group_info(b, g).libs == 2);
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
 		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib));
 		if (wouldbe_ladder_any(b, g, lib)) {
-			if (q)  mq_add(q, lib, tag);
+			if (q)  mq_add(q, lib);
 			return true;
 		}
 	}	
@@ -253,7 +250,7 @@ can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
 }
 
 void
-group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -262,7 +259,7 @@ group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_que
 				coord2sstr(group), color);
 
 	if (to_play != color) {  /* Attacker */		
-		can_capture_2lib_group(b, group, q, tag);
+		can_capture_2lib_group(b, group, q);
 		return;
 	}
 
@@ -275,12 +272,11 @@ group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_que
 			if (board_group_info(b, g2).libs == 1 &&
 			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], tag);
-				mq_nodup(q);
+				mq_add_nodup(q, board_group_info(b, g2).lib[0]);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)  continue;
-			can_capture_2lib_group(b, g2, q, tag);
+			can_capture_2lib_group(b, g2, q);
 		});
 	} foreach_in_group_end;
 }

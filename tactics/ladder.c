@@ -134,7 +134,7 @@ middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t pre
 
 /* Can we escape by capturing chaser ? */
 static bool
-chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, move_queue_t *ccq)
+chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, mq_t *ccq)
 {
 	for (int i = 0; i < ccq->moves; i++) {
 		coord_t lib = ccq->move[i];
@@ -185,7 +185,7 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 		});
 
 	/* Check countercaptures */
-	move_queue_t ccq;
+	mq_t ccq;
 	can_countercapture(b, laddered, &ccq);
 	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))

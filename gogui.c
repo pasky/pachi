@@ -410,7 +410,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	
 	int dame, seki;

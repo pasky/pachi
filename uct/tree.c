@@ -708,11 +708,11 @@ tree_expand_consider_move(board_t *b, coord_t c, enum stone color, uct_t *u)
 
 /* Fill list of considered moves */
 static void
-tree_expand_get_moves(move_queue_t *consider, board_t *b, enum stone color, uct_t *u)
+tree_expand_get_moves(mq_t *consider, board_t *b, enum stone color, uct_t *u)
 {
 	foreach_free_point(b) {
 		if (tree_expand_consider_move(b, c, color, u))
-			mq_add(consider, c, 0);
+			mq_add(consider, c);
 	} foreach_free_point_end;
 }
 
@@ -722,7 +722,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 {
 	/* Include pass in the prior map. */
 	move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
-	move_queue_t consider;  mq_init(&consider);
+	mq_t consider;  mq_init(&consider);
 	
 	/* Map of prior values to initialize the new nodes with. */
 	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &consider };

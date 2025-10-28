@@ -208,7 +208,7 @@ test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladde
 }
 
 static void
-apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color, move_queue_t *q, fixp_t *gammas)
+apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color, mq_t *q, fixp_t *gammas)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	move_t m2 = move(c, color);
@@ -220,7 +220,7 @@ apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color,
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static void
-apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, move_queue_t *q, fixp_t *gammas)
+apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, mq_t *q, fixp_t *gammas)
 {
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
@@ -244,7 +244,7 @@ apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, move_queue
 
 #ifdef MOGGY_JOSEKI
 static void
-joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
+joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (!joseki_dict)
@@ -257,12 +257,12 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *
 	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line("Joseki", q);
+		mq_print_line(q, "Joseki");
 }
 #endif /* MOGGY_JOSEKI */
 
 static void
-global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
+global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
 	if (b->clen == 0)
 		return;
@@ -272,7 +272,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
-			mq_print_line("Global atari", q);
+			mq_print_line(q, "Global atari");
 		if (pp->fullchoose)
 			return;
 	}
@@ -283,7 +283,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print_line("Global atari", q);
+				mq_print_line(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -293,7 +293,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print_line("Global atari", q);
+				mq_print_line(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -301,7 +301,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 }
 
 static int
-local_atari_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
+local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	int force = false;
@@ -327,14 +327,14 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	});
 
 	if (PLDEBUGL(5))
-		mq_print_line("Local atari", q);
+		mq_print_line(q, "Local atari");
 
 	return (force || pp->lcapturerate > fast_random(100));
 }
 
 
 static void
-local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
+local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	group_t group = group_at(b, m->coord);
 
@@ -348,12 +348,12 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line("Ladder", q);
+		mq_print_line(q, "Ladder");
 }
 
 
 static void
-local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
+local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	group_t group = group_at(b, m->coord), group2 = 0;
@@ -381,11 +381,11 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	});
 
 	if (PLDEBUGL(5))
-		mq_print_line("Local 2lib", q);
+		mq_print_line(q, "Local 2lib");
 }
 
 static void
-local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
+local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	group_t group = group_at(b, m->coord), group2 = 0;
@@ -415,11 +415,11 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_
 	});
 
 	if (PLDEBUGL(5))
-		mq_print_line("Local 2lib capture", q);
+		mq_print_line(q, "Local 2lib capture");
 }
 
 static void
-local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
+local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	enum stone color = stone_other(m->color);
@@ -464,7 +464,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
-		mq_print_line("Local nlib", q);
+		mq_print_line(q, "Local nlib");
 }
 
 static coord_t
@@ -493,7 +493,7 @@ nakade_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play)
 }
 
 static void
-eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, move_queue_t *q)
+eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq_t *q)
 {
 	/* The opponent could have filled an approach liberty for
 	 * falsifying an eye like these:
@@ -571,7 +571,7 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mo
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line("Eye fix", q);
+		mq_print_line(q, "Eye fix");
 }
 
 static coord_t
@@ -620,7 +620,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 	if (!is_pass(last_move(b).coord)) {
 		/* Local group in atari? */
 		if (true) {  // pp->lcapturerate check in local_atari_check()
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			if (local_atari_check(p, b, &last_move(b), &q) && 
 			    q.moves > 0)
 				return mq_pick(&q);
@@ -628,7 +628,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			local_ladder_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -638,7 +638,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		 * Check if his group can be laddered / put in atari */
 		if (ps->last_selfatari[other_color] &&
 		    pp->atarirate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			move_t m = move(ps->last_selfatari[other_color], other_color);			
 			ps->last_selfatari[other_color] = 0;  /* Clear */
 			local_2lib_capture_check(p, b, &m, &q);
@@ -648,7 +648,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			local_2lib_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -656,7 +656,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			local_nlib_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -664,7 +664,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			eye_fix_check(p, b, &last_move(b), to_play, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -680,7 +680,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			move_queue_t q;  mq_init(&q);
+			mq_t q;  mq_init(&q);
 			fixp_t gammas[MQL];
 			apply_pattern(p, b, &last_move(b),
 			                  pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL,
@@ -694,7 +694,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		move_queue_t q;  mq_init(&q);
+		mq_t q;  mq_init(&q);
 		global_atari_check(p, b, to_play, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -703,7 +703,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
-		move_queue_t q;  mq_init(&q);
+		mq_t q;  mq_init(&q);
 		joseki_check(p, b, to_play, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -723,7 +723,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 /* Pick a move from queue q, giving different likelihoods to moves
  * based on their tags. */
 static coord_t
-mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
+mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 
@@ -781,7 +781,7 @@ static coord_t
 playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -872,7 +872,7 @@ playout_moggy_assess_group(playout_policy_t *p, prior_map_t *map, group_t g, int
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	board_t *b = map->b;
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 
 	if (board_group_info(b, g).libs > pp->nlib_count)
 		return;

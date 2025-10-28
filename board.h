@@ -302,7 +302,7 @@ void board_print_target_move(board_t *b, FILE *f, coord_t target_move);
 int board_cmp(board_t *b1, board_t *b2);
 
 /* Place given handicap on the board; coordinates are printed to f. */
-void board_handicap(board_t *b, int stones, move_queue_t *q);
+void board_handicap(board_t *b, int stones, mq_t *q);
 
 /* Return color to play */
 static enum stone board_to_play(board_t *b);
@@ -349,11 +349,11 @@ enum stone board_eye_color(board_t *board, coord_t c);
 floating_t board_fast_score(board_t *board);
 floating_t board_score(board_t *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
-floating_t board_official_score(board_t *b, move_queue_t *dead);
-char*      board_official_score_str(board_t *b, move_queue_t *dead);
-floating_t board_official_score_color(board_t *b, move_queue_t *dead, enum stone color);
-floating_t board_official_score_details(board_t *b, move_queue_t *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
-void       board_print_official_ownermap(board_t *b, move_queue_t *dead);
+floating_t board_official_score(board_t *b, mq_t *dead);
+char*      board_official_score_str(board_t *b, mq_t *dead);
+floating_t board_official_score_color(board_t *b, mq_t *dead, enum stone color);
+floating_t board_official_score_details(board_t *b, mq_t *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
+void       board_print_official_ownermap(board_t *b, mq_t *dead);
 
 /* Set board rules according to given string.
  * Returns false in case of unknown ruleset. */

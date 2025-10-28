@@ -346,7 +346,7 @@ static void
 uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 {
 	assert(using_dcnn(b));
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 	
 	{  /* Prior best moves (dcnn policy mostly) */
 		int nbest = u->dcnn_pondering_prior;
@@ -358,16 +358,14 @@ uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 		assert(t->root->hints & TREE_HINT_DCNN);
 
 		for (int i = 0; i < best.n; i++)
-			mq_add(&q, best_c[i], 0);
+			mq_add(&q, best_c[i]);
 	}
 	
 	{  /* Opponent best moves from genmove search */
 		coord_t *best_c = u->dcnn_pondering_mcts_c;
 		int n = u->dcnn_pondering_mcts_n;
-		for (int i = 0; i < n; i++) {
-			mq_add(&q, best_c[i], 0);
-			mq_nodup(&q);
-		}
+		for (int i = 0; i < n; i++)
+			mq_add_nodup(&q, best_c[i]);
 	}
 	
 	if (DEBUGL(2)) {  /* Show guesses. */
@@ -773,7 +771,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 static bool
 uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
 {
-	move_queue_t dead;
+	mq_t dead;
 	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, &dead, msg, true);
 
 	if (res) {
@@ -798,7 +796,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	if (board_playing_ko_threat(b))  return false;
 
 	/* Find dames left */
-	move_queue_t dead, unclear;
+	mq_t dead, unclear;
 	uct_mcowner_playouts(u, b, color);
 	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;

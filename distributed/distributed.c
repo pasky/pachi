@@ -431,7 +431,7 @@ scmp(const void *p1, const void *p2)
 }
 
 static void
-distributed_dead_groups(engine_t *e, board_t *b, move_queue_t *mq)
+distributed_dead_groups(engine_t *e, board_t *b, mq_t *mq)
 {
 	protocol_lock();
 
@@ -459,7 +459,7 @@ distributed_dead_groups(engine_t *e, board_t *b, move_queue_t *mq)
 	char *dead = gtp_replies[best_reply];
 	dead = strchr(dead, ' '); // skip "id "
 	while (dead && *++dead != '\n') {
-		mq_add(mq, str2coord(dead), 0);
+		mq_add(mq, str2coord(dead));
 		dead = strchr(dead, '\n');
 	}
 	protocol_unlock();

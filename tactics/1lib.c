@@ -77,7 +77,7 @@ can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 
 /* Checks snapbacks */
 bool
-can_countercapture(board_t *b, group_t group, move_queue_t *q)
+can_countercapture(board_t *b, group_t group, mq_t *q)
 {
 	if (q) mq_init(q);
 	enum stone color = board_at(b, group);
@@ -96,8 +96,7 @@ can_countercapture(board_t *b, group_t group, move_queue_t *q)
 				continue;
 
 			if (!q) return true;
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
-			mq_nodup(q);
+			mq_add_nodup(q, board_group_info(b, group_at(b, c)).lib[0]);
 		});
 	} foreach_in_group_end;
 
@@ -108,7 +107,7 @@ can_countercapture(board_t *b, group_t group, move_queue_t *q)
 /* Same as can_countercapture() but returns capturable groups instead of moves,
  * queue may not be NULL, and is always cleared. */
 bool
-countercapturable_groups(board_t *b, group_t group, move_queue_t *q)
+countercapturable_groups(board_t *b, group_t group, mq_t *q)
 {
 	q->moves = 0;
 	enum stone color = board_at(b, group);
@@ -124,8 +123,7 @@ countercapturable_groups(board_t *b, group_t group, move_queue_t *q)
 			    !can_capture(b, g, color))
 				continue;
 
-			mq_add(q, group_at(b, c), 0);
-			mq_nodup(q);
+			mq_add_nodup(q, group_at(b, c));
 		});
 	} foreach_in_group_end;
 
@@ -133,7 +131,7 @@ countercapturable_groups(board_t *b, group_t group, move_queue_t *q)
 }
 
 bool
-can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
+can_countercapture_any(board_t *b, group_t group, mq_t *q)
 {
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
@@ -153,8 +151,7 @@ can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
 				continue;
 
 			if (!q) return true;
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
-			mq_nodup(q);
+			mq_add_nodup(q, board_group_info(b, group_at(b, c)).lib[0]);
 		});
 	} foreach_in_group_end;
 
@@ -178,7 +175,7 @@ can_be_rescued(board_t *b, group_t group, enum stone color)
 
 void
 group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
-                  move_queue_t *q, coord_t *ladder, bool middle_ladder, int tag)
+                  mq_t *q, coord_t *ladder, bool middle_ladder)
 {
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -196,10 +193,8 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 		if (!can_be_rescued(b, group, color))
 			return;
 #endif
-		if (can_play_on_lib(b, group, to_play)) {
-			mq_add(q, lib, tag);
-			mq_nodup(q);
-		}
+		if (can_play_on_lib(b, group, to_play))
+			mq_add_nodup(q, lib);
 		return;
 	}
 
@@ -208,7 +203,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	 *     Could be because of a bug / under the stones situations
 	 *     (maybe not so uncommon in moggy ?) / it upsets moggy's balance somehow
 	 *     (there's always a chance opponent doesn't capture after taking snapback) */
-	bool ccap = can_countercapture_any(b, group, q, tag);
+	bool ccap = can_countercapture_any(b, group, q);
 	if (ccap && !ladder && alwaysccaprate > fast_random(100))
 		return;
 
@@ -241,6 +236,5 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 		} else if (DEBUGL(6))  fprintf(stderr, "...no ladder\n");
 	}
 
-	mq_add(q, lib, tag);
-	mq_nodup(q);
+	mq_add_nodup(q, lib);
 }

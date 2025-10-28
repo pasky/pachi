@@ -38,7 +38,7 @@ static int coord2dcnn_idx(coord_t c);
 
 /* Private use */
 int  dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
-void get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, move_queue_t *q);
+void get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, mq_t *q);
 bool dcnn_first_line_connect_blunder(board_t *b, move_t *m);
 
 extern int darkforest_dcnn;

@@ -610,7 +610,7 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 
 	/* Check moves are valid first, don't leave half setup board on error. */
 	board_t copy;
@@ -622,7 +622,7 @@ cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 		int r = board_play(&copy, &m);
 		assert(r >= 0);
-		mq_add(&q, m.coord, 0);
+		mq_add(&q, m.coord);
 	} while (*gtp->next);
 
 	/* All good, update main board. */
@@ -649,7 +649,7 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	int stones;
 	gtp_arg_number(stones);
 	
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
 	if (DEBUGL(3) && debug_boardprint)
@@ -674,7 +674,7 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	char *score_str = board_official_score_str(b, &q);
 
@@ -731,7 +731,7 @@ cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 
 	for (int i = 0; i < q.moves; i++) {
@@ -752,7 +752,7 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	int printed = 0;
 	
@@ -779,7 +779,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 	if (!ownermap) {  gtp_error(gtp, "no ownermap");  return -1;  }
 	int printed = 0;
 
-	move_queue_t sekis;  mq_init(&sekis);
+	mq_t sekis;  mq_init(&sekis);
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_SEKI)  continue;
@@ -787,8 +787,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
 			if (!g)  continue;
-			mq_add(&sekis, g, 0);
-			mq_nodup(&sekis);
+			mq_add_nodup(&sekis, g);
 		});
 	} foreach_point_end;
 

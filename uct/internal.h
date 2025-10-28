@@ -131,7 +131,7 @@ typedef struct uct {
 #endif
 
 	/* Saved dead groups, for final_status_list dead */
-	move_queue_t dead_groups;
+	mq_t dead_groups;
 	int pass_moveno;
 	
 	/* Timing, stats */
@@ -162,7 +162,7 @@ typedef struct uct {
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, move_queue_t *dead, char **msg, bool log);
+bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, mq_t *dead, char **msg, bool log);
 void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
 void uct_pondering_stop(uct_t *u);
 void uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts);

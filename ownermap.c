@@ -124,7 +124,7 @@ ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge
 }
 
 void
-groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_queue_t *mq)
+groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, mq_t *mq)
 {
 	foreach_point(b) { /* foreach_group, effectively */
 		group_t g = group_at(b, c);
@@ -132,12 +132,12 @@ groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_que
 
 		assert(judge->gs[g] != GS_NONE);
 		if (judge->gs[g] == s)
-			mq_add(mq, g, 0);
+			mq_add(mq, g);
 	} foreach_point_end;
 }
 
 void
-ownermap_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear)
+ownermap_dead_groups(board_t *b, ownermap_t *ownermap, mq_t *dead, mq_t *unclear)
 {
 	enum gj_state gs_array[board_max_coords(b)];
 	group_judgement_t gj = { 0.67, gs_array };
@@ -217,7 +217,7 @@ is_ko_stone(board_t *b, coord_t c)
 	if (!group_is_onestone(b, g))          return false;
 	if (!board_is_eyelike(b, lib, color))  return false;
 
-	move_queue_t q;
+	mq_t q;
 	board_get_atari_neighbors(b, lib, color, &q);
 	if (q.moves != 1)  return false;
 	return true;
@@ -253,7 +253,7 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 	if (b->moves < board_earliest_pass(b))
 		return false;
 	
-	move_queue_t dead, unclear;
+	mq_t dead, unclear;
 	ownermap_dead_groups(b, ownermap, &dead, &unclear);
 	
 	floating_t score_est = ownermap_score_est(b, ownermap);
@@ -270,7 +270,7 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
  * Must call on board copy in this case. */
 bool
 board_position_final_full(board_t *b, ownermap_t *ownermap,
-			  move_queue_t *dead, move_queue_t *unclear, float score_est,
+			  mq_t *dead, mq_t *unclear, float score_est,
 			  int *final_ownermap, int final_dames, float final_score, char **msg)
 {
 	*msg = "too early to pass";
