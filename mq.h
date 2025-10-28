@@ -7,84 +7,75 @@
  * fact that coord_t == group_t). */
 
 #include <assert.h>
-#include "fixp.h"
 #include "move.h"
 #include "random.h"
 
 #define MQL 512 /* XXX: On larger board this might not be enough. */
+
+/* Move queue */
 typedef struct {
 	int moves;
 	coord_t move[MQL];
-	/* Each move can have an optional tag or set of tags.
-	 * The usage of these is user-dependent. */
-	unsigned char tag[MQL];
-} move_queue_t;
+} mq_t;
 
-static void mq_init(move_queue_t *q);
+
+static void mq_init(mq_t *q);
 
 /* Pick a random move from the queue. */
-static coord_t mq_pick(move_queue_t *q);
+static coord_t mq_pick(mq_t *q);
 
-/* Add a move to the queue. */
-static void mq_add(move_queue_t *q, coord_t c, unsigned char tag);
+/* Add a move to the queue (no dupe check). */
+static void mq_add(mq_t *q, coord_t c);
+
+/* Add a move to the queue (except if already in). */
+#define mq_add_nodup(q, c)	do {  mq_add((q), (c));  mq_nodup(q);  } while(0)
 
 /* Remove move from queue */
-static void mq_remove(move_queue_t *q, coord_t c);
+static void mq_remove(mq_t *q, coord_t c);
 
 /* Remove i'th item from queue */
-static void mq_remove_index(move_queue_t *q, int i);
+static void mq_remove_index(mq_t *q, int i);
 
 /* Is move in the queue ? */
-static bool mq_has(move_queue_t *q, coord_t c);
+static bool mq_has(mq_t *q, coord_t c);
 
 /* Cat two queues together. */
-static void mq_append(move_queue_t *qd, move_queue_t *qs);
+static void mq_append(mq_t *qd, mq_t *qs);
 
 /* Subtract two queues (find elements in a not in b) */
-static void mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res);
+static void mq_sub(mq_t *a, mq_t *b, mq_t *res);
 
 /* Check if the last move in queue is not a dupe, and remove it
  * in that case. */
-static void mq_nodup(move_queue_t *q);
+static void mq_nodup(mq_t *q);
 
 /* Print queue contents on stderr. */
-static int  mq_print(char *label, move_queue_t *q);
-static void mq_print_line(char *label, move_queue_t *q);
+static int  mq_print(mq_t *q, char *label);
+static void mq_print_line(mq_t *q, char *label);
 
-
-/* Variations of the above that allow move weighting. */
-/* XXX: The "kinds of move queue" issue (it's even worse in some other
- * branches) is one of the few good arguments for C++ in Pachi...
- * At least rewrite it to be less hacky and maybe make a move_gamma_queue
- * that encapsulates move_queue. */
-
-static coord_t mq_gamma_pick(move_queue_t *q, fixp_t *gammas);
-static void mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, fixp_t gamma, unsigned char tag);
-static void mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label);
 
 
 static inline void
-mq_init(move_queue_t *q)
+mq_init(mq_t *q)
 {
 	q->moves = 0;
 }
 
 static inline coord_t
-mq_pick(move_queue_t *q)
+mq_pick(mq_t *q)
 {
 	return q->moves ? q->move[fast_random(q->moves)] : pass;
 }
 
 static inline void
-mq_add(move_queue_t *q, coord_t c, unsigned char tag)
+mq_add(mq_t *q, coord_t c)
 {
 	assert(q->moves < MQL);
-	q->tag[q->moves] = tag;
 	q->move[q->moves++] = c;
 }
 
 static inline void
-mq_remove(move_queue_t *q, coord_t c)
+mq_remove(mq_t *q, coord_t c)
 {
 	for (int i = 0; i < q->moves; i++)
 		if (q->move[i] == c)
@@ -92,15 +83,14 @@ mq_remove(move_queue_t *q, coord_t c)
 }
 
 static inline void
-mq_remove_index(move_queue_t *q, int i)
+mq_remove_index(mq_t *q, int i)
 {
 	assert(q->moves);
-	q->tag[i]  = q->tag[q->moves - 1];
 	q->move[i] = q->move[q->moves-- - 1];
 }
 
 static inline bool
-mq_has(move_queue_t *q, coord_t c)
+mq_has(mq_t *q, coord_t c)
 {
 	for (int i = 0; i < q->moves; i++)
 		if (q->move[i] == c)
@@ -109,30 +99,28 @@ mq_has(move_queue_t *q, coord_t c)
 }
 
 static inline void
-mq_append(move_queue_t *qd, move_queue_t *qs)
+mq_append(mq_t *qd, mq_t *qs)
 {
 	assert(qd->moves + qs->moves < MQL);
-	memcpy(&qd->tag[qd->moves], qs->tag, qs->moves * sizeof(*qs->tag));
 	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(*qs->move));
 	qd->moves += qs->moves;
 }
 
 static inline void
-mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res)
+mq_sub(mq_t *a, mq_t *b, mq_t *res)
 {
 	int n = a->moves;
 	for (int i = 0; i < n; i++)
 		if (!mq_has(b, a->move[i]))
-			mq_add(res, a->move[i], 0);
+			mq_add(res, a->move[i]);
 }
 
 static inline void
-mq_nodup(move_queue_t *q)
+mq_nodup(mq_t *q)
 {
 	int n = q->moves;
 	for (int i = 0; i < n - 1; i++) {
 		if (q->move[i] == q->move[n - 1]) {
-			q->tag[i] |= q->tag[n - 1];
 			q->moves--;
 			return;
 		}
@@ -140,7 +128,7 @@ mq_nodup(move_queue_t *q)
 }
 
 static inline int
-mq_print(char *label, move_queue_t *q)
+mq_print(mq_t *q, char *label)
 {
 	int n = fprintf(stderr, "%s", label);
 	for (int i = 0; i < q->moves; i++)
@@ -149,46 +137,11 @@ mq_print(char *label, move_queue_t *q)
 }
 
 static inline void
-mq_print_line(char *label, move_queue_t *q)
+mq_print_line(mq_t *q, char *label)
 {
-	mq_print(label, q);
+	mq_print(q, label);
 	fprintf(stderr, "\n");
 }
 
-static inline coord_t
-mq_gamma_pick(move_queue_t *q, fixp_t *gammas)
-{
-	if (!q->moves)  return pass;
-
-	fixp_t total = 0;
-	for (int i = 0; i < q->moves; i++)
-		total += gammas[i];
-	if (!total)     return pass;
-
-	fixp_t stab = fast_irandom(total);
-	for (int i = 0; i < q->moves; i++) {
-		if (stab < gammas[i])
-			return q->move[i];
-		stab -= gammas[i];
-	}
-	assert(0);
-	return pass;
-}
-
-static inline void
-mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, fixp_t gamma, unsigned char tag)
-{
-	mq_add(q, c, tag);
-	gammas[q->moves - 1] = gamma;
-}
-
-static inline void
-mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label)
-{
-	fprintf(stderr, "%s candidate moves: ", label);
-	for (int i = 0; i < q->moves; i++)
-		fprintf(stderr, "%s(%.3f) ", coord2sstr(q->move[i]), fixp_to_double(gammas[i]));
-	fprintf(stderr, "\n");
-}
 
 #endif
