@@ -11,6 +11,8 @@
 #include "debug.h"
 #include "joseki/joseki.h"
 #include "mq.h"
+#include "gmq.h"
+#include "mtmq.h"
 #include "pattern3.h"
 #include "playout.h"
 #include "playout/moggy.h"
@@ -208,38 +210,38 @@ test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladde
 }
 
 static void
-apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color, mq_t *q, fixp_t *gammas)
+apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color, gmq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	move_t m2 = move(c, color);
 	fixp_t gamma;
 	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder, &gamma)) {
-		mq_gamma_add(q, gammas, c, gamma, 1<<MQ_PAT3);
+		gmq_add(q, c, gamma);
 	}
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static void
-apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, mq_t *q, fixp_t *gammas)
+apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, gmq_t *q)
 {
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return;
 
 	foreach_8neighbor(b, m->coord) {
-		apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
+		apply_pattern_here(p, b, c, stone_other(m->color), q);
 	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c))
 				continue;
-			apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
+			apply_pattern_here(p, b, c, stone_other(m->color), q);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_gamma_print(q, gammas, "Pattern");
+		gmq_print(q, "Pattern");
 }
 
 #ifdef MOGGY_JOSEKI
@@ -253,7 +255,7 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	foreach_joseki_move(joseki_dict, b, to_play) {
 		if (!board_is_valid_play(b, to_play, c))
 			continue;
-		mq_add(q, c, 1<<MQ_JOSEKI);
+		mq_add(q, c);
 	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
@@ -270,7 +272,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
 		if (PLDEBUGL(5))
 			mq_print_line(q, "Global atari");
 		if (pp->fullchoose)
@@ -279,7 +281,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -289,7 +291,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -308,7 +310,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder);
 	}
 
 	foreach_neighbor(b, m->coord, {
@@ -323,7 +325,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		    group_stone_count(b, g, 5) >= 3)
 			force = true;
 		
-		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, NULL, pp->middle_ladder);
 	});
 
 	if (PLDEBUGL(5))
@@ -344,7 +346,7 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	for (int i = 0; i < 2; i++) {
 		coord_t chase = board_group_info(b, group).lib[i];
 		if (wouldbe_ladder(b, group, chase))
-			mq_add(q, chase, 1<<MQ_LADDER);
+			mq_add(q, chase);
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
@@ -360,7 +362,7 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group).libs == 2) {
-		group_2lib_check(b, group, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group_2lib_check(b, group, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -376,7 +378,7 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group_t g = group_at(b, c);
 		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group_2lib_check(b, g, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		group2 = g; // prevent trivial repeated checks
 	});
 
@@ -392,7 +394,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 
 	/* Nothing there normally since opponent avoided bad selfatari ... */
 	if (board_group_info(b, group).libs == 2) {
-		group_2lib_capture_check(b, group, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group_2lib_capture_check(b, group, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -410,7 +412,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group_t g = group_at(b, c);
 		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_capture_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group_2lib_capture_check(b, g, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		group2 = g; // prevent trivial repeated checks
 	});
 
@@ -459,7 +461,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 			continue;
 		if (board_group_info(b, g).libs < 3 || board_group_info(b, g).libs > pp->nlib_count)
 			continue;
-		group_nlib_defense_check(b, g, color, q, 1<<MQ_LNLIB);
+		group_nlib_defense_check(b, g, color, q);
 		group2 = g; // prevent trivial repeated checks
 	} foreach_8neighbor_end;
 
@@ -553,7 +555,7 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 					foreach_diag_neighbor(b, falsified) {
 						if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1) {
 							/* Suggest capturing a falsifying stone in atari. */
-							mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
+							mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
 						} else {
 							color_diag_libs[board_at(b, c)]++;
 						}
@@ -561,7 +563,7 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 					if (color_diag_libs[m->color] == 1 || (color_diag_libs[m->color] == 0 && color_diag_libs[S_OFFBOARD] == 2)) {
 						/* That's it. Fill the falsifying
 						 * liberty before it's too late! */
-						mq_add(q, falsifying, 0);
+						mq_add(q, falsifying);
 					}
 				} foreach_diag_neighbor_end;
 			});
@@ -680,13 +682,11 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			mq_t q;  mq_init(&q);
-			fixp_t gammas[MQL];
-			apply_pattern(p, b, &last_move(b),
-			                  pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL,
-					  &q, gammas);
+			gmq_t q;  gmq_init(&q);
+			move_t *last_move2 = (pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL);
+			apply_pattern(p, b, &last_move(b), last_move2, &q);
 			if (q.moves > 0)
-				return mq_gamma_pick(&q, gammas);
+				return gmq_pick(&q);
 		}
 	}
 
@@ -723,23 +723,9 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 /* Pick a move from queue q, giving different likelihoods to moves
  * based on their tags. */
 static coord_t
-mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
+mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mtmq_t *q)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
-
-	/* First, merge all entries for a move. */
-	/* We use a naive O(N^2) since the average length of the queue
-	 * is about 1.4. */
-	for (int i = 0; i < q->moves; i++) {
-		for (int j = i + 1; j < q->moves; j++) {
-			if (q->move[i] != q->move[j])
-				continue;
-			q->tag[i] |= q->tag[j];
-			q->moves--;
-			q->tag[j] = q->tag[q->moves];
-			q->move[j] = q->move[q->moves];
-		}
-	}
 
 	/* Now, cona_t probdist. */
 	fixp_t total = 0;
@@ -777,11 +763,20 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	return pass;
 }
 
+#define FULLCHOOSE_ADD_TAGGED(code, tag)   do \
+{ \
+	mq_t q;  mq_init(&q); \
+	do { code; } while(0); \
+	for (int i = 0; i < q.moves; i++) \
+		mtmq_add_nodup(&mq, q.move[i], tag); \
+} while(0)
+
+
 static coord_t
 playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
-	mq_t q;  mq_init(&q);
+	mtmq_t mq;  mtmq_init(&mq);  /* Tagged queue */
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -791,45 +786,46 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 	    && b->moves - b->last_ko_age < pp->koage) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
-			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
+			mtmq_add_nodup(&mq, b->last_ko.coord, 1<<MQ_KO);
 	}
 
 	/* Local checks */
 	if (!is_pass(last_move(b).coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > 0)
-			local_atari_check(p, b, &last_move(b), &q);
+			FULLCHOOSE_ADD_TAGGED(local_atari_check(p, b, &last_move(b), &q), 1<<MQ_LATARI);
 
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > 0)
-			local_ladder_check(p, b, &last_move(b), &q);
+			FULLCHOOSE_ADD_TAGGED(local_ladder_check(p, b, &last_move(b), &q), 1<<MQ_LADDER);
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > 0)
-			local_2lib_check(p, b, &last_move(b), &q);
+			FULLCHOOSE_ADD_TAGGED(local_2lib_check(p, b, &last_move(b), &q), 1<<MQ_L2LIB);
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > 0)
-			local_nlib_check(p, b, &last_move(b), &q);
+			FULLCHOOSE_ADD_TAGGED(local_nlib_check(p, b, &last_move(b), &q), 1<<MQ_LNLIB);
 
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > 0)
-			eye_fix_check(p, b, &last_move(b), to_play, &q);
+			FULLCHOOSE_ADD_TAGGED(eye_fix_check(p, b, &last_move(b), to_play, &q), 0); // XXX no tag
 
 		/* Nakade check */
 		if (pp->nakaderate > 0 && immediate_liberty_count(b, last_move(b).coord) > 0) {
 			coord_t nakade = nakade_check(p, b, &last_move(b), to_play);
 			if (!is_pass(nakade))
-				mq_add(&q, nakade, 1<<MQ_NAKADE);
+				mtmq_add_nodup(&mq, nakade, 1<<MQ_NAKADE);
 		}
 
 		/* Check for patterns we know */
 		if (pp->patternrate > 0) {
-			fixp_t gammas[MQL];
-			apply_pattern(p, b, &last_move(b),
-					pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL,
-					&q, gammas);
+			gmq_t q;  gmq_init(&q);
+			move_t *last_move2 = (pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL);
+			apply_pattern(p, b, &last_move(b), last_move2, &q);
 			/* FIXME: Use the gammas. */
+			for (int i = 0; i < q.moves; i++)
+				mtmq_add_nodup(&mq, q.move[i], MQ_PAT3);
 		}
 	}
 
@@ -837,12 +833,12 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 
 	/* Any groups in atari? */
 	if (pp->capturerate > 0)
-		global_atari_check(p, b, to_play, &q);
+		FULLCHOOSE_ADD_TAGGED(global_atari_check(p, b, to_play, &q), 1<<MQ_GATARI);
 
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > 0)
-		joseki_check(p, b, to_play, &q);
+		FULLCHOOSE_ADD_TAGGED(joseki_check(p, b, to_play, &q), 1<<MQ_JOSEKI);
 #endif
 
 #if 0
@@ -853,8 +849,8 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 	printf("\n");
 #endif
 
-	if (q.moves > 0)
-		return mq_tagged_choose(p, b, to_play, &q);
+	if (mq.moves > 0)
+		return mq_tagged_choose(p, b, to_play, &mq);
 
 	/* Fill board */
 	if (pp->fillboardtries > 0) {
@@ -887,7 +883,7 @@ playout_moggy_assess_group(playout_policy_t *p, prior_map_t *map, group_t g, int
 			return;
 		if (board_at(b, g) != map->to_play)
 			return; // we do only defense
-		group_nlib_defense_check(b, g, map->to_play, &q, 0);
+		group_nlib_defense_check(b, g, map->to_play, &q);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
@@ -915,7 +911,7 @@ playout_moggy_assess_group(playout_policy_t *p, prior_map_t *map, group_t g, int
 
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group_2lib_check(b, g, map->to_play, &q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
@@ -929,7 +925,7 @@ playout_moggy_assess_group(playout_policy_t *p, prior_map_t *map, group_t g, int
 	/* This group, sir, is in atari! */
 
 	coord_t ladder = pass;
-	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, true, 0);
+	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, true);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
