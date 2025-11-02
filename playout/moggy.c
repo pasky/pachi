@@ -28,8 +28,6 @@
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
-/* Use joseki moves in moggy ? */
-//#define MOGGY_JOSEKI 1
 
 /* In case "seqchoose" move picker is enabled (i.e. no "fullchoose"
  * parameter passed), we stochastically apply fixed set of decision

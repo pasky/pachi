@@ -8,10 +8,13 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "joseki/joseki.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
+
+#ifdef MOGGY_JOSEKI
+#include "joseki/joseki.h"
+#endif
 
 /* Internal engine state. */
 typedef struct {
@@ -187,7 +190,10 @@ replay_state_init(engine_t *e, board_t *b)
 	r->debug_level = 1;
 	r->runs = 1000;
 	r->no_suicide = 0;
+
+#ifdef MOGGY_JOSEKI
 	joseki_load(board_rsize(b));
+#endif
 
 	/* Process engine options. */
 	char *err;
