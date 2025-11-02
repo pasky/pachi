@@ -743,6 +743,7 @@ test_moggy_status(board_t *b, char *arg)
 	
 	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
+		assert(n < 10);
 		coords[n] = str2coord(arg);
 		next_arg(arg);
 
