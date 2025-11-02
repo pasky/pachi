@@ -15,21 +15,15 @@ typedef struct playout_setup playout_setup_t;
 /** Playout policy interface: */
 
 /* Initialize policy data structures for new playout; subsequent choose calls
- * (but not assess/permit calls!) will all be made on the same board; if
- * setboard is used, it is guaranteed that choose will pick all moves played
- * on the board subsequently. The routine is expected to initialize b->ps
- * with internal data. b->ps will be simply free()d when board is destroyed,
+ * (but not permit calls!) will all be made on the same board; if setboard
+ * is used, it is guaranteed that choose will pick all moves played on the
+ * board subsequently. The routine is expected to initialize b->ps with
+ * internal data. b->ps will be simply free()d when board is destroyed,
  * so make sure all data is within single allocated block. */
 typedef void (*playoutp_setboard)(playout_policy_t *playout_policy, board_t *b);
 
 /* Pick the next playout simulation move. */
 typedef coord_t (*playoutp_choose)(playout_policy_t *playout_policy, playout_setup_t *playout_setup, board_t *b, enum stone to_play);
-
-/* Set number of won (>0) or lost (<0) games for each considerable
- * move (usually a proportion of @games); can leave some untouched
- * if policy has no opinion. The number must have proper parity;
- * just use uct/prior.h:add_prior_value(). */
-typedef void (*playoutp_assess)(playout_policy_t *playout_policy, struct prior_map *map, int games);
 
 
 /* Whether to allow given move. All playout moves must pass permit() before being played.
@@ -45,11 +39,9 @@ struct playout_policy {
 	int debug_level;
 	/* We call setboard when we start new playout.
 	 * We call choose when we ask policy about next move.
-	 * We call assess when we ask policy about how good given move is.
 	 * We call permit when we ask policy if we can make a randomly chosen move. */
 	playoutp_setboard setboard;
 	playoutp_choose choose;
-	playoutp_assess assess;
 	playoutp_permit permit;
 	playoutp_done done;
 	/* By default, with setboard set we will refuse to make (random)
