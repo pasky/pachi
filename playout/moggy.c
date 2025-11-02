@@ -272,7 +272,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
 		if (PLDEBUGL(5))
 			mq_print_line(q, "Global atari");
 		if (pp->fullchoose)
@@ -281,7 +281,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -291,7 +291,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -310,7 +310,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, pp->middle_ladder);
 	}
 
 	foreach_neighbor(b, m->coord, {
@@ -325,7 +325,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		    group_stone_count(b, g, 5) >= 3)
 			force = true;
 		
-		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, NULL, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, pp->middle_ladder);
 	});
 
 	if (PLDEBUGL(5))

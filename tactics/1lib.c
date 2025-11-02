@@ -175,7 +175,7 @@ can_be_rescued(board_t *b, group_t group, enum stone color)
 
 void
 group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
-                  mq_t *q, coord_t *ladder, bool middle_ladder)
+                  mq_t *q, bool middle_ladder)
 {
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -204,7 +204,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	 *     (maybe not so uncommon in moggy ?) / it upsets moggy's balance somehow
 	 *     (there's always a chance opponent doesn't capture after taking snapback) */
 	bool ccap = can_countercapture_any(b, group, q);
-	if (ccap && !ladder && alwaysccaprate > fast_random(100))
+	if (ccap && alwaysccaprate > fast_random(100))
 		return;
 
 	/* Otherwise, do not save kos. */
@@ -228,12 +228,9 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	
 	/* ...or play out ladders (unless we can counter-capture anytime). */
 	if (!ccap) {
-		if (is_ladder(b, group, middle_ladder)) {
-			/* Sometimes we want to keep the ladder move in the
-			 * queue in order to discourage it. */
-			if (!ladder)   return;
-			else           *ladder = lib;
-		} else if (DEBUGL(6))  fprintf(stderr, "...no ladder\n");
+		if (is_ladder(b, group, middle_ladder))
+			return;
+		else if (DEBUGL(6))  fprintf(stderr, "...no ladder\n");
 	}
 
 	mq_add_nodup(q, lib);

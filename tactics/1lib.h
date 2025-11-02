@@ -23,7 +23,7 @@ bool can_countercapture_any(board_t *b, group_t group, mq_t *q);
  * @to_play to deal with it (rescuing or capturing it). */
 /* ladder != NULL implies to always enqueue all relevant moves. */
 void group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
-                       mq_t *q, coord_t *ladder, bool middle_ladder);
+                       mq_t *q, bool middle_ladder);
 
 
 /* Returns 0 or ID of neighboring group in atari. */
