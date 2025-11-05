@@ -3,6 +3,7 @@ boardsize 3
 X X .
 X X X
 X X .
+
 bad_selfatari b c1 1
 bad_selfatari b c3 1
 bad_selfatari w c1 1
@@ -13,6 +14,7 @@ boardsize 3
 X X X
 X X X
 X X .
+
 bad_selfatari b c1 1
 bad_selfatari w c1 0
 
@@ -21,14 +23,41 @@ boardsize 3
 X X .
 O . X
 X X X
+
 bad_selfatari w b2 1
 bad_selfatari b b2 0
+
+
+##############################################################################
+# Nakade
+
+% Capture-from-within 2pt-eye nakade
+boardsize 3
+O O O
+O . .
+O O O
+
+bad_selfatari w b2 1
+bad_selfatari b b2 0
+bad_selfatari w c2 1
+bad_selfatari b c2 0
+
+% Not Capture-from-within 2pt-eye nakade
+boardsize 4
+. . . .
+. O O O
+. O . .
+. O O O
+
+bad_selfatari b c2 1
+bad_selfatari b d2 1
 
 % Almost-nakade
 boardsize 3
 O O O
 . . X
 X X .
+
 bad_selfatari b c1 0
 bad_selfatari w c1 1
 bad_selfatari b b2 0
@@ -41,6 +70,7 @@ boardsize 3
 O O O
 . . X
 X X X
+
 bad_selfatari b b2 0
 bad_selfatari w b2 0
 bad_selfatari b a2 1
@@ -51,6 +81,7 @@ boardsize 3
 O O O
 . X .
 X X X
+
 bad_selfatari b c2 0
 bad_selfatari w c2 1  # Makes bent 4, bad normally    (except in corner ... FIXME ?)
 bad_selfatari b a2 0
@@ -62,6 +93,7 @@ X X O O
 . X . O
 O X O O
 O O O O
+
 bad_selfatari w a3 1
 bad_selfatari b a3 0
 bad_selfatari w c3 1
@@ -73,6 +105,7 @@ X . O O
 . X X O
 O X O O
 O O O O
+
 bad_selfatari w a3 1
 bad_selfatari b a3 1
 bad_selfatari w b4 1
@@ -84,6 +117,7 @@ X X O O
 X X . O
 O . O O
 O O O O
+
 bad_selfatari w b2 1
 bad_selfatari b b2 0
 bad_selfatari w c3 1
@@ -96,46 +130,9 @@ O . . O O
 O X X O O
 O X X X O
 O O O O O
+
 bad_selfatari b b4 1
 bad_selfatari b c4 1
-
-% Seki destruction
-boardsize 4
-X X X .
-X O O O
-X . X X
-X X X X
-bad_selfatari w b2 1
-bad_selfatari b b2 1
-bad_selfatari w d4 1
-bad_selfatari b d4 1
-
-% Seki destruction (2 stones)
-boardsize 6
-. . O X . O
-. O O X . O
-. O X O O O
-. O X X X X
-. O X . X .
-. O X . X .
-sar b e6 1
-sar w e6 1
-sar b e5 1
-sar w e5 1
-
-% Seki destruction (3 stones)
-boardsize 6
-. . O X . O
-. . O X . O
-. O O X O O
-. O X O O X
-. O X X X X
-. O X . X .
-
-sar b e6 1
-sar w e6 1
-sar b e5 1
-sar w e5 1
 
 % Bulky five nakade
 boardsize 5
@@ -144,6 +141,7 @@ X O O X X
 X O . X X
 X X . X X
 X X X X X
+
 bad_selfatari b c3 0
 bad_selfatari w c3 0
 bad_selfatari b c2 1
@@ -156,45 +154,18 @@ X O O X X
 X O . X X
 X X . X X
 X X X X .
+
 bad_selfatari b c3 0
 bad_selfatari w c3 0
 bad_selfatari b c2 1
 bad_selfatari w c2 1
-
-% Capture-from-within 2pt-eye nakade
-boardsize 3
-O O O
-O . .
-O O O
-bad_selfatari w b2 1
-bad_selfatari b b2 0
-bad_selfatari w c2 1
-bad_selfatari b c2 0
-
-% Not Capture-from-within 2pt-eye nakade
-boardsize 4
-. . . .
-. O O O
-. O . .
-. O O O
-bad_selfatari b c2 1
-bad_selfatari b d2 1
-
-% Forbidden throw-in to get seki
-boardsize 5
-. X X X .
-X X O O O
-X O O . .
-X O O O O
-X X X X X
-! bad_selfatari b d3 0	# Gosh, sometimes bad moves are good
-! bad_selfatari b e3 0
 
 % Capture-from-within 3pt-eye (straight) nakade
 boardsize 3
 O O O
 . X .
 O O O
+
 bad_selfatari w a2 1
 bad_selfatari b a2 0
 bad_selfatari w c2 1
@@ -205,6 +176,7 @@ boardsize 3
 O . O
 O X .
 O O O
+
 bad_selfatari w b3 1
 bad_selfatari b b3 0
 bad_selfatari w c2 1
@@ -215,6 +187,7 @@ boardsize 3
 O . X
 O . X
 O O O
+
 bad_selfatari w b3 1
 bad_selfatari b b3 0
 bad_selfatari w b2 1
@@ -225,6 +198,7 @@ boardsize 3
 O O O
 . . X
 O O O
+
 bad_selfatari w a2 1
 bad_selfatari b a2 1
 bad_selfatari w b2 0
@@ -237,6 +211,7 @@ X O O X X
 X O . . X
 X X O X X
 X X X X X
+
 bad_selfatari b c3 0
 bad_selfatari w c3 0 
 bad_selfatari b d3 1
@@ -249,6 +224,7 @@ X O O X .
 X O . X X
 X X . X X
 . . X X X
+
 bad_selfatari b c3 0
 bad_selfatari w c3 0
 bad_selfatari b c2 0
@@ -268,6 +244,7 @@ X . O X O .
 O X X X O .
 O O X X O .
 O O O O O .
+
 bad_selfatari b b4 1
 bad_selfatari w b4 0
 bad_selfatari b c5 1
@@ -281,6 +258,7 @@ X . O X O .
 O X X X O .
 O . X X O .
 O O O O O .
+
 bad_selfatari b b4 0
 bad_selfatari w b4 0	# Have to allow this or we may never be able to kill that group
 bad_selfatari b c5 0
@@ -294,6 +272,7 @@ boardsize 6
 . O X O . X
 . O X . O X
 . O O X X X
+
 bad_selfatari b d2 0
 bad_selfatari w d2 0
 bad_selfatari b e3 0
@@ -305,6 +284,7 @@ X X X X
 X O . X
 X X . X
 X X X X
+
 bad_selfatari w c3 0
 bad_selfatari w c2 1
 
@@ -314,6 +294,7 @@ X X X X
 X O . X
 X X . X
 . X X X
+
 bad_selfatari w c3 0
 bad_selfatari w c2 1
 
@@ -323,6 +304,7 @@ X X X X
 X O . O
 X X . X
 X X X X
+
 bad_selfatari w c3 0
 bad_selfatari w c2 1
 
@@ -332,6 +314,7 @@ X X X X
 X O . O
 X X . X
 . X X X
+
 bad_selfatari w c3 0
 bad_selfatari w c2 1
 
@@ -341,6 +324,7 @@ X X X X
 X O . O
 X X X .
 X X X X
+
 bad_selfatari w c3 0
 bad_selfatari w d2 1
 
@@ -350,6 +334,7 @@ X X X X
 X O . O
 X X X .
 . X X X
+
 bad_selfatari w c3 0
 bad_selfatari w d2 1
 
@@ -360,10 +345,221 @@ X O O X X
 X O O X .
 X . O X X
 X O O X X
+
 bad_selfatari w b2 1
 bad_selfatari b b2 1
 bad_selfatari w b5 1
 bad_selfatari b b5 0
+
+% Bad nakade (real game 1)
+boardsize 9
+O . O . . O X X .
+. O . O . O O X .
+O O . . O O X X O
+X O O O O X O O O
+X X O X X X X X O
+. X O O O X X X X
+. X O X X X . . X
+X X X O . . X X X
+X O . . O . . . O
+
+bad_selfatari w j8 1
+bad_selfatari b j8 0
+
+% 3 stones bad_selfatari nakade to dead shape (middle)
+boardsize 5
+X X X X X
+O . O . X
+X X X X X
+X X X X X
+X X X X X
+
+bad_selfatari w b4 0	# Fill eye
+bad_selfatari b b4 0	# Capture and live
+bad_selfatari b d4 1   
+
+% 3 stones bad_selfatari nakade to dead shape 
+boardsize 5
+X X X X X
+O O . . X
+X X X X X
+X X X X X
+X X X X X
+
+bad_selfatari w c4 0	# Fill eye
+bad_selfatari b c4 0	# Capture and live
+bad_selfatari b d4 1   
+
+% 3 stones bad_selfatari nakade to dead shape (outside libs)
+boardsize 5
+X X X X X
+O O . . X
+X X X X X
+. . . . .
+. . . . .
+
+bad_selfatari w c4 0	# Fill eye
+bad_selfatari w d4 1   
+
+% 2 stones bad_selfatari nakade to dead shape 
+boardsize 4
+X X X X
+O . . X
+X X X X
+X X X X
+
+bad_selfatari w b3 0	# Fill eye
+bad_selfatari b b3 0	# Capture and live
+bad_selfatari b c3 1   
+
+% 2 stones bad_selfatari nakade to dead shape (outside libs)
+boardsize 4
+X X X X
+O . . X
+X X X X
+. . . .
+
+bad_selfatari w b3 0	# Fill eye
+
+
+% Bulky-five nakade (outside libs)
+boardsize 6
+X X X X X X
+O O O O X X
+. . X O X .
+X X X O X X
+O O O O X .
+O O . . X X
+
+bad_selfatari b b4 0
+bad_selfatari b a4 1
+
+% 4 stone nakade
+boardsize 4
+X O O O
+X X . X
+X X . X
+X X X X
+
+bad_selfatari w c3 0
+bad_selfatari w c2 1
+
+% 4 stone nakade (outside libs)
+boardsize 4
+X O O O
+X X . X
+. X . X
+. X X X
+
+bad_selfatari w c3 0
+bad_selfatari w c2 1
+
+% Bad nakade (not taking away eyeshape and not atari)
+boardsize 4
+O O . X
+X . X X
+X X X .
+. . . .
+
+bad_selfatari w c4 1 
+
+% Not a nakade !  (threatening capture)
+boardsize 4
+X . O O
+X X O O
+O . . X
+. . . .
+
+bad_selfatari b b4 1	# Can escape !
+bad_selfatari w b4 1	# Can escape !
+
+% Not a nakade !  (threatening nothing)
+boardsize 4
+X . O O
+X X O O
+O . . .
+. . . .
+
+bad_selfatari b b4 1	# Can escape !
+
+% Not a nakade !  (threatening nothing)
+boardsize 5
+O O O O O
+O X O O O
+O X . O O
+O X X O O
+O O . . .
+
+bad_selfatari b c3 1	# Can escape !
+
+% Corner nakade (shortage of libs)
+boardsize 4
+. O X .
+X O . X
+X O O O
+X X X .
+
+bad_selfatari b c3 0
+bad_selfatari b d4 0
+
+
+##############################################################################
+# Seki
+
+% Seki destruction
+boardsize 4
+X X X .
+X O O O
+X . X X
+X X X X
+
+bad_selfatari w b2 1
+bad_selfatari b b2 1
+bad_selfatari w d4 1
+bad_selfatari b d4 1
+
+% Seki destruction (2 stones)
+boardsize 6
+. . O X . O
+. O O X . O
+. O X O O O
+. O X X X X
+. O X . X .
+. O X . X .
+
+sar b e6 1
+sar w e6 1
+sar b e5 1
+sar w e5 1
+
+% Seki destruction (3 stones)
+boardsize 6
+. . O X . O
+. . O X . O
+. O O X O O
+. O X O O X
+. O X X X X
+. O X . X .
+
+sar b e6 1
+sar w e6 1
+sar b e5 1
+sar w e5 1
+
+% Forbidden throw-in to get seki
+boardsize 5
+. X X X .
+X X O O O
+X O O . .
+X O O O O
+X X X X X
+
+! bad_selfatari b d3 0	# Gosh, sometimes bad moves are good
+! bad_selfatari b e3 0
+
+
+##############################################################################
+# Snapback
 
 % Not-quite-snapback
 boardsize 5
@@ -372,6 +568,7 @@ X X X . O
 X X X . O
 O O O X X
 O O . . .
+
 bad_selfatari b c1 0
 bad_selfatari w c1 1
 bad_selfatari b d3 0
@@ -385,6 +582,7 @@ X X O .
 . . X .
 O X . .
 . . . .
+
 bad_selfatari b a1 1
 bad_selfatari w a1 0
 bad_selfatari b a3 1
@@ -394,106 +592,17 @@ bad_selfatari w b3 0	# Snapback !
 bad_selfatari b d4 0
 bad_selfatari w d4 0
 
-% Real game 1
-boardsize 9
-O . O . . O X X .
-. O . O . O O X .
-O O . . O O X X O
-X O O O O X O O O
-X X O X X X X X O
-. X O O O X X X X
-. X O X X X . . X
-X X X O . . X X X
-X O . . O . . . O
-bad_selfatari w j8 1
-bad_selfatari b j8 0
 
-% 3 stones bad_selfatari nakade to dead shape (middle)
-boardsize 5
-X X X X X
-O . O . X
-X X X X X
-X X X X X
-X X X X X
-bad_selfatari w b4 0	# Fill eye
-bad_selfatari b b4 0	# Capture and live
-bad_selfatari b d4 1   
+##############################################################################
+# Connect / escape
 
-% 3 stones bad_selfatari nakade to dead shape 
-boardsize 5
-X X X X X
-O O . . X
-X X X X X
-X X X X X
-X X X X X
-bad_selfatari w c4 0	# Fill eye
-bad_selfatari b c4 0	# Capture and live
-bad_selfatari b d4 1   
-
-% 3 stones bad_selfatari nakade to dead shape (outside libs)
-boardsize 5
-X X X X X
-O O . . X
-X X X X X
-. . . . .
-. . . . .
-bad_selfatari w c4 0	# Fill eye
-bad_selfatari w d4 1   
-
-% 2 stones bad_selfatari nakade to dead shape 
-boardsize 4
-X X X X
-O . . X
-X X X X
-X X X X
-bad_selfatari w b3 0	# Fill eye
-bad_selfatari b b3 0	# Capture and live
-bad_selfatari b c3 1   
-
-% 2 stones bad_selfatari nakade to dead shape (outside libs)
-boardsize 4
-X X X X
-O . . X
-X X X X
-. . . .
-bad_selfatari w b3 0	# Fill eye
-
-
-% Bulky-five nakade (outside libs)
-boardsize 6
-X X X X X X
-O O O O X X
-. . X O X .
-X X X O X X
-O O O O X .
-O O . . X X
-bad_selfatari b b4 0
-bad_selfatari b a4 1
-
-% 4 stone nakade
-boardsize 4
-X O O O
-X X . X
-X X . X
-X X X X
-bad_selfatari w c3 0
-bad_selfatari w c2 1
-
-% 4 stone nakade (outside libs)
-boardsize 4
-X O O O
-X X . X
-. X . X
-. X X X
-bad_selfatari w c3 0
-bad_selfatari w c2 1
-
-% Connection
+% Connect and die (damezumari)
 boardsize 4
 . X O X
 O . O X
 O X X X
 X X . .
+
 bad_selfatari b b3 0
 bad_selfatari w b3 1	# Connect and die
 
@@ -504,6 +613,7 @@ O X X O .
 O X . X .
 O O X X .
 . . X X .
+
 bad_selfatari b b5 1
 
 % Bad self-atari (3 stones, can escape) 
@@ -513,6 +623,7 @@ boardsize 5
 . O X X O
 . O X . .
 . O O . .
+
 bad_selfatari b c4 1
 
 % Bad self-atari (4 stones, connect first !)
@@ -523,6 +634,7 @@ O O O X O O
 . O O X . X
 . . O O X X
 . . . . . .
+
 bad_selfatari b d6 1
 
 % Bad self-atari (connecting 4 stones, connect and die)
@@ -533,6 +645,7 @@ O O O X O O
 . O O X . X
 . . O O X X
 . . . . . .
+
 bad_selfatari b d5 1
 
 % Bad self-atari (5 stones, connect first !)
@@ -543,6 +656,7 @@ O O X X X O
 . O O X . X
 . . O O X X
 . . . . . .
+
 bad_selfatari b c5 1
 
 % Connect instead of self-atari !
@@ -552,76 +666,15 @@ X . O . .
 X X X O .
 . O O O .
 . . . . .
+
 bad_selfatari w b4 1
 bad_selfatari w d4 0
 
-% Bad self-atari (not taking away eyeshape and not atari)
-boardsize 4
-O O . X
-X . X X
-X X X .
-. . . .
-bad_selfatari w c4 1 
 
-% Not a nakade !  (threatening capture)
-boardsize 4
-X . O O
-X X O O
-O . . X
-. . . .
-bad_selfatari b b4 1	# Can escape !
-bad_selfatari w b4 1	# Can escape !
+##############################################################################
+# Side throw-in
 
-% Not a nakade !  (threatening nothing)
-boardsize 4
-X . O O
-X X O O
-O . . .
-. . . .
-bad_selfatari b b4 1	# Can escape !
-
-% Not a nakade !  (threatening nothing)
-boardsize 5
-O O O O O
-O X O O O
-O X . O O
-O X X O O
-O O . . .
-bad_selfatari b c3 1	# Can escape !
-
-
-% Corner nakade (shortage of libs)
-boardsize 4
-. O X .
-X O . X
-X O O O
-X X X .
-bad_selfatari b c3 0
-bad_selfatari b d4 0
-
-% Throw-in
-boardsize 5
-. . . X .
-O O O X .
-O . . O O
-O O O X .
-. . . X .
-bad_selfatari b c3 0
-bad_selfatari b b3 1	# Silly
-
-% Throw-in making atari
-boardsize 7
-. . . . . . .
-. . . X X X X
-O O O X O O O
-. X . O O . O
-O O O X O O O
-. . . X X X X
-. . . . . . .
-bad_selfatari b c4 0
-bad_selfatari b a4 1      # silly
-
-% Throw-in making atari (outside group with libs)
+% 2 stones throw-in (atari, outside group with libs)
 boardsize 7
 . X . O O . O
 O O O X X X O
@@ -630,18 +683,58 @@ O O O X X X O
 . . . X . O .
 . . . X . O O
 . . . . X X .
+
 bad_selfatari b c7 0      # but cutting is good too ...
 bad_selfatari b a7 1      # silly
 
-% Throw-in making atari with another group on the other side
+% 2 stones throw-in (atari)
 boardsize 5
 . X . O O
 O O O X O
 . X X X O
 . X O O O
 . X O . X
+
 bad_selfatari b c5 0      
 bad_selfatari b a5 1      # silly
+
+% Not a throw-in (corner)
+boardsize 4
+. . . .
+O O . .
+X O O O
+. X . O
+
+bad_selfatari b c1 1	# Captures 2 groups
+bad_selfatari b a1 0
+
+
+##############################################################################
+# Middle throw-in
+
+% Single stone throw-in
+boardsize 5
+. . . X .
+O O O X .
+O . . O O
+O O O X .
+. . . X .
+
+bad_selfatari b c3 0
+bad_selfatari b b3 1	# Silly
+
+% 2 stones throw-in (atari)
+boardsize 7
+. . . . . . .
+. . . X X X X
+O O O X O O O
+. X . O O . O
+O O O X O O O
+. . . X X X X
+. . . . . . .
+
+bad_selfatari b c4 0
+bad_selfatari b a4 1      # silly
 
 % 2 stones throw-ins
 boardsize 6
@@ -656,25 +749,17 @@ bad_selfatari b d5 0   # a) in check_throw_in_or_inside_capture()
 bad_selfatari b d3 0   # b)
 bad_selfatari b c1 1   # c) silly, connect first		 [ d) tested in Capture-from-within 3pt-eye (straight) nakade ]
 
-% Not a throw-in 
-boardsize 4
-. . . .
-O O . .
-X O O O
-. X . O
-bad_selfatari b c1 1	# Captures 2 groups
-bad_selfatari b a1 0
-
-% Side throw-in
+% 2 stones throw-in (incomplete shape)
 boardsize 5
 . O X . .
 . O . O .
 . X O X X
 . X O X .
 . . O . .
+
 bad_selfatari b c4 0
 
-% Side throw-in with outside stone
+% 2 stones throw-in with outside stone
 boardsize 6
 . O X . X .
 . O . O O X
@@ -682,10 +767,11 @@ boardsize 6
 . X O X X X
 . . O . . .
 . . . . . .
+
 bad_selfatari b c5 0
 bad_selfatari b a6 1
 
-% Side throw-in with outside stone (continued)
+% 2 stones throw-in with outside stone (continued)
 boardsize 6
 . O . O X .
 . O . O O X
@@ -693,5 +779,6 @@ boardsize 6
 . X O X X X
 . . O . . .
 . . . . . .
+
 bad_selfatari b c5 0
 bad_selfatari b c6 1
