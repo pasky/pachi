@@ -211,6 +211,64 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	return -1;
 }
 
+/*   . X O .	Check if playing at @to snapbacks 2lib group @group.
+ *   X . * O	@lib is throw-in stone's liberty.
+ *   X O O X	Check that capture captures only our stone, and that lib's neighbors
+ *   . X X X    are sane (no extra lib, no opponent group with more than 2 libs) */
+static bool
+capturing_would_be_snapback_for(board_t *b, enum stone color, group_t group, coord_t to, coord_t lib)
+{
+	foreach_neighbor(b, lib, {
+		enum stone col = board_at(b, c);
+		if (col == S_NONE || col == S_OFFBOARD)
+			continue;
+
+		group_t g = group_at(b, c);
+		int libs = board_group_info(b, g).libs;
+		if (col == color) {
+			if (libs == 1)  // capture more than one group
+				return false;
+		} else { // other_color
+			if (libs > 2)   // will gain extra libs
+				return false;
+			if (libs == 2 && board_group_other_lib(b, g, lib) != to)
+				return false;
+		}
+	});
+	return true;
+}
+
+/* Check if selfatari stone sets up a snapback. */
+static int
+check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
+{
+	enum stone other_color = stone_other(color);
+
+	/* Must be single-stone throw-in. */
+	if (s->groupcts[color] || s->libs != 1)
+		return -1;
+
+	/* Cramped space */
+	if (immediate_liberty_count(b, s->lib) != 1)
+		return -1;
+
+	/* Not ko-like situation */
+	if (!neighbor_count_at(b, s->lib, other_color))
+		return -1;
+
+	/* Examine enemy groups */
+	for (int i = 0; i < s->groupcts[other_color]; i++) {
+		group_t g = s->groupids[other_color][i];
+		if (board_group_info(b, g).libs == 2 &&
+		    capturing_would_be_snapback_for(b, color, g, to, s->lib)) {
+			s->snapback_group = g;
+			return false;
+		}
+	}
+	return -1;
+}
+
+
 static inline bool
 is_neighbor_group(board_t *b, enum stone color, group_t g, selfatari_state_t *s)
 {
@@ -725,9 +783,14 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	s->friend_has_no_libs = false;
 	s->needs_more_lib = 0;
 	s->needs_more_lib_except = 0;
+	// s->lib uninitialized (check s->libs before using)
 
 	foreach_neighbor(b, to, {
 		enum stone color = board_at(b, c);
+		if (color == S_NONE) {
+			s->lib = c;
+			continue;
+		}
 		group_t group = group_at(b, c);
 		if (!group) { continue; }
 
@@ -740,6 +803,30 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 		if (!dup)
 			s->groupids[color][s->groupcts[color]++] = group;
 	});	
+}
+
+/* Check if move sets up a snapback.
+ * Only does the check_snapback() part of is_bad_selfatari(). */
+bool
+is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group)
+{
+	if (immediate_liberty_count(b, to) > 1 ||
+	    neighbor_count_at(b, to, color) ||			  // fast examine_friendly_groups()
+	    board_get_atari_neighbor(b, to, stone_other(color)))  // fast examine_enemy_groups()
+		return false;
+
+	selfatari_state_t s;
+	init_selfatari_state(b, color, to, &s);
+
+	/* We have shortage of liberties; that's the point. */
+	assert(s.libs <= 1);
+
+	if (check_snapback(b, color, to, &s) == false) {
+		if (snapback_group)
+			*snapback_group = s.snapback_group;
+		return true;
+	}
+	return false;
 }
 
 bool
@@ -765,6 +852,10 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 	d = examine_enemy_groups(b, color, to, &s);
 	if (d >= 0)	return d;
 	if (DEBUGL(6))  fprintf(stderr, "no capture\n");
+
+	d = check_snapback(b, color, to, &s);
+	if (d >= 0)	return d;
+	if (DEBUGL(6))  fprintf(stderr, "no snapback\n");
 	
 	if (!(flags & SELFATARI_BIG_GROUPS_ONLY)) {
 		d = check_throwin(b, color, to, &s);

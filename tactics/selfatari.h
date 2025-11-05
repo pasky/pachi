@@ -11,6 +11,7 @@ typedef struct {
 	int     groupcts[S_MAX];	/* number of neighbor groups for each color */
 	group_t groupids[S_MAX][4];	/* and their ids */
 	int     libs;
+	coord_t lib;			/* liberty after playing selfatari */
 	
 	bool    friend_has_no_libs;	/* This is set if this move puts a group out of _all_
 					 * liberties; we need to watch out for snapback then. */
@@ -20,6 +21,7 @@ typedef struct {
 					 * already providing one, don't consider it again. */
 	
 	coord_t needs_more_lib_except;  /* ID of the first liberty, providing it again is not interesting. */
+	group_t snapback_group;		/* if snapback, snapbacked group found */
 } selfatari_state_t;
 
 
@@ -37,6 +39,13 @@ static bool is_really_bad_selfatari(board_t *b, enum stone color, coord_t to);
 
 /* Check if move results in self-atari. */
 static bool is_selfatari(board_t *b, enum stone color, coord_t to);
+
+/* Check if move sets up a snapback.
+ * faster than with_move(selfatari) + capturing_group_is_snapback() for checking
+ * a potential move. Only checks local situation (doesn't check if snapbacked
+ * group has countercaptures).
+ * Stores snapbacked group found in @snapback_group if non NULL. */
+bool is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group);
 
 /* Move (color, coord) is a selfatari; this means that it puts a group of
  * ours in atari; i.e., the group has two liberties now. Return the other

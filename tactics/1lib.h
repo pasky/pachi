@@ -9,6 +9,9 @@
 /* Can capture group g (not snapback) */
 bool can_capture(board_t *b, group_t g, enum stone to_play);
 
+/* Check if @group capture is a snapback.
+ * see also is_snapback(): faster for checking a potential move than
+ * with_move(selfatari) + capturing_group_is_snapback() */
 bool capturing_group_is_snapback(board_t *b, group_t group);
 /* Can group @group usefully capture a neighbor ? 
  * (usefully: not a snapback) */

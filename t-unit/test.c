@@ -309,6 +309,26 @@ test_really_bad_selfatari(board_t *b, char *arg)
 }
 
 static bool
+test_snapback(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "snapback %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = is_snapback(b, color, c, NULL);
+
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+static bool
 test_false_eye_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
@@ -1003,6 +1023,7 @@ typedef struct {
 static t_unit_cmd commands[] = {
 	{ "bad_selfatari",          test_bad_selfatari,         },
 	{ "really_bad_selfatari",   test_really_bad_selfatari,  },
+	{ "snapback",		    test_snapback,		},
 	{ "ladder",                 test_ladder,                },
 	{ "ladder_any",             test_ladder_any,            },
 	{ "wouldbe_ladder",         test_wouldbe_ladder,        },

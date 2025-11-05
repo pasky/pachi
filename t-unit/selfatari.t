@@ -583,14 +583,195 @@ X X O .
 O X . .
 . . . .
 
+bad_selfatari w b3 0	# Snapback !
 bad_selfatari b a1 1
 bad_selfatari w a1 0
 bad_selfatari b a3 1
 bad_selfatari w a3 0
 bad_selfatari b b3 0
-bad_selfatari w b3 0	# Snapback !
 bad_selfatari b d4 0
-bad_selfatari w d4 0
+bad_selfatari w d4 0    # ?
+
+% Snapback
+boardsize 5
+. X O . .
+X . . O .
+X O O X .
+. X X X .
+. . . . .
+
+bad_selfatari b c4 0
+snapback b c4 1
+snapback b d5 0
+
+% We only check for local snapback, not countercaptures
+boardsize 5
+. X O . .
+X . . O .
+O O O X X
+X O O O X
+X X X X .
+
+bad_selfatari b c4 0
+snapback b c4 1
+
+% Snapback capture
+boardsize 5
+. X O . .
+X . X O .
+X O O X .
+. X X X .
+. . . . .
+
+bad_selfatari w b4 1
+
+% Not snapback (3lib group)
+boardsize 5
+. X O . .
+X . . O .
+X O O X .
+. . X X .
+. . . . .
+
+bad_selfatari b c4 1
+snapback b c4 0
+
+% Not snapback (extra lib after capture)
+boardsize 5
+. X O . .
+. . . O .
+X O O X .
+. X X X .
+. . . . .
+
+bad_selfatari b c4 1
+snapback b c4 0
+
+% Not snapback (multiple captures)
+boardsize 6
+O O O . . .
+O X O . . .
+X . . O . .
+X O O X . .
+. X X X . .
+. . . . . .
+
+bad_selfatari b c4 1
+snapback b c4 0
+
+% Not snapback (3lib group nearby)
+boardsize 5
+. X X . .
+O O X O .
+. . O O .
+O O X . .
+X X X . .
+
+bad_selfatari b b3 0	# throw-in
+snapback b b3 0
+
+% Ko throwin, not snapback
+boardsize 5
+. . . . .
+. X O . .
+X . . O .
+. X O . .
+. . . . .
+
+bad_selfatari b c3 1
+snapback b c3 0
+
+% Ko capture
+boardsize 5
+. . . . .
+. X O . .
+X O . O .
+. X O . .
+. . . . .
+
+bad_selfatari b c3 0
+snapback b c3 0
+
+% Side snapback
+boardsize 5
+X X X . .
+. O X . .
+. O X . .
+O X X . .
+. . . . .
+
+bad_selfatari b a3 0
+snapback b a3 1
+
+% Not side snapback
+boardsize 5
+. X X . .
+. O X . .
+. O X . .
+O X X . .
+. . . . .
+
+bad_selfatari b a3 0
+snapback b a3 0
+
+% Bad throw-in, no snapback
+boardsize 5
+. X X X .
+. . O X .
+. O O X .
+O X X X .
+. . . . .
+
+bad_selfatari b a3 1
+snapback b a3 0
+
+% Inside snapback
+boardsize 5
+. X O O O
+O O . . O
+. X O O O
+. . X X X
+. . . . .
+
+bad_selfatari b c4 0
+snapback b c4 1
+
+% Not snapback
+boardsize 6
+. . . . O .
+. . . . O X
+. . . O X .
+. . . O X .
+. . . . O X
+. . . . O .
+
+bad_selfatari w f3 0	# throw-in
+snapback w f3 0
+
+% Inside snapback with 2 groups
+boardsize 6
+. X X X X .
+. X O O X .
+O O . . X .
+. X O O X .
+. X X X . .
+. . . . . .
+
+bad_selfatari b c4 0
+snapback b c4 1
+
+% Not snapback (multiple captures)
+boardsize 7
+. . . . . . .
+. X X X X X .
+. X O O O X .
+O O . . X O O
+. X O O O X .
+. X X X X X .
+. . . . . . .
+
+bad_selfatari b c4 0	# throwin
+snapback b c4 0
 
 
 ##############################################################################
