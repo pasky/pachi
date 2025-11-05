@@ -230,7 +230,7 @@ bad_selfatari w c3 0
 bad_selfatari b c2 0
 bad_selfatari w c2 1
 bad_selfatari b d5 0
-bad_selfatari w d5 0	# Throw-in
+bad_selfatari w d5 1
 bad_selfatari b e4 0
 bad_selfatari w e4 1
 bad_selfatari b e5 0
@@ -696,6 +696,149 @@ bad_selfatari b d2 1
 ##############################################################################
 # Side throw-in
 
+% Side throw-in
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. X X O .
+. . . X .
+
+bad_selfatari w c1 0
+
+% Not side throw-in (shape missing)
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. . X O .
+. . . X .
+
+bad_selfatari w c1 1
+
+% Not side throw-in (shape missing, corner)
+boardsize 5
+. . . . .
+. . . . .
+. . O . .
+. X O . .
+. . X . .
+
+bad_selfatari w b1 1
+
+% Can't throw-in into the corner
+boardsize 5
+X . . O .
+. X . O X
+X O . O X
+X O . O X
+. . . . .
+
+bad_selfatari w a1 1
+bad_selfatari w e1 1
+
+% Not side throw-in (bad shape)
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. . X O .
+X . . X .
+
+bad_selfatari w c1 1
+
+% Not side throw-in (bad shape, own stones)
+boardsize 5
+. . . . .
+. . . . .
+O . X O .
+. O X O .
+. . . X .
+
+bad_selfatari w c1 1
+
+% Not side throw-in (bad shape, own stones)
+boardsize 5
+. . . . .
+. . . . .
+O . X O .
+. O X O .
+X . . X .
+
+bad_selfatari w c1 1		# XXX !
+
+% Side throw-in (not eye-falsifying)
+boardsize 5
+. . . . .
+. . . . .
+O . . O .
+O X X O .
+O . . X .
+
+bad_selfatari w c1 0		# Can be useful damezumari
+
+% Side 2 stones throw-in
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. X X O .
+. O . X .
+
+bad_selfatari w c1 0
+
+% Side 2 stones throw-in
+boardsize 6
+. . . . . .
+. . . . . .
+. . . . . .
+. . . . O .
+. X X X O .
+. . O . X .
+
+bad_selfatari w d1 0
+
+% Side 2 stones throw-in
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+X . X O .
+X O . X .
+
+bad_selfatari w c1 0
+
+% Not side 2 stones throw-in
+boardsize 6
+. . . . . .
+. . . . . .
+. . . . . .
+. O . . O .
+. O X X O .
+. . O . X .
+
+bad_selfatari w d1 1
+
+% Not side 2 stones throw-in (open)
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. . X O .
+X O . X .
+
+bad_selfatari w c1 1	# XXX
+
+% Not side 2 stones throw-in (connect-out)
+boardsize 5
+. . . . .
+. . . . .
+. O . O .
+. . X O .
+X O . X .
+
+bad_selfatari w c1 1	# XXX
+
 % 2 stones throw-in (atari, outside group with libs)
 boardsize 7
 . X . O O . O
@@ -729,6 +872,17 @@ X O O O
 
 bad_selfatari b c1 1	# Captures 2 groups
 bad_selfatari b a1 0
+
+% 3 stones throw-in doesn't take away eye shape
+boardsize 6
+. . . . . .
+. . . . . .
+. . . . . .
+. . . . O .
+X X X X O .
+. O O . X .
+
+bad_selfatari w d1 1
 
 
 ##############################################################################
@@ -804,3 +958,33 @@ boardsize 6
 
 bad_selfatari b c5 0
 bad_selfatari b c6 1
+
+% Middle throw-in
+boardsize 5
+. . . . .
+. X X O O
+. . . X .
+. X X O O
+. . . . .
+
+bad_selfatari w c3 0
+
+% Not middle throw-in
+boardsize 5
+. . . . .
+. X X O O
+X . . X .
+. O X O O
+. . . . .
+
+bad_selfatari w c3 1
+
+% Not middle throw-in (weird shape)
+boardsize 5
+. . . . .
+. X X O O
+X . . X .
+. . X O O
+. . . . .
+
+bad_selfatari w c3 1

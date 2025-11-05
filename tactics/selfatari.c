@@ -647,52 +647,73 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 #endif
 
 
+/* We can be throwing-in to false eye:
+ *   X X X O X X X O X X X X X
+ *   X . * X * O . X * O O . X
+ *   # # # # # # # # # # # # #   */
 static int
 check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
-	/* We can be throwing-in to false eye:
-	 * X X X O X X X O X X X X X
-	 * X . * X * O . X * O O . X
-	 * # # # # # # # # # # # # # */
+	enum stone other_color = stone_other(color);
+
+	/* Throw-in situation ? */
+	if (!(neighbor_count_at(b, to, other_color) + neighbor_count_at(b, to, S_OFFBOARD) == 3 &&
+	      board_is_false_eyelike(b, to, other_color)))
+		return -1;
+
 	/* We cannot sensibly throw-in into a corner. */
-	if (neighbor_count_at(b, to, S_OFFBOARD) < 2
-	    && neighbor_count_at(b, to, stone_other(color))
-	       + neighbor_count_at(b, to, S_OFFBOARD) == 3
-	    && board_is_false_eyelike(b, to, stone_other(color))) {
-		assert(s->groupcts[color] <= 1);
-		/* Single-stone throw-in may be ok... */
-		if (s->groupcts[color] == 0) {
-			/* O X .  There is one problem - when it's
-			 * . * X  actually not a throw-in!
-			 * # # #  */
-			foreach_neighbor(b, to, {
-				if (board_at(b, c) == S_NONE) {
-					/* Is the empty neighbor an escape path? */
-					/* (Note that one S_NONE neighbor is already @to.) */
-					if (neighbor_count_at(b, c, stone_other(color))
-					    + neighbor_count_at(b, c, S_OFFBOARD) < 2)
-						return -1;
-				}
-			});
-			return false;
-		}
+	if (neighbor_count_at(b, to, S_OFFBOARD) == 2)
+		return true;
 
-		/* Multi-stone throwin...? */
-		assert(s->groupcts[color] == 1);
-		group_t g = s->groupids[color][0];
+	assert(s->groupcts[color] <= 1);
 
-		assert(board_group_info(b, g).libs <= 2);
-		/* Suicide is definitely NOT ok, no matter what else
-		 * we could test. */
-		if (board_group_info(b, g).libs == 1)
-			return true;
+	/* Single-stone throw-in may be ok... */
+	if (s->groupcts[color] == 0) {
+		/* O X .  There is one problem - when it's
+		 * . * X  actually not a throw-in!
+		 * # # #  */
+		foreach_neighbor(b, to, {
+			if (board_at(b, c) != S_NONE) continue;
+			/* Is the empty neighbor an escape path?
+			 * (Note that one S_NONE neighbor is already @to.)
+			 * We need at least 2 opponent stones nearby (1 at the edge). */
+			int other_stones = neighbor_count_at(b, c, other_color);
+			if (!other_stones ||
+			    other_stones + neighbor_count_at(b, c, S_OFFBOARD) < 2)
+				return true;
+			/* Shape must be right also: Stones above/below empty spot
+			 * in example must be either black or offboard. */
+			int diff = board_stride(b) + 1 - abs(c - to);
+			enum stone e1 = board_at(b, c + diff);
+			enum stone e2 = board_at(b, c - diff);
+			if ((e1 != other_color && e1 != S_OFFBOARD) ||
+			    (e2 != other_color && e2 != S_OFFBOARD))
+				return true;
+		});
+		return false;
+	}
 
-		/* In that case, we must be connected to at most one stone,
-		 * or throwin will not destroy any eyes. */
-		if (group_is_onestone(b, g))
+	/* Multi-stone throwin...? */
+	assert(s->groupcts[color] == 1);
+	group_t g = s->groupids[color][0];
+
+	assert(board_group_info(b, g).libs <= 2);
+	/* Suicide is definitely NOT ok, no matter what else
+	 * we could test. */
+	if (board_group_info(b, g).libs == 1)
+		return true;
+
+	/* In that case, we must be connected to at most one stone,
+	 * or throwin will not destroy any eyes. */
+	if (group_is_onestone(b, g)) {
+		/* Must be somewhat enclosed */
+		coord_t other_lib = board_group_other_lib(b, g, to);
+		int other_own = neighbor_count_at(b, other_lib, color) - 1;
+		if (immediate_liberty_count(b, other_lib) + other_own < 2)
 			return false;
 	}
-	return -1;
+
+	return true;
 }
 
 static void
