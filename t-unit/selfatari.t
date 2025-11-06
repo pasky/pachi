@@ -670,6 +670,28 @@ X X X O .
 bad_selfatari w b4 1
 bad_selfatari w d4 0
 
+% Filling false-eye
+boardsize 6
+X X O O . .
+X . X O . .
+O X X O . O
+O O . X X O
+. . O X . X
+. . O O X X
+
+bad_selfatari b e2 0	# ok to connect ...
+bad_selfatari b b5 1	# as long as there are enough liberties
+
+% Filling false-eye suicide
+boardsize 5
+. . . . .
+. O O O O
+. O X X O
+. O X . X
+. O O X X
+
+bad_selfatari b d2 1
+
 
 ##############################################################################
 # Side throw-in
