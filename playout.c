@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -12,15 +12,6 @@
 #include "ownermap.h"
 #include "playout.h"
 
-/* Whether to set global debug level to the same as the playout
- * has, in case it is different. This can make sure e.g. tactical
- * reading produces proper level of debug prints during simulations.
- * But it is safe to enable this only in single-threaded instances! */
-//#define DEBUGL_BY_PLAYOUT
-
-#define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
-
-
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
@@ -28,10 +19,17 @@ playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool r
 	coord_t coord = m->coord;
 	if (coord == pass) return false;
 
-	if (!board_permit(b, m, NULL) ||
-	    (p->permit && !p->permit(p, b, m, alt, rnd)))
-		return false;
-	return true;
+	bool permit =  (board_permit(b, m, NULL) &&
+			(!p->permit || p->permit(p, b, m, alt, rnd)));
+
+	if (DEBUGL(5)) {
+		if (!permit)
+			fprintf(stderr, "Playout permit(%s): rejected\n", coord2sstr(coord));
+		if (permit && m->coord != coord)
+			fprintf(stderr, "Playout permit(%s): redirect -> %s\n", coord2sstr(coord), coord2sstr(m->coord));
+	}
+
+	return permit;
 }
 
 /* Return coord if move is ok, an alternative move or pass if not.
@@ -58,6 +56,8 @@ static bool
 random_permit_handler(board_t *b, move_t *m, void *data)
 {
 	playout_policy_t *policy = (playout_policy_t*)data;
+
+	//if (DEBUGL(5)) fprintf(stderr, "Trying %s\n", coord2sstr(m->coord));
 	return playout_permit_move(policy, b, m, true, true);
 }
 
@@ -70,8 +70,8 @@ playout_play_move(playout_setup_t *setup,
 	coord_t coord = pass;
 	
 	coord = policy->choose(policy, setup, b, color);
+	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(coord));
 	coord = playout_check_move(policy, b, coord, color);
-	// fprintf(stderr, "policy: %s\n", coord2sstr(coord));
 
 	if (!is_pass(coord)) {
 		move_t m = move(coord, color);
@@ -85,8 +85,10 @@ playout_play_move(playout_setup_t *setup,
 
 	/* Defer to uniformly random move choice if policy failed to produce a move.
 	 * This must never happen if the policy is tracking internal board state, obviously. */
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
 	assert(!policy->setboard || policy->setboard_randomok);
 	board_play_random(b, color, &coord, random_permit_handler, policy);
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move: %s\n", coord2sstr(coord));
 	return coord;
 }
 
@@ -234,10 +236,7 @@ fill_bent_three(board_t *b, enum stone color)
 }
 
 #define random_game_loop_stuff  \
-		if (PLDEBUGL(7)) { \
-			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord)); \
-			if (PLDEBUGL(8)) board_print(b, stderr); \
-		} \
+		if (DEBUGL(5)) board_print(b, stderr); \
 \
 		if (unlikely(is_pass(coord)))  passes++; \
 		else                           passes = 0; \
@@ -272,10 +271,6 @@ playout_play_game(playout_setup_t *setup,
 
 	if (policy->setboard)
 		policy->setboard(policy, b);
-#ifdef DEBUGL_BY_PLAYOUT
-	int debug_level_orig = debug_level;
-	debug_level = policy->debug_level;
-#endif
 
 	enum stone color = starting_color;
 	int passes = is_pass(last_move(b).coord) && b->moves > 0;
@@ -344,10 +339,6 @@ playout_play_game(playout_setup_t *setup,
 	}
 
 	if (ownermap)  ownermap_fill(ownermap, b);
-
-#ifdef DEBUGL_BY_PLAYOUT
-	debug_level = debug_level_orig;
-#endif
 
 	return result;
 }

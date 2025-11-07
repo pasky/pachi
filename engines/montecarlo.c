@@ -286,7 +286,6 @@ montecarlo_state_init(engine_t *e, board_t *b)
 
 	if (!mc->playout)
 		mc->playout = playout_light_init(NULL, b);
-	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
 	mc->loss_threshold = 5000; /* Stop reading if no loss encountered in first 5000 games. */

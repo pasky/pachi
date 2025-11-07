@@ -562,10 +562,8 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 
 		int debug_level_save = debug_level;
 		int u_debug_level_save = u->debug_level;
-		int p_debug_level_save = u->playout->debug_level;
 		debug_level = u->debug_after.level;
 		u->debug_level = u->debug_after.level;
-		u->playout->debug_level = u->debug_after.level;
 		uct_halt = false;
 
 		uct_playouts(u, b, color, t, &debug_ti);
@@ -574,7 +572,6 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		uct_halt = true;
 		debug_level = debug_level_save;
 		u->debug_level = u_debug_level_save;
-		u->playout->debug_level = p_debug_level_save;
 
 		fprintf(stderr, "--8<-- UCT debug post-run finished --8<--\n");
 	}
@@ -1607,7 +1604,6 @@ uct_state_init(engine_t *e, board_t *b)
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
-	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
 #ifdef DISTRIBUTED
 	if (u->slave)			uct_slave_init(u, b);
 #endif

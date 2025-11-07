@@ -36,7 +36,6 @@ typedef void (*playoutp_done)(playout_policy_t *playout_policy);
 
 
 struct playout_policy {
-	int debug_level;
 	/* We call setboard when we start new playout.
 	 * We call choose when we ask policy about next move.
 	 * We call permit when we ask policy if we can make a randomly chosen move. */

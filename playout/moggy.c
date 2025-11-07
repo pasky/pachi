@@ -26,9 +26,6 @@
 #include "tactics/seki.h"
 #include "uct/prior.h"
 
-#define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
-
-
 /* In case "seqchoose" move picker is enabled (i.e. no "fullchoose"
  * parameter passed), we stochastically apply fixed set of decision
  * rules in given order.
@@ -238,8 +235,8 @@ apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, gmq_t *q)
 		} foreach_8neighbor_end;
 	}
 
-	if (PLDEBUGL(5))
-		gmq_print(q, "Pattern");
+	if (DEBUGL(5) && q->moves)
+		gmq_print(q, "Moggy pattern: ");
 }
 
 #ifdef MOGGY_JOSEKI
@@ -256,8 +253,8 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		mq_add(q, c);
 	} foreach_joseki_move_end;
 
-	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line(q, "Joseki");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy joseki: ");
 }
 #endif /* MOGGY_JOSEKI */
 
@@ -271,8 +268,8 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
-		if (PLDEBUGL(5))
-			mq_print_line(q, "Global atari");
+		if (DEBUGL(5) && q->moves)
+			mq_print_line(q, "Moggy global atari: ");
 		if (pp->fullchoose)
 			return;
 	}
@@ -282,8 +279,8 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
-			if (PLDEBUGL(5))
-				mq_print_line(q, "Global atari");
+			if (DEBUGL(5))
+				mq_print_line(q, "Moggy global atari: ");
 			if (pp->fullchoose)
 				return;
 		}
@@ -292,8 +289,8 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
-			if (PLDEBUGL(5))
-				mq_print_line(q, "Global atari");
+			if (DEBUGL(5))
+				mq_print_line(q, "Moggy global atari: ");
 			if (pp->fullchoose)
 				return;
 		}
@@ -326,11 +323,14 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, pp->middle_ladder);
 	});
 
-	if (PLDEBUGL(5))
-		mq_print_line(q, "Local atari");
-
-	return (q->moves &&
-		(force || pp->lcapturerate > fast_random(100)));
+	if (q->moves &&
+	    (force || pp->lcapturerate > fast_random(100))) {
+		if (DEBUGL(5))
+			mq_print_line(q, "Moggy local atari: ");
+		return q->moves;
+	}
+	
+	return 0;
 }
 
 
@@ -348,8 +348,8 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 			mq_add(q, chase);
 	}
 
-	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line(q, "Ladder");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy ladder: ");
 }
 
 
@@ -381,8 +381,8 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group2 = g; // prevent trivial repeated checks
 	});
 
-	if (PLDEBUGL(5))
-		mq_print_line(q, "Local 2lib");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy local 2lib: ");
 }
 
 static void
@@ -415,8 +415,8 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group2 = g; // prevent trivial repeated checks
 	});
 
-	if (PLDEBUGL(5))
-		mq_print_line(q, "Local 2lib capture");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy local 2lib capture: ");
 }
 
 static void
@@ -464,8 +464,8 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group2 = g; // prevent trivial repeated checks
 	} foreach_8neighbor_end;
 
-	if (PLDEBUGL(5))
-		mq_print_line(q, "Local nlib");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy local nlib: ");
 }
 
 static coord_t
@@ -488,8 +488,8 @@ nakade_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play)
 	assert(!is_pass(empty));
 
 	coord_t nakade = nakade_point(b, empty, stone_other(to_play));
-	if (PLDEBUGL(5) && !is_pass(nakade))
-		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade));
+	if (DEBUGL(5) && !is_pass(nakade))
+		fprintf(stderr, "Moggy nakade: %s\n", coord2sstr(nakade));
 	return nakade;
 }
 
@@ -571,8 +571,8 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 		c = c1;
 	}
 
-	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print_line(q, "Eye fix");
+	if (DEBUGL(5) && q->moves)
+		mq_print_line(q, "Moggy eye fix: ");
 }
 
 static coord_t
@@ -605,9 +605,6 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 	moggy_state_t *ps = (moggy_state_t*)b->ps;
 	enum stone other_color = stone_other(to_play);
 
-	if (PLDEBUGL(5))
-		board_print(b, stderr);
-
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage
@@ -620,7 +617,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 	/* Local checks */
 	if (!is_pass(last_move(b).coord)) {
 		/* Local group in atari? */
-		if (true) {  // pp->lcapturerate check in local_atari_check()
+		{  // pp->lcapturerate check in local_atari_check()
 			mq_t q;  mq_init(&q);
 			if (local_atari_check(p, b, &last_move(b), &q))
 				return mq_pick(&q);
@@ -743,7 +740,7 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mtmq_t *q)
 
 	/* Finally, pick a move! */
 	fixp_t stab = fast_irandom(total);
-	if (PLDEBUGL(5)) {
+	if (DEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
 		for (int i = 0; i < q->moves; i++)
 			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(pd[i]));
@@ -775,9 +772,6 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	mtmq_t mq;  mtmq_init(&mq);  /* Tagged queue */
-
-	if (PLDEBUGL(5))
-		board_print(b, stderr);
 
 	/* Ko fight check */
 	if (pp->korate > 0 && !is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
@@ -883,17 +877,15 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 			     is_bad_selfatari(b, m->color, m->coord) :
 			     is_really_bad_selfatari(b, m->color, m->coord));
 	if (bad_selfatari) {
-		if (PLDEBUGL(5))
-			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
-				stone2str(m->color), coord2sstr(m->coord));
+		if (DEBUGL(5))
+			fprintf(stderr, "Moggy: Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord));
 		if (alt && pp->selfatari_other) {
 			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
 			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
 			if (!permit_move(c)) return false;
-			if (PLDEBUGL(5))
-				fprintf(stderr, "___ Redirecting to other lib %s\n",
-					coord2sstr(c));
+			if (DEBUGL(5))
+				fprintf(stderr, "Moggy: Redirecting to other lib %s\n", coord2sstr(c));
 			m->coord = c;
 			return true;
 		}
@@ -904,35 +896,31 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (!alt || fast_random(100) >= pp->eyefillrate) {
-		if (PLDEBUGL(5))
-			fprintf(stderr, "skipping eyefill test\n");
+	if (!alt || fast_random(100) >= pp->eyefillrate)
 		goto eyefill_skip;
-	}
 
 	{
 	bool eyefill = board_is_eyelike(b, m->coord, m->color);
 	/* If saving a group in atari don't interfere ! */
 	if (eyefill && !board_get_atari_neighbor(b, m->coord, m->color)) {
+		if (DEBUGL(5))  fprintf(stderr, "Moggy: %s filling eye, checking neighbors\n", coord2sstr(m->coord));
 		foreach_diag_neighbor(b, m->coord) {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
 			switch (board_group_info(b, group_at(b, c)).libs) {
 			case 1: /* Capture! */
 				c = board_group_info(b, group_at(b, c)).lib[0];
-				if (permit_move(c)) {
-					if (PLDEBUGL(5))
-						fprintf(stderr, "___ Redirecting to capture %s\n",
-							coord2sstr(c));
-					m->coord = c;
-					return true;
-				}
-				break;
+				if (!permit_move(c))
+					break;
+				if (DEBUGL(5))  fprintf(stderr, "Moggy: Redirecting to capture %s\n", coord2sstr(c));
+				m->coord = c;
+				return true;
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
 					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
 					if (!permit_move(l))
 						continue;
+					if (DEBUGL(5))  fprintf(stderr, "Moggy: Redirecting to %s atari\n", coord2sstr(l));
 					m->coord = l;
 					return true;
 				}
@@ -1044,9 +1032,7 @@ playout_moggy_init(char *arg, board_t *b)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (!strcasecmp(optname, "debug") && optval) {
-				p->debug_level = atoi(optval);
-			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
+			if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladderrate") && optval) {
 				/* Note that ladderrate is considered obsolete;
