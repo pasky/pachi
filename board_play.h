@@ -3,10 +3,9 @@
 static void
 board_group_addlib(board_t *board, group_t group, coord_t coord)
 {
-	if (DEBUGL(7))
-		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
-			group_base(group), coord2sstr(group_base(group)),
-			board_group_info(board, group).libs, coord2sstr(coord));
+	if (DEBUGL(10))
+		fprintf(stderr, "Group %s (%d libs): Adding liberty %s\n",
+			coord2sstr(group_base(group)), board_group_info(board, group).libs, coord2sstr(coord));
 
 	group_info_t *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
@@ -50,10 +49,9 @@ board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coo
 static void
 board_group_rmlib(board_t *board, group_t group, coord_t coord)
 {
-	if (DEBUGL(7))
-		fprintf(stderr, "Group %d[%s] %d: Removing liberty %s\n",
-			group_base(group), coord2sstr(group_base(group)),
-			board_group_info(board, group).libs, coord2sstr(coord));
+	if (DEBUGL(10))
+		fprintf(stderr, "Group %s (%d libs): Removing liberty %s\n",
+			coord2sstr(group_base(group)), board_group_info(board, group).libs, coord2sstr(coord));
 
 	group_info_t *gi = &board_group_info(board, group);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
@@ -149,7 +147,7 @@ add_to_group(board_t *board, group_t group, coord_t prevstone, coord_t coord)
 			board_group_addlib(board, group, c);
 	});
 
-	if (DEBUGL(8))
+	if (DEBUGL(10))
 		fprintf(stderr, "add_to_group: added (%s ->) %s (-> %s) to group %s\n",
 			coord2sstr(prevstone), coord2sstr(coord), coord2sstr(groupnext_at(board, coord)),
 			coord2sstr(group_base(group)));
@@ -158,9 +156,9 @@ add_to_group(board_t *board, group_t group, coord_t prevstone, coord_t coord)
 static void profiling_noinline
 merge_groups(board_t *board, group_t group_to, group_t group_from)
 {
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: merging groups %d -> %d\n",
-			group_base(group_from), group_base(group_to));
+	if (DEBUGL(10))
+		fprintf(stderr, "board_play_raw: merging groups %s -> %s\n",
+			coord2sstr(group_base(group_from)), coord2sstr(group_base(group_to)));
 	group_info_t *gi_from = &board_group_info(board, group_from);
 	group_info_t *gi_to = &board_group_info(board, group_to);
 #ifdef FULL_BOARD
@@ -168,7 +166,7 @@ merge_groups(board_t *board, group_t group_to, group_t group_from)
 	if (gi_from->libs == 1)  board_capturable_rm(board, group_from, gi_from->lib[0]);
 #endif
 
-	if (DEBUGL(7))  fprintf(stderr,"---- (froml %d, tol %d)\n", gi_from->libs, gi_to->libs);
+	if (DEBUGL(10))  fprintf(stderr,"---- (from libs: %d, to libs: %d)\n", gi_from->libs, gi_to->libs);
 
 	if (gi_to->libs < GROUP_KEEP_LIBS) {
 		for (int i = 0; i < gi_from->libs; i++) {
@@ -204,7 +202,7 @@ next_from_lib:;
 	groupnext_at(board, group_base(group_to)) = group_base(group_from);
 	memset(gi_from, 0, sizeof(group_info_t));
 
-	if (DEBUGL(7))  fprintf(stderr, "board_play_raw: merged group: %d\n", group_base(group_to));
+	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: merged group: %d\n", group_base(group_to));
 }
 
 static group_t profiling_noinline
@@ -228,9 +226,9 @@ new_group(board_t *board, coord_t coord)
 	if (gi->libs == 1)  board_capturable_add(board, group, gi->lib[0]);
 #endif
 
-	if (DEBUGL(8))
-		fprintf(stderr, "new_group: added %d,%d to group %d\n",
-			coord_x(coord), coord_y(coord), group_base(group));
+	if (DEBUGL(10))
+		fprintf(stderr, "new_group: added %s to group %s\n",
+			coord2sstr(coord), coord2sstr(group_base(group)));
 
 	return group;
 }
@@ -248,8 +246,8 @@ play_one_neighbor(board_t *board,
 	if (!ngroup)  return group;
 
 	board_group_rmlib(board, ngroup, coord);
-	if (DEBUGL(7))  fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
-				group_base(ngroup), ncolor, color, other_color);
+	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: reducing libs for %s group %s\n",
+				 stone2str(ncolor), coord2sstr(group_base(ngroup)));
 
 	if (ncolor == color && ngroup != group) {
 		if (!group) {
@@ -258,9 +256,9 @@ play_one_neighbor(board_t *board,
 		} else
 			merge_groups(board, group, ngroup);
 	} else if (ncolor == other_color) {
-		if (DEBUGL(8)) {
+		if (DEBUGL(10)) {
 			group_info_t *gi = &board_group_info(board, ngroup);
-			fprintf(stderr, "testing captured group %d[%s]: ", group_base(ngroup), coord2sstr(group_base(ngroup)));
+			fprintf(stderr, "testing captured group %s: ", coord2sstr(group_base(ngroup)));
 			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
 				fprintf(stderr, "%s ", coord2sstr(gi->lib[i]));
 			fprintf(stderr, "\n");
@@ -315,13 +313,13 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 	enum stone color = m->color;
 	/* Check ko: Capture at a position of ko capture one move ago */
 	if (unlikely(color == board->ko.color && coord == board->ko.coord)) {
-		if (DEBUGL(5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord), coord_y(coord), color);
+		if (DEBUGL(10))
+			fprintf(stderr, "board_check: ko at %s color %s\n", coord2sstr(coord), stone2str(color));
 		return -1;
-	} else if (DEBUGL(6))
-		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
-			color, coord_x(coord), coord_y(coord),
-			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
+	} else if (DEBUGL(10))
+		fprintf(stderr, "board_check: no ko at %s %s - ko is %s %s\n",
+			stone2str(color), coord2sstr(coord),
+			stone2str(board->ko.color), coord2sstr(board->ko.coord));
 
 	move_t ko = { pass, S_NONE };
 
@@ -329,15 +327,15 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 
 	foreach_neighbor(board, coord, {
 		group_t g = group_at(board, c);
-		if (DEBUGL(7))
-			fprintf(stderr, "board_check: group %d has %d libs\n",
-				g, board_group_info(board, g).libs);
+		if (DEBUGL(10))
+			fprintf(stderr, "board_check: group %s has %d libs\n",
+				coord2sstr(g), board_group_info(board, g).libs);
 		captured_groups += (board_group_info(board, g).libs == 1);
 	});
 
 	if (likely(captured_groups == 0)) {
-		if (DEBUGL(5)) {
-			if (DEBUGL(6))  board_print(board, stderr);
+		if (DEBUGL(10)) {
+			// board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
 		return -1;
@@ -360,9 +358,8 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 			continue;
 
 		board_group_rmlib(board, group, coord);
-		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
-				group_base(group));
+		if (DEBUGL(10))
+			fprintf(stderr, "board_play_raw: reducing libs for group %s\n", coord2sstr(group_base(group)));
 
 		if (board_group_captured(board, group)) {
 			ko_caps += board_group_capture(board, group);
@@ -374,8 +371,8 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 		ko.coord = cap_at; // unique
 		board->last_ko = ko;
 		board->last_ko_age = board->moves + 1;  /* == board->moves really, board->moves++ done after */
-		if (DEBUGL(5))
-			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord));
+		if (DEBUGL(10))
+			fprintf(stderr, "guarding ko at %s %s\n", stone2str(ko.color), coord2sstr(ko.coord));
 	}
 
 	board_at(board, coord) = color;
@@ -394,8 +391,8 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 static int __attribute__((flatten))
 board_play_f(board_t *board, move_t *m, int f)
 {
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord), coord_x(m->coord), coord_y(m->coord));
+	if (DEBUGL(10))
+		fprintf(stderr, "board_play(%s):\n", coord2sstr(m->coord));
 	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
@@ -434,7 +431,7 @@ board_play_(board_t *board, move_t *m)
 	}
 
 	if (unlikely(board_at(board, m->coord) != S_NONE)) {
-		if (DEBUGL(7)) fprintf(stderr, "board_check: stone exists\n");
+		if (DEBUGL(10)) fprintf(stderr, "board_check: stone exists\n");
 		return -1;
 	}
 

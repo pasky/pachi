@@ -369,7 +369,7 @@ cprint_group(board_t *board, coord_t c, strbuf_t *buf, void *data)
 void
 board_print(board_t *board, FILE *f)
 {
-	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL, NULL);
+	board_print_custom(board, f, (DEBUGL(10) ? cprint_group : NULL), NULL);
 }
 
 static char*
@@ -806,7 +806,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 {
 	if (!playout_board(board)) {
 		board->hash ^= hash_at(coord, color);
-		if (DEBUGL(8))
+		if (DEBUGL(10))
 			fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
 	}
 
@@ -842,11 +842,11 @@ board_hash_commit(board_t *b)
 {
 	if (playout_board(b))  return;
 
-	if (DEBUGL(8)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
+	if (DEBUGL(10)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
 
 	for (int i = 0; i < BOARD_HASH_HISTORY; i++) {
 		if (b->hash_history[i] == b->hash) {
-			if (DEBUGL(5))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
+			if (DEBUGL(10))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
 			b->superko_violation = true;
 			return;
 		}
