@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -20,7 +20,7 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 	assert(color != S_OFFBOARD && color != S_NONE
 	       && color == board_at(b, group_base(group)));
 
-	if (DEBUGL(5))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
+	if (DEBUGL(6))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
 
 #if 0
 	/* XXX: The code below is specific for 3-liberty groups. Its impact

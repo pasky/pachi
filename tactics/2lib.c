@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -204,7 +204,7 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool us
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
 
-	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib check of color %d\n",
+	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib check of color %d\n",
 				coord2sstr(group), color);
 
 	/* Do not try to atari groups that cannot be harmed. */
@@ -255,7 +255,7 @@ group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mq_t *q,
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
 	
-	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
+	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
 				coord2sstr(group), color);
 
 	if (to_play != color) {  /* Attacker */		

@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -181,8 +181,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	assert(color != S_OFFBOARD && color != S_NONE);
-	if (DEBUGL(5))  fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
-				coord2sstr(group), coord2sstr(lib), color);
+	if (DEBUGL(6))  fprintf(stderr, "group_atari_check group %s (%s)\n", coord2sstr(group), stone2str(color));
 	assert(board_at(b, lib) == S_NONE);
 
 	if (to_play != color) {

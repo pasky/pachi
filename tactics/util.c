@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "tactics/util.h"
