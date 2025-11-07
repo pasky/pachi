@@ -929,7 +929,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 					m->coord = c;
 					return true;
 				}
-				/* FALLTHROUGH */
+				break;
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
 					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
