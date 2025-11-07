@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "board_undo.h"
 #include "debug.h"
@@ -31,7 +31,7 @@ is_border_ladder(board_t *b, group_t laddered)
 	
 	int x = coord_x(coord), y = coord_y(coord);
 
-	if (DEBUGL(5))  fprintf(stderr, "border ladder\n");
+	if (DEBUGL(8))  fprintf(stderr, "border ladder\n");
 	
 	/* Direction along border; xd is horiz. border, yd vertical. */
 	int xd = 0, yd = 0;
@@ -41,7 +41,7 @@ is_border_ladder(board_t *b, group_t laddered)
 		xd = 1;	
 	/* Direction from the border; -1 is above/left, 1 is below/right. */
 	int dd = (board_atxy(b, x + yd, y + xd) == S_OFFBOARD) ? 1 : -1;
-	if (DEBUGL(6))  fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
+	if (DEBUGL(8))  fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
 	
 	/* | ? ?
 	 * | . O #
@@ -60,7 +60,7 @@ is_border_ladder(board_t *b, group_t laddered)
 	int libs1 = board_group_info(b, g1).libs;
 	group_t g2 = group_atxy(b, x - xd - yd * dd, y - yd - xd * dd);
 	int libs2 = board_group_info(b, g2).libs;
-	if (DEBUGL(6))  fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);	
+	if (DEBUGL(8))  fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);	
 	/* Already in atari? */
 	if (libs1 < 2 || libs2 < 2)  return false;
 	/* Would be self-atari? */
@@ -87,11 +87,11 @@ middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t pre
 	}
 
 	if (!laddered || board_group_info(b, laddered).libs == 1) {
-		if (DEBUGL(6))  fprintf(stderr, "* we can capture now\n");
+		if (DEBUGL(8))  fprintf(stderr, "* we can capture now\n");
 		return len;
 	}
 	if (board_group_info(b, laddered).libs > 2) {
-		if (DEBUGL(6))  fprintf(stderr, "* we are free now\n");
+		if (DEBUGL(8))  fprintf(stderr, "* we are free now\n");
 		return 0;
 	}
 
@@ -122,7 +122,7 @@ middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t pre
 			if (!group_at(b, ataristone))
 					break;
 
-			if (DEBUGL(6))  fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone), board_group_info(b, group_at(b, ataristone)).libs);
+			if (DEBUGL(8))  fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone), board_group_info(b, group_at(b, ataristone)).libs);
 
 			int l = middle_ladder_walk(b, laddered, lcolor, prevmove, len);
 			if (l)  with_move_return(l);
@@ -146,7 +146,7 @@ chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, mq_t *cc
 #endif
 
 		/* We can capture one of the ladder stones, investigate ... */
-		if (DEBUGL(6)) {
+		if (DEBUGL(8)) {
 			fprintf(stderr, "------------- can capture chaser, investigating %s -------------\n", coord2sstr(lib));
 			board_print(b, stderr);
 		}
@@ -156,7 +156,7 @@ chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, mq_t *cc
 				with_move_return(true); /* escape ! */		
 		});
 
-		if (DEBUGL(6))  fprintf(stderr, "-------------------------- done %s ------------------------------\n", coord2sstr(lib));
+		if (DEBUGL(8))  fprintf(stderr, "-------------------------- done %s ------------------------------\n", coord2sstr(lib));
 	}
 	
 	return false;
@@ -179,7 +179,7 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 	if (b->ko.coord != pass)
 		foreach_neighbor(b, last_move(b).coord, {
 				if (group_at(b, c) == laddered) {
-					if (DEBUGL(6))  fprintf(stderr, "* ko, no ladder\n");
+					if (DEBUGL(8))  fprintf(stderr, "* ko, no ladder\n");
 					return 0;
 				}
 		});
@@ -193,7 +193,7 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 
 	/* Escape then */
 	coord_t nextmove = board_group_info(b, laddered).lib[0];
-	if (DEBUGL(6))  fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove));
+	if (DEBUGL(8))  fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove));
 	with_move_strict(b, nextmove, lcolor, {
 		len = middle_ladder_chase(b, laddered, lcolor, nextmove, len + 1);
 	});
@@ -212,7 +212,7 @@ is_middle_ladder(board_t *b, group_t laddered)
 	/* If we can move into empty space or do not have enough space
 	 * to escape, this is obviously not a ladder. */
 	if (immediate_liberty_count(b, coord) != 2) {
-		if (DEBUGL(5))  fprintf(stderr, "no ladder, wrong free space\n");
+		if (DEBUGL(8))  fprintf(stderr, "no ladder, wrong free space\n");
 		return false;
 	}
 
@@ -221,7 +221,7 @@ is_middle_ladder(board_t *b, group_t laddered)
 	 * start selective 2-liberty search. */
 	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 
-	if (DEBUGL(6) && length)  fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
+	if (DEBUGL(8) && length)  fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
 					  group_stone_count(b, laddered, 50), length);
 
 	return (length != 0);
@@ -245,11 +245,11 @@ wouldbe_ladder(board_t *b, group_t group, coord_t chaselib)
 	enum stone other_color = stone_other(lcolor);
 	coord_t escapelib = board_group_other_lib(b, group, chaselib);
 
-	if (DEBUGL(6))  fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
+	if (DEBUGL(8))  fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
 				stone2str(lcolor), coord2sstr(escapelib), coord2sstr(chaselib));
 
 	if (immediate_liberty_count(b, escapelib) != 2) {
-		if (DEBUGL(5))  fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
+		if (DEBUGL(8))  fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
 		return false;
 	}
 
