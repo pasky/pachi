@@ -188,8 +188,13 @@ gtp_is_valid(engine_t *e, const char *cmd)
 	return (gtp_get_handler(cmd) != NULL);
 }
 
+#ifdef BOARD_TESTS
+#define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
+				 board_is_valid_play(b, (m)->color, (m)->coord))
+#else
 #define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
 				 board_is_valid_play_no_suicide(b, (m)->color, (m)->coord))
+#endif
 
 #define gtp_check_valid_move(b, m)	do {				\
 	if (!gtp_valid_move(b, m)) {				\

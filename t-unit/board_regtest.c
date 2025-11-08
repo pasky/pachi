@@ -275,6 +275,7 @@ board_regression_test(board_t *b, char *arg)
 		// if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
 		gtp_parse(&gtp, b, &e, ti, buf);
+		assert(!gtp.error);
 		dump_board(b);
 		b->superko_violation = false;       // never cleared currently.
 	}
