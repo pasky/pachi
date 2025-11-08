@@ -100,7 +100,7 @@ hash_board(board_t *b)
 	} foreach_point_end;
 
 	/* Neighbor info */
-	for (int col = S_NONE; col < S_MAX; col++) {
+	for (int col = S_BLACK; col < S_MAX; col++) {  /* Not maintained for S_NONE */
 		foreach_point(b) {
 			hash_int(neighbor_count_at(b, c, col));
 		} foreach_point_end;
