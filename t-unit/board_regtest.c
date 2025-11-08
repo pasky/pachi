@@ -32,7 +32,11 @@
 #define hash_data(pt, len) do {  r = SHA1_Update(&ctx, (pt), (len));  assert(r);  } while(0)
 #define hash_struct(pt)    hash_data((pt), sizeof(*(pt)));
 #define hash_field(f)      hash_data(&b->f, sizeof(b->f))
-#define hash_int(val)      do {  int i_ = (val);  hash_data(&i_, sizeof(i_)); } while(0)
+#define hash_int(val)      do {  int v_ = (val);  hash_data(&v_, sizeof(v_)); } while(0)
+#define hash_mq(q)	   do { \
+	for (int i_ = 0; i_ < (q)->moves; i_++)	\
+		hash_int((q)->move[i_]);	\
+	} while(0)
 #define hash_print()       do {  for (int i = 0; i < 20; i++) \
 					 printf("%02x", md[i]); \
 			      } while(0)
@@ -115,9 +119,15 @@ hash_board(board_t *b)
 		group_t g = group_at(b, c);
 		if (!g || g != c)  continue;  /* foreach group really */
 		
-		hash_int(c);
+		hash_int(g);
+
+		/* Sort liberties in canonical order before hashing so 
+		 * functionally equivalent implementations hash identically. */
+		mq_t q;  mq_init(&q);
 		for (int i = 0; i < board_group_info(b, g).libs; i++)
-			hash_int(board_group_info(b, g).lib[i]);
+			mq_add(&q, board_group_info(b, g).lib[i]);
+		mq_sort(&q);
+		hash_mq(&q);
 	} foreach_point_end;
 
 
@@ -125,12 +135,17 @@ hash_board(board_t *b)
 	/* Playouts fields */
 
 	hash_field(superko_violation);
-	
+
+	/* Sort free positions in canonical order before hashing so
+	 * functionally equivalent implementations hash identically. */
+	mq_t q;  mq_init(&q);
 	for (int i = 0; i < b->flen; i++) {
 		coord_t c = b->f[i];
-		hash_int(c);
 		assert(b->fmap[c] == i);  /* sanity check ... */
+		mq_add(&q, c);
 	}
+	mq_sort(&q);
+	hash_mq(&q);
 
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE) continue;
@@ -143,9 +158,14 @@ hash_board(board_t *b)
 
 	
 #ifdef WANT_BOARD_C
-	for (int i = 0; i < b->clen; i++) {
-		hash_int(b->c[i]);
-	}
+	/* Sort capturable groups in canonical order before hashing so
+	 * functionally equivalent implementations hash identically. */
+	mq_init(&q);
+	for (int i = 0; i < b->clen; i++)
+		mq_add(&q, b->c[i]);
+	mq_sort(&q);
+	hash_mq(&q);
+
 #endif
 
 	/****************************************************************/

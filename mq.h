@@ -7,6 +7,7 @@
  * fact that coord_t == group_t). */
 
 #include <assert.h>
+#include <stdlib.h>
 #include "move.h"
 #include "random.h"
 
@@ -49,12 +50,14 @@ static void mq_sub(mq_t *a, mq_t *b, mq_t *res);
  * in that case. */
 static void mq_nodup(mq_t *q);
 
+/* Sort moves in canonical order */
+static void mq_sort(mq_t *q);
+
 /* Print queue contents. */
 static int  mq_print_file(mq_t *q, FILE *f, char *label);
 /* Print queue contents on stderr. */
 static int  mq_print(mq_t *q, char *label);
 static void mq_print_line(mq_t *q, char *label);
-
 
 
 static inline void
@@ -127,6 +130,20 @@ mq_nodup(mq_t *q)
 			return;
 		}
 	}
+}
+
+static inline int
+mq_sort_compare(const void *p1, const void *p2)
+{
+	coord_t *c1 = (coord_t *)p1;
+	coord_t *c2 = (coord_t *)p2;
+	return (*c1 - *c2);
+}
+
+static inline void
+mq_sort(mq_t *q)
+{
+	qsort(q->move, q->moves, sizeof(q->move[0]), mq_sort_compare);
 }
 
 static inline int
