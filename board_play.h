@@ -9,10 +9,9 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 
 	group_info_t *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
+		/* Normal would be to loop through the group libs (i < gi->libs), but
+		 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
 		for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
-#if 0                   /* Seems extra branch just slows it down */
-			if (!gi->lib[i]) break;
-#endif
 			if (unlikely(gi->lib[i] == coord))
 				return;
 		}
@@ -53,11 +52,10 @@ board_group_rmlib(board_t *board, group_t group, coord_t coord)
 		fprintf(stderr, "Group %s (%d libs): Removing liberty %s\n",
 			coord2sstr(group_base(group)), board_group_info(board, group).libs, coord2sstr(coord));
 
+	/* Normal would be to loop through the group libs (i < gi->libs), but
+	 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
 	group_info_t *gi = &board_group_info(board, group);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
-#if 0           /* Seems extra branch just slows it down */
-		if (!gi->lib[i]) break;
-#endif
 		if (likely(gi->lib[i] != coord))
 			continue;
 
