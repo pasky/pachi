@@ -12,6 +12,11 @@
 #include "gtp.h"
 #include "pattern3.h"
 
+/* Print all board structures as text ?
+ * (default: print one-line summary with hash of board structures) */
+//#define FULL_BOARD_DUMP
+
+
 /* ko_age definition was changed at commit fb09e89,
  * comment out to test against earlier versions. */
 #define CHECK_KO_AGE
@@ -21,26 +26,6 @@
 
 
 #define printf(...)  fprintf(stderr, __VA_ARGS__)
-
-
-#include <openssl/sha.h>
-
-#define hash_init()      \
-  	int r;           \
-	SHA_CTX ctx;     \
-	r = SHA1_Init(&ctx);  assert(r);
-#define hash_data(pt, len) do {  r = SHA1_Update(&ctx, (pt), (len));  assert(r);  } while(0)
-#define hash_struct(pt)    hash_data((pt), sizeof(*(pt)));
-#define hash_field(f)      hash_data(&b->f, sizeof(b->f))
-#define hash_int(val)      do {  int v_ = (val);  hash_data(&v_, sizeof(v_)); } while(0)
-#define hash_mq(q)	   do { \
-	for (int i_ = 0; i_ < (q)->moves; i_++)	\
-		hash_int((q)->move[i_]);	\
-	} while(0)
-#define hash_print()       do {  for (int i = 0; i < 20; i++) \
-					 printf("%02x", md[i]); \
-			      } while(0)
-#define hash_final(md)     do {  r = SHA1_Final(md, &ctx);  assert(r);  } while(0)
 
 
 static void
@@ -109,6 +94,228 @@ print_board_header(board_t *b, bool show_last_moves)
 
 	printf("%3s ", (b->superko_violation ? "SKO" : ""));
 }
+
+
+/******************************************************************************************/
+#ifdef FULL_BOARD_DUMP
+
+/* Print once for each board size. */
+static void
+print_board_statics(board_t *b)
+{
+	int size = board_rsize(b);
+
+	static int size_done[BOARD_MAX_SIZE + 1] = { 0, };
+	if (size_done[size])
+		return;
+	size_done[size] = 1;
+
+	print_board_flags(b);
+	printf("board_statics(%2i)  ", size);
+
+	printf("board_max_coords: %i\n", board_max_coords(b));
+	printf("board_bits2: %i", board_bits2());
+
+	for (int color = S_BLACK; color <= S_WHITE; color++) {
+		printf("\n\nhashes (%s) (offboard):\n", stone2str(color));
+		int i = 0;
+		foreach_point(b) {
+			if (board_at(b, c) != S_OFFBOARD)  continue;
+			printf("%016" PRIhash " ", hash_at(c, color));
+			if (++i % 6 == 0)
+				printf("\n");
+		} foreach_point_end;
+	}
+	
+	for (int color = S_BLACK; color <= S_WHITE; color++) {
+		printf("\n\nhashes (%s):\n", stone2str(color));
+		int i = 0;
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD)  continue;
+			printf("%3s %016" PRIhash " ", coord2sstr(c), hash_at(c, color));
+			if (++i % 6 == 0)
+				printf("\n");
+		} foreach_point_end;
+	}
+
+	printf("\n\n");
+}
+
+static void
+board_print_all_structures(board_t *b)
+{
+	int size = board_rsize(b);
+	
+	if (last_move(b).color == S_NONE)
+		print_board_statics(b);
+
+	board_print(b, stderr);
+	
+	print_board_header(b, true);
+
+	
+	/****************************************************************/
+	/* Common fields */
+
+	printf("\nsize: %i   ", size);
+	// captures: already done
+	// passes: already done
+	printf("komi: %.1f   ", b->komi);
+	printf("handicap: %i   ", b->handicap);
+	printf("rules: %s   ", rules2str(b->rules));
+	// moves: already done
+
+	// last moves: already done
+
+	// ko: already done
+	printf("last_ko: ");
+	print_move(b, &b->last_ko);
+	// last_ko_age: already done
+	printf("superko violation: %i", b->superko_violation);
+
+	/* Neighbor info */
+	for (int col = S_BLACK; col < S_MAX; col++) {  /* Not maintained for S_NONE */
+		printf("\n\nneighbor count (%s):\n", (col == S_OFFBOARD ? "offboard" : stone2str(col)));
+		int i = 0;
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD) continue;
+			printf("%3s %i ", coord2sstr(c), neighbor_count_at(b, c, col));
+			if (++i % 21 == 0)
+				printf("\n");
+		} foreach_point_end;
+	}
+
+	/* Groups */
+	printf("\n\ngroups:\n");
+	foreach_point_for_print(b) {
+		if (board_at(b, c) == S_OFFBOARD) continue;
+		group_t g = group_at(b, c);
+		printf("%3s ", (g ? coord2sstr(group_at(b, c)) : "-"));
+		if (coord_x(c) == board_rsize(b))
+			printf("\n");
+	} foreach_point_for_print_end;
+
+	/* Group next */
+	printf("\n\ngroup next:\n");
+	foreach_point_for_print(b) {
+		if (board_at(b, c) == S_OFFBOARD) continue;
+		coord_t next = groupnext_at(b, c);
+		printf("%3s ", (next ? coord2sstr(next) : "-"));
+		if (coord_x(c) == board_rsize(b))
+			printf("\n");
+	} foreach_point_for_print_end;
+
+	/* Group info */
+	printf("\n\ngroup info:\n");
+	foreach_point(b) {
+		group_t g = group_at(b, c);
+		group_info_t *gi = &board_group_info(b, g);
+		if (!g || g != c)  continue;  /* foreach group really */
+		
+		printf("%3s: %i libs  ", coord2sstr(g), gi->libs);
+
+		/* Sort liberties in canonical order so functionally
+		 * equivalent implementations print identically. */
+		mq_t q;  mq_init(&q);
+		for (int i = 0; i < board_group_info(b, g).libs; i++)
+			mq_add(&q, board_group_info(b, g).lib[i]);
+		mq_sort(&q);
+		mq_print(&q, "[ ");
+		printf("]\n");
+	} foreach_point_end;
+	printf("\n");
+
+
+	/****************************************************************/
+	/* Playouts fields */
+
+	// superko violation: above
+	
+	/* free positions:
+	 * sort in canonical order so functionally
+	 * equivalent implementations print the same. */
+	mq_t q;  mq_init(&q);
+	for (int i = 0; i < b->flen; i++) {
+		coord_t c = b->f[i];
+		assert(b->fmap[c] == i);  /* sanity check ... */
+		mq_add(&q, c);
+	}
+	printf("free positions: %i\n", b->flen);
+	mq_sort(&q);
+	mq_print(&q, "[ ");
+	printf("]\n\n");
+
+	/* pat3 */
+	printf("pat3: \n");
+	int i = 0;
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)
+			continue;
+		printf("%3s ", coord2sstr(c));
+		if (board_at(b, c) != S_NONE)
+			printf("%-8s  ", "-");
+		else {
+			hash3_t h = pattern3_hash(b, c);
+			printf("%#08x  ", h);
+#ifdef BOARD_PAT3
+			assert(b->pat3[c] == h);  /* sanity check ... */
+#endif
+		}
+		if (++i % 9 == 0)
+			printf("\n");
+	} foreach_point_end;
+	printf("\n\n");
+
+#ifdef WANT_BOARD_C
+	/* Capturable groups:
+	 * Sort in canonical order so functionally
+	 * equivalent implementations hash identically. */
+	mq_init(&q);
+	for (int i = 0; i < b->clen; i++)
+		mq_add(&q, b->c[i]);
+	mq_sort(&q);
+	printf("capturable groups: %i\n", b->clen);
+	mq_print(&q, "[ ");
+	printf("]\n\n");
+#endif
+
+	
+	/****************************************************************/
+	/* Full board fields */
+
+	printf("board hash: %" PRIhash "\n", b->hash);
+
+	/* Not showing hash history ... */
+	
+	printf("\n");
+}
+
+
+/******************************************************************************************/
+#else /* Print board hashes only */
+
+
+#include <openssl/sha.h>
+
+#define hash_init()      \
+  	int r;           \
+	SHA_CTX ctx;     \
+	r = SHA1_Init(&ctx);  assert(r);
+#define hash_data(pt, len) do {  r = SHA1_Update(&ctx, (pt), (len));  assert(r);  } while(0)
+#define hash_struct(pt)    hash_data((pt), sizeof(*(pt)));
+#define hash_field(f)      hash_data(&b->f, sizeof(b->f))
+#define hash_int(val)      do {  int v_ = (val);  hash_data(&v_, sizeof(v_)); } while(0)
+#define hash_mq(q)	   do { \
+	for (int i_ = 0; i_ < (q)->moves; i_++)	\
+		hash_int((q)->move[i_]);	\
+	} while(0)
+#define hash_print()       do {  for (int i = 0; i < 20; i++) \
+					 printf("%02x", md[i]); \
+			      } while(0)
+#define hash_final(md)     do {  r = SHA1_Final(md, &ctx);  assert(r);  } while(0)
+
+
+static void print_board_flags(board_t *b);
 
 static unsigned char*
 hash_board_statics(board_t *b)
@@ -297,6 +504,12 @@ print_board_hashes(board_t *b)
 	printf("\n");
 }
 
+#endif /* FULL_BOARD_DUMP */
+
+
+/******************************************************************************************/
+
+
 /* Replay games dumping board state hashes at every move. */
 bool
 board_regression_test(board_t *b, char *arg)
@@ -318,8 +531,11 @@ board_regression_test(board_t *b, char *arg)
 
 		if (DEBUGL(2))  board_print(b, stderr);
 
+#ifdef FULL_BOARD_DUMP
+		board_print_all_structures(b);
+#else
 		print_board_hashes(b);
-		
+#endif
 		b->superko_violation = false;       // never cleared currently.
 	}
 
