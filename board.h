@@ -193,7 +193,7 @@ FB_ONLY(int influence_fuseki_by_quadrant)[4];	  /* Keep track where influence fu
 
 /*************************************************************************************************************/
 
-#ifdef DCNN_DARKFOREST
+#if defined(DCNN) && defined(DCNN_DARKFOREST)
 FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 #endif
 

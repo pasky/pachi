@@ -783,7 +783,7 @@ static void
 board_commit_move(board_t *b, move_t *m)
 {
 	if (!playout_board(b)) {
-#ifdef DCNN_DARKFOREST
+#if defined(DCNN) && defined(DCNN_DARKFOREST)
 		if (darkforest_dcnn && !is_pass(m->coord))
 			b->moveno[m->coord] = b->moves;
 #endif
