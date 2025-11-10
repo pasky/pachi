@@ -316,7 +316,7 @@ int board_play(board_t *b, move_t *m);
  * the move coordinate to redirect the move elsewhere. */
 typedef bool (*ppr_permit)(board_t *b, move_t *m, void *data);
 bool board_permit(board_t *b, move_t *m, void *data);
-void board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
+coord_t board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data);
 
 /* Returns true if given move can be played. */
 static bool board_is_valid_play(board_t *b, enum stone color, coord_t coord);

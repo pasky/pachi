@@ -443,37 +443,45 @@ board_permit(board_t *b, move_t *m, void *data)
 }
 
 static inline bool
-board_try_random_move(board_t *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
+board_try_random_move(board_t *b, int f, move_t *m, ppr_permit permit, void *permit_data)
 {
-	*coord = b->f[f];
-	move_t m = { *coord, color };
-	if (DEBUGL(6))
-		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord), coord_y(*coord), coord2sstr(*coord), board_is_valid_move(b, &m));
-	permit = (permit ? permit : board_permit);
-	if (!permit(b, &m, permit_data))
+	coord_t c = m->coord = b->f[f];
+	if (DEBUGL(10))
+		fprintf(stderr, "trying random move %d: %s %d\n", f, coord2sstr(c), board_is_valid_move(b, m));
+	if (!permit(b, m, permit_data))
 		return false;
-	if (m.coord == *coord)
-		return likely(board_play_f(b, &m, f) >= 0);
-	*coord = m.coord; // permit modified the coordinate
-	return likely(board_play(b, &m) >= 0);
+	if (likely(m->coord == c))
+		return likely(board_play_f(b, m, f) >= 0);
+	// permit modified the coordinate
+	return likely(board_play(b, m) >= 0);
 }
 
-void
-board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
+coord_t
+board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
 {
+	permit = (permit ? permit : board_permit);
+
+	/* XXX picking of playout endgame moves is pretty biased and inefficient:
+	 * - near the end most free positions are not playable (one point eyes). if there
+	 *   are 40 free positions only 2 of which are playable, picking a random starting
+	 *   point and skipping moves until we find a playable one will give probabilities
+	 *   very different from 50% depending on where the 2 moves lie.
+	 * - we end up checking the same unplayable moves again and again.
+	 * ideal would be to maintain a list of playable moves and pick from that. */
 	if (likely(b->flen)) {
 		int base = fast_random(b->flen), f;
+		move_t m = move(pass, color);
 		for (f = base; f < b->flen; f++)
-			if (board_try_random_move(b, color, coord, f, permit, permit_data))
-				return;
+			if (board_try_random_move(b, f, &m, permit, permit_data))
+				return m.coord;
 		for (f = 0; f < base; f++)
-			if (board_try_random_move(b, color, coord, f, permit, permit_data))
-				return;
+			if (board_try_random_move(b, f, &m, permit, permit_data))
+				return m.coord;
 	}
 
-	*coord = pass;
-	move_t m = { pass, color };
+	move_t m = move(pass, color);
 	board_play(b, &m);
+	return pass;
 }
 
 

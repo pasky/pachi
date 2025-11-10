@@ -87,7 +87,7 @@ playout_play_move(playout_setup_t *setup,
 	 * This must never happen if the policy is tracking internal board state, obviously. */
 	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
 	assert(!policy->setboard || policy->setboard_randomok);
-	board_play_random(b, color, &coord, random_permit_handler, policy);
+	coord = board_play_random(b, color, random_permit_handler, policy);
 	if (DEBUGL(5))  fprintf(stderr, "Playout random move: %s\n", coord2sstr(coord));
 	return coord;
 }
