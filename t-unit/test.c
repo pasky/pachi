@@ -724,10 +724,10 @@ moggy_move_test(moggy_move_test_t *test, coord_t c, float r)
 }
 
 static void
-moggy_moves_show_moves(coord_t *best_c, float *best_r, moggy_move_test_t *ranked, int max)
+moggy_moves_show_moves(coord_t *best_c, float *best_r, int nbest, moggy_move_test_t *ranked, int max)
 {
 	fprintf(stderr, "playout moves:\n");
-	for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++) {
+	for (int i = 0; i < nbest && best_c[i]; i++) {
 		fprintf(stderr, "  %3s %5.1f%%        ", coord2sstr(best_c[i]), best_r[i] * 100);
 		/* Show ranked tests side by side */
 		if (i < max && ranked[i].q.moves) {
@@ -865,7 +865,7 @@ test_moggy_moves(board_t *b, char *arg)
 	engine_best_moves(&e, b, &ti, color, &best);
 
 	/* Show playout moves */
-	if (DEBUGL(2))  moggy_moves_show_moves(best_c, best_r, ranked, 10);
+	if (DEBUGL(2))  moggy_moves_show_moves(best_c, best_r, PLAYOUT_NBEST, ranked, 10);
 
 	/* Print test */
 	if (DEBUGL(1))  moggy_moves_print_tests(global, nglobal, ranked, 10);
@@ -992,6 +992,81 @@ test_moggy_status(board_t *b, char *arg)
 	}
 	
 	return ret;
+}
+
+/* Run playout showing board, candidate moves and playout logic behind
+ * each move. Useful to visualize / debug / investigate what's going on
+ * in playouts in a real game. Other tools give either candidate moves
+ * (t-unit moggy moves) or playout logic (pachi -d6), here we get both.
+ * playout.c and moggy.c must be compiled with debug messages enabled
+ * (#define DEBUG) for this to work.
+ * Not a full playout_play_game() replica at this stage (bent-four logic
+ * missing for example) but should be pretty close. */
+static bool
+moggy_debug_game(board_t *board, char *arg)
+{
+	int prev_debug_level = debug_level;
+	playout_policy_t *policy = playout_moggy_init(NULL, board);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	
+	board_t b2;
+	board_t *b = &b2;
+	board_copy(b, board);
+
+	engine_t e;  engine_init(&e, E_REPLAY, "", b);
+	time_info_t ti = ti_none;
+	
+	board_print_test(b);
+	fprintf(stderr, "moggy debug_game ...\n\n");
+	
+	/* playout_play_game() logic ... */
+	
+	b->playout_board = true;   // don't need board hash, history ...
+
+	enum stone color = board_to_play(b);
+	int gamelen = setup.gamelen - b->moves;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
+
+	if (policy->setboard)
+		policy->setboard(policy, b);
+
+	/* Play until both sides pass, or we hit threshold. */
+	while (gamelen-- > 0 && passes < 2) {
+		/* Show best candidates */
+		int nbest = 10;
+		coord_t best_c[nbest];
+		float   best_r[nbest];
+		best_moves_setup(best, best_c, best_r, nbest);
+		engine_best_moves(&e, b, &ti, color, &best);
+		moggy_moves_show_moves(best_c, best_r, nbest, NULL, 0);
+
+		/* Show chosen move and playout thinking logic */
+		fprintf(stderr, "picked move:\n");
+		debug_level = 6;
+		coord_t coord = playout_play_move(&setup, b, color, policy);
+		debug_level = prev_debug_level;
+		fprintf(stderr, "\n");
+
+		board_print(b, stderr);
+		
+		if (unlikely(is_pass(coord)))  passes++;
+		else                           passes = 0;
+
+		if (setup.mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup.mercymin)
+			break;
+
+		color = stone_other(color);
+	}
+
+	/* XXX playout_play_game() bent-four logic missing here */
+
+	assert(b->rules == RULES_CHINESE);
+	float score = board_fast_score(b);  /* From w perspective */
+	fprintf(stderr, "Score: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
+
+	board_done(b);
+
+	return true;
 }
 
 /* Test uct genmove on given position, make sure we get/don't get wanted/unwanted moves.
@@ -1222,6 +1297,7 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
+	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "breaking_3_stone_seki",  test_breaking_3_stone_seki,},
 	{ "pass_is_safe",           test_pass_is_safe,          },
