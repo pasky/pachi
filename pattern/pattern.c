@@ -300,16 +300,6 @@ pattern_context_free(pattern_context_t *ct)
 #define have_last_move(b)  (!is_pass(last_move(b).coord))
 
 static bool
-is_neighbor(board_t *b, coord_t c1, coord_t c2)
-{
-	assert(!is_pass(c1));  	assert(!is_pass(c2));
-	foreach_neighbor(b, c1, {
-			if (c == c2)  return true;
-	});
-	return false;
-}
-
-static bool
 is_neighbor_group(board_t *b, coord_t coord, group_t g)
 {
 	assert(!is_pass(coord));  assert(g);
@@ -383,7 +373,7 @@ pattern_match_capture(board_t *b, move_t *m)
 
 		/* Prevent connection to previous move ? */
 		if (capg != group_at(b, last_move) &&
-		    is_neighbor(b, m->coord, last_move))
+		    coord_is_adjecent(m->coord, last_move))
 			return PF_CAPTURE_PEEP;
 	}
 		
