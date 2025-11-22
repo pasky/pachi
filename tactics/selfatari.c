@@ -293,26 +293,41 @@ is_neighbor_group(board_t *b, enum stone color, group_t g, selfatari_state_t *s)
 	return false;
 }
 
+static bool
+unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
+			       coord_t lib)
+{
+	for (int i = 0; i < s->groupcts[color]; i++) {
+		group_t g = s->groupids[color][i];
+		for (int j = 0; j < board_group_info(b, g).libs; j++)
+			if (board_group_info(b, g).lib[j] == lib)
+				return false;
+	}
+	return true;
+}
+
+static bool
+unreachable_lib(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
+		coord_t lib)
+{
+	if (coord_is_adjecent(to, lib))
+		return false;
+	return unreachable_lib_from_neighbors(b, color, to, s, lib);
+}
 
 /* Instead of playing this self-atari, could we have connected/escaped by 
  * playing on the other liberty of a neighboring group ? */
 static inline bool
 is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_state_t *s)
 {
-	/* Let's look at neighbors of the other liberty: */
+	/* If the other liberty has empty neighbor, it must be the original liberty;
+	 * otherwise, since the whole group has only 2 liberties, the other liberty
+	 * may not be internal and we are nakade'ing eyeless group from outside,
+	 * which is stupid. */
 	foreach_neighbor(b, lib2, {
-		/* If the other liberty has empty neighbor,
-		 * it must be the original liberty; otherwise,
-		 * since the whole group has only 2 liberties,
-		 * the other liberty may not be internal and
-		 * we are nakade'ing eyeless group from outside,
-		 * which is stupid. */
-		if (board_at(b, c) == S_NONE) {
-			if (c == to)
-				continue;
-			else
-				return true;
-		}});
+		if (c != to && board_at(b, c) == S_NONE)
+			return true;
+	});
 
 	/* Let's look at neighbors of the other liberty: */
 	foreach_neighbor(b, lib2, {
@@ -327,6 +342,11 @@ is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_
 		/* Should connect these groups instead of self-atari on the other side. */
 		return true;
 	});
+
+	/* Check if the other liberty is internal:
+	 * If we can't reach it from our groups for sure it's not internal. */
+	if (unreachable_lib(b, color, to, s, lib2))
+		return true;
 
 	return false;
 }
@@ -349,19 +369,6 @@ can_escape_instead(board_t *b, enum stone color, coord_t to, selfatari_state_t *
 			return true;
 	}
 	return false;
-}
-
-static inline bool
-unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
-			       coord_t lib)
-{
-	for (int i = 0; i < s->groupcts[color]; i++) {
-		group_t g = s->groupids[color][i];
-		for (int j = 0; j < board_group_info(b, g).libs; j++)
-			if (board_group_info(b, g).lib[j] == lib)
-				return false;
-	}
-	return true;
 }
 
 /* This only looks at existing empty spots, not captures */

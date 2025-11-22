@@ -215,6 +215,49 @@ bad_selfatari b a2 1
 bad_selfatari w b2 0
 bad_selfatari b b2 0
 
+% Eye falsification nakade (outside libs)
+boardsize 5
+. . . . .
+O O O O .
+O . . X O
+. O O O O
+. . . . .
+
+bad_selfatari b c3 0
+
+% Bad nakade (throwing stone away)
+boardsize 5
+. . . . .
+. . . . .
+. X . X .
+. . X . .
+. . . . .
+
+bad_selfatari w c3 1
+
+% Bad nakade (nakade from outside)
+boardsize 6
+. . . . . .
+. . . . . .
+. . X . X .
+. X . X O .
+. . . O O .
+. . . . . .
+
+bad_selfatari w d4 1
+bad_selfatari w c3 1
+
+% Bad nakade (nakade from outside)
+boardsize 6
+. . . . . .
+. . . . . .
+. . X . X .
+. X . X O .
+. . X O O .
+. . . . . .
+
+bad_selfatari w d4 1
+
 % Bulky five multi-w-group nakade
 boardsize 5
 X X X X X
