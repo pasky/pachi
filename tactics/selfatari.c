@@ -108,6 +108,21 @@ next_lib:
 	return false;
 }
 
+/* Return number of stones in resulting group after playing move.
+ * @max_stones: max number of stones we care about */
+static int
+selfatari_group_stones(board_t *b, enum stone color, selfatari_state_t *s, int max_stones)
+{
+	int stones = 1;  /* Selfatari move stone */
+	for (int i = 0; i < s->groupcts[color]; i++) {
+		group_t g = s->groupids[color][i];
+		stones += group_stone_count(b, g, max_stones);
+		if (stones >= max_stones)
+			return stones;
+	}
+	return stones;
+}
+
 static int
 examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int flags)
 {
@@ -363,11 +378,8 @@ capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari
 
 /* Only cares about dead shape. */
 static bool
-nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to, int stones)
+nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to)
 {
-	assert(stones >= 1);
-	assert(stones <= 5);
-
 	/* Breaking seki ? */
 	bool breaking_seki = breaking_local_seki(b, s, to);
 	
@@ -404,10 +416,10 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 {
 	int cap_would_make_eye = false;
 
-	if (!stones)
+	if (stones == 1)
 		return false;	
-	assert(stones != 1);
-	assert(stones <= 5);
+	assert(stones != 2);
+	assert(stones <= 6);
 	
 	/* If not atariing surrounding group it's a good move if:
 	 *   - Shape after capturing us is dead   AND 
@@ -459,7 +471,7 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 		    return false;   /* Bad nakade */
 	}
 	
-	return nakade_making_dead_shape(b, s, color, to, stones);
+	return nakade_making_dead_shape(b, s, color, to);
 }
 
 
@@ -526,15 +538,12 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 			return -1;
 		
 		check_throw_in_or_inside_capture(b, color, to, s, false);
-		
-		int stones = 0;
-		for (int j = 0; j < s->groupcts[color]; j++) {
-			group_t g2 = s->groupids[color][j];
-			stones += group_stone_count(b, g2, 6);
-			if (stones > 5)
-				return true;
-		}
-		
+
+		/* No good nakade above 6 stones. */
+		int stones = selfatari_group_stones(b, color, s, 7);
+		if (stones > 6)
+			return true;
+
 		return (useful_nakade_making_dead_shape(b, color, to, s, false, stones) ? false : -1);
 	}
 
@@ -555,7 +564,6 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	/* We would create more than 2-stone group; in that
 	 * case, the liberty of our result must be lib2,
 	 * indicating this really is a nakade. */
-	int stones = 0;
 	for (int j = 0; j < s->groupcts[color]; j++) {
 		group_t g2 = s->groupids[color][j];
 		assert(board_group_info(b, g2).libs <= 2);
@@ -564,12 +572,13 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 			    && board_group_info(b, g2).lib[1] != lib2)
 				return -1;
 		} else
-			assert(board_group_info(b, g2).lib[0] == to);		
-		/* See below: */
-		stones += group_stone_count(b, g2, 6);
-		if (stones > 5)
-			return true;
+			assert(board_group_info(b, g2).lib[0] == to);
 	}
+
+	/* No good nakade above 6 stones. */
+	int stones = selfatari_group_stones(b, color, s, 7);
+	if (stones > 6)
+		return true;
 	
 	return !useful_nakade_making_dead_shape(b, color, to, s, true, stones);
 }
@@ -604,14 +613,11 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 			return true;
 	}
 
-	int stones = 0;
-	for (int j = 0; j < s->groupcts[color]; j++) {
-		group_t g2 = s->groupids[color][j];
-		stones += group_stone_count(b, g2, 6);
-		if (stones > 5)
-			return true;
-	}
-	
+	/* No good nakade above 6 stones. */
+	int stones = selfatari_group_stones(b, color, s, 7);
+	if (stones > 6)
+		return true;
+
 	/* Look at the enemy groups and determine the other contended
 	 * liberty. We must make sure the liberty:
 	 * (i) is an internal liberty
@@ -649,7 +655,7 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 		}
 	}
 	
-	return (nakade_making_dead_shape(b, s, color, to, stones) ? false : true);
+	return (nakade_making_dead_shape(b, s, color, to) ? false : true);
 }
 
 #if 0
@@ -657,7 +663,7 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
  * We also need to know status if opponent plays first */
 static inline int
 nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2,
-			      selfatari_state_t *s, int stones)
+			      selfatari_state_t *s, int pre_selfatari_stones)
 {
 	/* It also remains to be seen whether it is nakade
 	 * and not seki destruction. To do this properly, we

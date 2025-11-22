@@ -134,6 +134,17 @@ O O O O O
 bad_selfatari b b4 1
 bad_selfatari b c4 1
 
+% Seven stones nakade is bad
+boardsize 5
+O O O O O
+O . . O O
+O X X X O
+O X X X O
+O O O O O
+
+bad_selfatari b b4 1
+bad_selfatari b c4 1
+
 % Bulky five nakade
 boardsize 5
 X X X X X
