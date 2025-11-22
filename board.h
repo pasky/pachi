@@ -301,6 +301,8 @@ void board_print_custom(board_t *b, FILE *f, board_cprint cprint, void *data);
 void board_hprint(board_t *b, FILE *f, board_print_handler handler, void *data);
 /* @target_move displayed as '*' (must be empty spot) */
 void board_print_target_move(board_t *b, FILE *f, coord_t target_move);
+/* Print board highlighting @group */
+void board_print_group(board_t *board, FILE *f, group_t group);
 
 /* Debugging: Compare 2 boards byte by byte. Don't use that for sorting =) */
 int board_cmp(board_t *b1, board_t *b2);

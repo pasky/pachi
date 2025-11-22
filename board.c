@@ -392,6 +392,25 @@ board_print_target_move(board_t *b, FILE *f, coord_t target_move)
 	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target_move);
 }
 
+static char*
+print_group_handler(board_t *b, coord_t c, void *data)
+{
+	static char buf[32];
+	group_t group = (group_t)(intptr_t)data;
+	group_t g = group_at(b, c);
+
+	if (g == group)  sprintf(buf, "\e[40;33;1m%c\e[0m", stone2char(board_at(b, c)));
+	else		 sprintf(buf, "%c", stone2char(board_at(b, c)));
+	return buf;
+}
+
+void
+board_print_group(board_t *board, FILE *f, group_t group)
+{
+	assert(group);
+	assert(group_at(board, group) == group);
+	board_hprint(board, f, print_group_handler, (void*)(intptr_t)group);
+}
 
 static void
 board_handicap_stone(board_t *board, int x, int y, mq_t *q)
