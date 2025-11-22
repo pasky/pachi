@@ -47,6 +47,10 @@ static bool is_selfatari(board_t *b, enum stone color, coord_t to);
  * Stores snapbacked group found in @snapback_group if non NULL. */
 bool is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group);
 
+/* For testing purposes mostly.
+ * Only does the 3lib suicide check of is_bad_selfatari(). */
+bool is_3lib_selfatari(board_t *b, enum stone color, coord_t to);
+
 /* Move (color, coord) is a selfatari; this means that it puts a group of
  * ours in atari; i.e., the group has two liberties now. Return the other
  * liberty of such a troublesome group (optionally stored at *bygroup)

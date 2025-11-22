@@ -309,6 +309,37 @@ test_really_bad_selfatari(board_t *b, char *arg)
 }
 
 static bool
+test_3lib_selfatari(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "3lib_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+
+	assert(board_at(b, c) == S_NONE);
+
+	/* Sanity check: 3lib group nearby */
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) != color)  continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs == 3)
+			goto good;
+	});
+	die("no 3lib group near %s %s, bad test ?\n", stone2str(color), coord2sstr(c));
+
+ good:;
+	int rres = is_3lib_selfatari(b, color, c);
+
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+static bool
 test_snapback(board_t *b, char *arg)
 {
 	next_arg(arg);
@@ -1286,6 +1317,7 @@ typedef struct {
 static t_unit_cmd commands[] = {
 	{ "bad_selfatari",          test_bad_selfatari,         },
 	{ "really_bad_selfatari",   test_really_bad_selfatari,  },
+	{ "3lib_selfatari",         test_3lib_selfatari,        },
 	{ "snapback",		    test_snapback,		},
 	{ "ladder",                 test_ladder,                },
 	{ "ladder_any",             test_ladder_any,            },

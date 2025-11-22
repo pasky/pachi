@@ -811,6 +811,24 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	});
 }
 
+/* For testing purposes mostly.
+ * Only does the 3lib suicide check of is_bad_selfatari(). */
+bool
+is_3lib_selfatari(board_t *b, enum stone color, coord_t to)
+{
+	selfatari_state_t s;
+	init_selfatari_state(b, color, to, &s);
+
+	for (int i = 0; i < s.groupcts[color]; i++) {
+		group_t g = s.groupids[color][i];
+		group_info_t *gi = &board_group_info(b, g);
+		if (gi->libs == 3 &&
+		    three_liberty_suicide(b, g, color, to, &s))
+			return true;
+	}
+	return false;
+}
+
 /* Check if move sets up a snapback.
  * Only does the check_snapback() part of is_bad_selfatari(). */
 bool
