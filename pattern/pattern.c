@@ -648,7 +648,8 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 		with_move(b, m->coord, m->color, {
 			group_t g = group_at(b, m->coord);  /* throwin stone */
 			group_t atari_neighbor;
-			if (g && capturing_group_is_snapback(b, g) &&
+			if (g && board_group_info(b, g).libs == 1 &&
+			    capturing_group_is_snapback(b, g) &&
 			    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
 			    !can_countercapture(b, atari_neighbor, NULL) &&
 			    ownermap_color(ownermap, atari_neighbor, 0.67) != color)
@@ -1100,7 +1101,8 @@ pattern_match_double_snapback(board_t *b, move_t *m)
 				if (board_at(b, c) != S_NONE)  continue;
 				with_move(b, c, color, {
 					group_t g = group_at(b, c);
-					if (g && capturing_group_is_snapback(b, g))
+					if (g && board_group_info(b, g).libs == 1 &&
+					    capturing_group_is_snapback(b, g))
 						snap++;
 				});
 			}
