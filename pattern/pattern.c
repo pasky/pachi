@@ -639,24 +639,16 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 	enum stone color = m->color;
 	enum stone other_color = stone_other(color);
 	group_t g1 = 0, g3libs = 0;
-	bool snapback = false, double_atari = false, atari_and_cap = false, atari_and_cap2 = false;
+	bool double_atari = false, atari_and_cap = false, atari_and_cap2 = false;
 	bool ladder_atari = false, ladder_big = false, ladder_safe = false, ladder_cut = false;
 	bool ladder_last = false;
 
 	/* Check snapback on stones we don't own already. */
-	if (immediate_liberty_count(b, m->coord) == 1 && !neighbor_count_at(b, m->coord, color)) {
-		with_move(b, m->coord, m->color, {
-			group_t g = group_at(b, m->coord);  /* throwin stone */
-			group_t atari_neighbor;
-			if (g && board_group_info(b, g).libs == 1 &&
-			    capturing_group_is_snapback(b, g) &&
-			    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
-			    !can_countercapture(b, atari_neighbor, NULL) &&
-			    ownermap_color(ownermap, atari_neighbor, 0.67) != color)
-				snapback = true;
-		});
-	}
-	if (snapback)  return PF_ATARI_SNAPBACK;
+	group_t snapback_group;
+	if (is_snapback(b, m->color, m->coord, &snapback_group) &&
+	    !can_countercapture(b, snapback_group, NULL) &&
+	    ownermap_color(ownermap, snapback_group, 0.67) != color)
+		return PF_ATARI_SNAPBACK;
 
 	bool selfatari = is_selfatari(b, m->color, m->coord);
 	if (selfatari && !board_is_valid_play_no_suicide(b, color, m->coord))
@@ -1093,18 +1085,15 @@ pattern_match_double_snapback(board_t *b, move_t *m)
 	int snap = 0;
 	int x = coord_x(coord);
 	int y = coord_y(coord);
+	/* XXX try using is_snapback_selfatari() instead, should be faster */
 	with_move(b, coord, color, {
 		for (int i = 0; i < 4 && snap != 2; i++) {
 			snap = 0;
 			for (int j = 0; j < 2; j++) {
 				coord_t c = coord_xy(x + offsets[i][j][0], y + offsets[i][j][1]);
 				if (board_at(b, c) != S_NONE)  continue;
-				with_move(b, c, color, {
-					group_t g = group_at(b, c);
-					if (g && board_group_info(b, g).libs == 1 &&
-					    capturing_group_is_snapback(b, g))
-						snap++;
-				});
+				if (is_snapback(b, color, c, NULL))
+					snap++;
 			}
 		}
 	});
