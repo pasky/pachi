@@ -15,28 +15,35 @@
 
 bool
 capturing_group_is_snapback(board_t *b, group_t group)
-{	
+{
+	//assert(board_group_info(b, group).libs == 1);
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	if (immediate_liberty_count(b, lib) > 0 ||
 	    group_stone_count(b, group, 2) > 1)
 		return false;
-	
-	enum stone to_play = stone_other(board_at(b, group));
-	enum stone other = stone_other(to_play);	
-	if (board_is_eyelike(b, lib, other))
+
+	enum stone other_color = board_at(b, group);
+	//enum stone to_play = stone_other(other_color);
+	if (board_is_eyelike(b, lib, other_color))
 		return false;
 	
 	foreach_neighbor(b, lib, {
-			group_t g = group_at(b, c);
-			if (board_at(b, c) == S_OFFBOARD || g == group)
-				continue;
-			
-			if (board_at(b, c) == other && board_group_info(b, g).libs == 1)  // capture more than one group
+		enum stone st = board_at(b, c);
+		if (st == S_NONE || st == S_OFFBOARD)
+			continue;
+
+		group_t g = group_at(b, c);
+		if (g == group)
+			continue;
+
+		if (st == other_color) {
+			if (board_group_info(b, g).libs == 1)  // capture more than one group
 				return false;
-			if (board_at(b, c) == to_play && board_group_info(b, g).libs > 1)
+		} else  // to_play
+			if (board_group_info(b, g).libs > 1)
 				return false;
-		});
+	});
 	return true;
 }
 
