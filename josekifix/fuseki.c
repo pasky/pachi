@@ -190,6 +190,7 @@ sanrensei_fuseki(struct board *b, hash_t lasth)
 				return (spatial_hash("P10") == 0x6824b58429db8cde ? coord("Q10") : pass);
 			if (last_move2(b).coord == coord("D16"))
 				return (spatial_hash("K15") == 0x1f77eaacf1573066 ? coord("K16") : pass);
+			/* fallthrough */
 		default: return pass;
 	}
 }
@@ -206,6 +207,7 @@ chinese_fuseki(struct board *b, hash_t lasth)
 				return (spatial_hash("P10") == 0x6824b58429db8cde ? random_coord("R9", "Q9") : pass);
 			if (last_move2(b).coord == coord("C16"))
 				return (spatial_hash("K15") == 0x1f77eaacf1573066 ? random_coord("J17", "J16") : pass);
+			/* fallthrough */
 		default: return pass;
 	}
 }
