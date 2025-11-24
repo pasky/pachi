@@ -115,14 +115,14 @@ virtual_connection_at(board_t *b, enum stone color, coord_t lib, coord_t c2, gro
 
 	/* Diagonal connection ? */
 	int x2 = coord_x(c2),          y2 = coord_y(c2);
-	foreach_diag_neighbor(b, c2) {
+	foreach_diag_neighbor(b, c2, {
 		if (board_at(b, c) != color || group_at(b, c) != g1)
 			continue;
 		int x = coord_x(c);    coord_t d1 = coord_xy(x, y2);
 		int y = coord_y(c);    coord_t d2 = coord_xy(x2, y);		   
 		if (no_stone_at(d1) && no_stone_at(d2))
 			return true;	
-	} foreach_diag_neighbor_end;
+	});
 
 	int x = coord_x(lib);          int dx = coord_dx(lib, c2);
 	int y = coord_y(lib);          int dy = coord_dy(lib, c2);
@@ -388,9 +388,9 @@ real_eye_endpoint(board_t *board, coord_t to, enum stone color)
 {
 	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 	
-	foreach_diag_neighbor(board, to) {
+	foreach_diag_neighbor(board, to, {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
-	} foreach_diag_neighbor_end;
+	});
 	/* We need to control 3 corners of the eye in the middle of the board,
 	 * 2 on the side, and 1 in the corner. */
 	if (color_diag_libs[S_OFFBOARD]) {
@@ -399,7 +399,7 @@ real_eye_endpoint(board_t *board, coord_t to, enum stone color)
 	}
 
 	/* Corners could be eye-like too ... */
-	foreach_diag_neighbor(board, to) {
+	foreach_diag_neighbor(board, to, {
 		if (color_diag_libs[color] >= 3)		return true;
 		if (color_diag_libs[stone_other(color)] >= 2)	return false;
 		
@@ -409,7 +409,7 @@ real_eye_endpoint(board_t *board, coord_t to, enum stone color)
 			color_diag_libs[color]++;
 		else
 			color_diag_libs[stone_other(color)]++;
-	} foreach_diag_neighbor_end;
+	});
 
 	return (color_diag_libs[color] >= 3);
 }

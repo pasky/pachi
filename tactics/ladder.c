@@ -381,10 +381,10 @@ ladder_with_tons_of_double_ataris(board_t *b, group_t laddered, enum stone color
 	int double_ataris = 0;
 	foreach_in_group(b, laddered) {
 		coord_t stone = c;
-		foreach_diag_neighbor(b, stone) {
+		foreach_diag_neighbor(b, stone, {
 			if (is_double_atari(b, c, stone_other(color)))
 				double_ataris++;
-		} foreach_diag_neighbor_end;
+		});
 	} foreach_in_group_end;
 
 	return (double_ataris >= 2);

@@ -416,16 +416,17 @@ const char *rules2str(enum rules rules);
 	} while (0)
 
 /* For each diag neighbor (NOT VALID on S_OFFBOARD coordinates) */
-#define foreach_diag_neighbor(b, coord) \
+#define foreach_diag_neighbor(b, coord, loop_body) \
 	do { \
 		int fn__i; \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c = coord__; \
+		/* Unrolling loop like foreach_neighbor() is slower somehow. */ \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			c += board_statics.dnei[fn__i];
-#define foreach_diag_neighbor_end \
+			c += board_statics.dnei[fn__i]; \
+			do { loop_body } while(0); \
 		} \
-	} while (0)
+	} while(0)
 
 
 /* XXX doesn't handle handicap placement phase */

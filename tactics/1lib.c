@@ -211,12 +211,12 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4) {
 		/* Except when the ko is for an eye! */
 		bool eyeconnect = false;
-		foreach_diag_neighbor(b, lib) {
+		foreach_diag_neighbor(b, lib, {
 			if (board_at(b, c) == S_NONE && neighbor_count_at(b, c, color) + neighbor_count_at(b, c, S_OFFBOARD) == 4) {
 				eyeconnect = true;
 				break;
 			}
-		} foreach_diag_neighbor_end;
+		});
 		if (!eyeconnect)  return;
 	}
 

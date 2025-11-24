@@ -615,7 +615,7 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 	 *    liberty must be 8-touching the same number of
 	 *    stones as us. */
 	int touch8 = neighbor_count_at(b, to, color);
-	foreach_diag_neighbor(b, to) {
+	foreach_diag_neighbor(b, to, {
 		if (board_at(b, c) != color) continue;
 		/* Consider only internal stones. Otherwise, e.g.
 		 * X O . X
@@ -624,7 +624,7 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 		if (board_group_info(b, group_at(b, c)).lib[0] == to
 		    || board_group_info(b, group_at(b, c)).lib[1] == to)
 			touch8++;
-	} foreach_diag_neighbor_end;
+	});
 	if (touch8 == stones)
 		return true;
 
@@ -636,12 +636,12 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 		return true;
 	
 	int ltouch8 = neighbor_count_at(b, lib2, color);
-	foreach_diag_neighbor(b, lib2) {
+	foreach_diag_neighbor(b, lib2, {
 		if (board_at(b, c) != color) continue;
 		if (board_group_info(b, group_at(b, c)).lib[0] == to
 		    || board_group_info(b, group_at(b, c)).lib[1] == to)
 			ltouch8++;
-	} foreach_diag_neighbor_end;
+	});
 	return ltouch8 == touch8;
 }
 #endif

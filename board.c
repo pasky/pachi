@@ -495,9 +495,9 @@ board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 {
 	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
-	foreach_diag_neighbor(board, coord) {
+	foreach_diag_neighbor(board, coord, {
 		color_diag_libs[board_at(board, c)]++;
-	} foreach_diag_neighbor_end;
+	});
 	
 	/* For false eye, we need two enemy stones diagonally in the
 	 * middle of the board, or just one enemy stone at the edge

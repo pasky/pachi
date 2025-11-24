@@ -454,7 +454,7 @@ cutting_stones(board_t *b, group_t g)
 		if (neighbor_count_at(b, c, other_color) < 2)  continue;
 		int x1 = coord_x(c);  int y1 = coord_y(c);
 		coord_t coord = c;
-		foreach_diag_neighbor(b, coord) {
+		foreach_diag_neighbor(b, coord, {
 			if (board_at(b, c) != color || group_at(b, c) == g)  continue;
 			int x2 = coord_x(c);  int y2 = coord_y(c);
 			coord_t c2 = coord_xy(x1, y2);
@@ -462,7 +462,7 @@ cutting_stones(board_t *b, group_t g)
 			if (board_at(b, c2) != other_color ||
 			    board_at(b, c3) != other_color)   continue;
 			return true;
-		} foreach_diag_neighbor_end;
+		});
 	} foreach_in_group_end;	
 	return false;
 }
@@ -617,14 +617,14 @@ static bool
 can_countercap_common_stone(board_t *b, coord_t coord, enum stone color, group_t g1, group_t g2)
 {
 	int x1 = coord_x(coord);  int y1 = coord_y(coord);
-	foreach_diag_neighbor(b, coord) {
+	foreach_diag_neighbor(b, coord, {
 		if (board_at(b, c) != color || board_group_info(b, group_at(b, c)).libs != 1)  continue;
 		int x2 = coord_x(c);  int y2 = coord_y(c);
 		coord_t c1 = coord_xy(x1, y2);
 		coord_t c2 = coord_xy(x2, y1);
 		if ((group_at(b, c1) == g1 && group_at(b, c2) == g2) ||
 		    (group_at(b, c1) == g2 && group_at(b, c2) == g1))   return true;
-	} foreach_diag_neighbor_end;
+	});
 	return false;
 }
 
@@ -761,7 +761,7 @@ safe_diag_neighbor_reaches_two_opp_groups(board_t *b, move_t *m,
 {
 	enum stone other_color = stone_other(m->color);
 	
-	foreach_diag_neighbor(b, m->coord) {
+	foreach_diag_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color) continue;
 		group_t g = group_at(b, c);
 
@@ -781,7 +781,7 @@ safe_diag_neighbor_reaches_two_opp_groups(board_t *b, move_t *m,
 					if (gs[i] == g)  {  found++;  gs[i] = 0;  break;  }
 			});
 		if (found >= 2)  return true;
-	} foreach_diag_neighbor_end;
+	});
 	
 	return false;
 }
@@ -879,9 +879,9 @@ is_net(board_t *b, coord_t target, coord_t net)
 	assert(board_group_info(b, netg).libs >= 2);
 
 	bool diag_neighbors = false;
-	foreach_diag_neighbor(b, net) {
+	foreach_diag_neighbor(b, net, {
 		if (group_at(b, c) == g)  diag_neighbors = true;
-	} foreach_diag_neighbor_end;
+	});
 	assert(diag_neighbors);	
 
 	/* Don't match on first line... */
@@ -930,9 +930,9 @@ net_last_move(board_t *b, move_t *m, coord_t last)
 	if (coord_edge_distance(last) == 0)	   return false;
 	
 	bool diag_neighbors = false;
-	foreach_diag_neighbor(b, last) {
+	foreach_diag_neighbor(b, last, {
 		if (m->coord == c)  diag_neighbors = true;
-	} foreach_diag_neighbor_end;
+	});
 	if (!diag_neighbors)  return false;
 
 	return is_net(b, last, m->coord);
@@ -950,12 +950,12 @@ pattern_match_net(board_t *b, move_t *m, ownermap_t *ownermap)
 
 	/* Speedup: avoid with_move() if there are no candidates... */
 	int can = 0;
-	foreach_diag_neighbor(b, m->coord) {
+	foreach_diag_neighbor(b, m->coord, {
 		if (board_at(b, c) != other_color)     continue;
 		group_t g = group_at(b, c);
 		if (board_group_info(b, g).libs != 2)  continue;
 		can++;
-	} foreach_diag_neighbor_end;
+	});
 	if (!can)  return -1;
 
 	coord_t last = last_move(b).coord;
@@ -964,7 +964,7 @@ pattern_match_net(board_t *b, move_t *m, ownermap_t *ownermap)
 			with_move_return(PF_NET_LAST);
 
 		bool net_cut = false; bool net_some = false; bool net_dead = false;
-		foreach_diag_neighbor(b, m->coord) {
+		foreach_diag_neighbor(b, m->coord, {
 			if (board_at(b, c) != other_color)     continue;
 			group_t g = group_at(b, c);
 			if (board_group_info(b, g).libs != 2)  continue;
@@ -975,7 +975,7 @@ pattern_match_net(board_t *b, move_t *m, ownermap_t *ownermap)
 				if (own != m->color)				net_some = true;
 				else						net_dead = true;
 			}
-		} foreach_diag_neighbor_end;
+		});
 		
 		if (net_cut)    with_move_return(PF_NET_CUT);
 		if (net_some)   with_move_return(PF_NET_SOME);

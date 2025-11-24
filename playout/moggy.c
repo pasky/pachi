@@ -538,7 +538,7 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 				/* ...and the neighbor must potentially falsify
 				 * an eye. */
 				coord_t falsifying = c;
-				foreach_diag_neighbor(b, falsifying) {
+				foreach_diag_neighbor(b, falsifying, {
 					if (board_at(b, c) != S_NONE)
 						continue;
 					if (!board_is_eyelike(b, c, to_play))
@@ -551,20 +551,20 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 					 * are board edge. */
 					coord_t falsified = c;
 					int color_diag_libs[S_MAX] = {0};
-					foreach_diag_neighbor(b, falsified) {
+					foreach_diag_neighbor(b, falsified, {
 						if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1) {
 							/* Suggest capturing a falsifying stone in atari. */
 							mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
 						} else {
 							color_diag_libs[board_at(b, c)]++;
 						}
-					} foreach_diag_neighbor_end;
+					});
 					if (color_diag_libs[m->color] == 1 || (color_diag_libs[m->color] == 0 && color_diag_libs[S_OFFBOARD] == 2)) {
 						/* That's it. Fill the falsifying
 						 * liberty before it's too late! */
 						mq_add(q, falsifying);
 					}
-				} foreach_diag_neighbor_end;
+				});
 			});
 		}
 
@@ -587,10 +587,10 @@ fillboard_check(playout_policy_t *p, board_t *b)
 		coord_t coord = b->f[fast_random(b->flen)];
 		if (immediate_liberty_count(b, coord) != 4)
 			continue;
-		foreach_diag_neighbor(b, coord) {
+		foreach_diag_neighbor(b, coord, {
 			if (board_at(b, c) != S_NONE)
 				goto next_try;
-		} foreach_diag_neighbor_end;
+		});
 		return coord;
 next_try:
 		;
@@ -904,7 +904,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 	/* If saving a group in atari don't interfere ! */
 	if (eyefill && !board_get_atari_neighbor(b, m->coord, m->color)) {
 		if (DEBUGL(5))  fprintf(stderr, "Moggy: %s filling eye, checking neighbors\n", coord2sstr(m->coord));
-		foreach_diag_neighbor(b, m->coord) {
+		foreach_diag_neighbor(b, m->coord, {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
 			switch (board_group_info(b, group_at(b, c)).libs) {
@@ -926,7 +926,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 				}
 				break;
 			}
-		} foreach_diag_neighbor_end;
+		});
 	}
 	}
 
