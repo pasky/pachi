@@ -393,10 +393,10 @@ const char *rules2str(enum rules rules);
 	do { \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		c = coord__ - board_stride(board_); do { loop_body } while (0); \
-		c = coord__ - 1; do { loop_body } while (0); \
-		c = coord__ + 1; do { loop_body } while (0); \
-		c = coord__ + board_stride(board_); do { loop_body } while (0); \
+		c = coord__ + offset_down;  do { loop_body } while (0); \
+		c = coord__ + offset_left;  do { loop_body } while (0); \
+		c = coord__ + offset_right; do { loop_body } while (0); \
+		c = coord__ + offset_up;    do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_8neighbor(board_, coord_) \

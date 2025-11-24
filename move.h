@@ -10,6 +10,15 @@
 
 typedef int coord_t;
 
+#define offset_horiz (1)
+#define offset_vert  (the_board_stride())
+
+#define offset_left  (-offset_horiz)
+#define offset_right (offset_horiz)
+#define offset_down  (-offset_vert)
+#define offset_up    (offset_vert)
+
+
 // XXX board_size() instead of board_statics.size
 #define coord_xy(x, y) ((x) + (y) * the_board_stride())
 #define coord_x(c) (board_statics.coord[c][0])
@@ -23,8 +32,8 @@ typedef int coord_t;
 #define is_pass(c)   (c == pass)
 #define is_resign(c) (c == resign)
 
-#define coord_is_adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(c1 - c2) == the_board_stride())
-#define coord_is_8adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - the_board_stride()) < 2)
+#define coord_is_adjecent(c1, c2) (abs(c1 - c2) == offset_horiz || abs(c1 - c2) == offset_vert)
+#define coord_is_8adjecent(c1, c2) (abs(c1 - c2) == offset_horiz || abs(abs(c1 - c2) - offset_vert) < 2)
 
 char *coord2bstr(char *buf, coord_t c);
 /* Return coordinate string in a dynamically allocated buffer. Thread-safe. */
