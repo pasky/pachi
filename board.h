@@ -368,34 +368,34 @@ const char *rules2str(enum rules rules);
 
 /** Iterators */
 
-#define foreach_point(board_) \
+/* For each point (including offboard margin !) */
+#define foreach_point(b) \
 	do { \
-		coord_t c = 0; \
-		for (; c < board_max_coords(board_); c++)
+		for (coord_t c = 0; c < board_max_coords(b); c++)
 #define foreach_point_end \
 	} while (0)
 
-#define foreach_free_point(board_) \
+/* For each empty point */
+#define foreach_free_point(b) \
 	do { \
-		int fmax__ = (board_)->flen; \
+		int fmax__ = (b)->flen; \
 		for (int f__ = 0; f__ < fmax__; f__++) { \
-			coord_t c = (board_)->f[f__];
+			coord_t c = (b)->f[f__];
 #define foreach_free_point_end \
 		} \
 	} while (0)
 
-#define foreach_in_group(board_, group_) \
+/* For each stone in group */
+#define foreach_in_group(b, group) \
 	do { \
-		board_t *board__ = board_; \
-		for (coord_t c = group_base(group_); c; c = groupnext_at(board__, c))
+		for (coord_t c = group_base(group); c; c = groupnext_at((b), c))
 #define foreach_in_group_end \
 	} while (0)
 
-/* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
- * on S_OFFBOARD coordinates. */
-#define foreach_neighbor(board_, coord_, loop_body) \
+/* For each coord neighbor (NOT VALID on S_OFFBOARD coordinates) */
+#define foreach_neighbor(b, coord, loop_body) \
 	do { \
-		coord_t coord__ = coord_; \
+		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c; \
 		c = coord__ + offset_down;  do { loop_body } while (0); \
 		c = coord__ + offset_left;  do { loop_body } while (0); \
@@ -403,20 +403,24 @@ const char *rules2str(enum rules rules);
 		c = coord__ + offset_up;    do { loop_body } while (0); \
 	} while (0)
 
-#define foreach_8neighbor(board_, coord_) \
+/* For each coord neighbor or diag neighbor (NOT VALID on S_OFFBOARD coordinates) */
+#define foreach_8neighbor(b, coord) \
 	do { \
 		int fn__i; \
-		coord_t c = (coord_); \
+		coord_t coord__ = (coord);  /* needed if coord = c */ \
+		coord_t c = coord__; \
 		for (fn__i = 0; fn__i < 8; fn__i++) { \
 			c += board_statics.nei8[fn__i];
 #define foreach_8neighbor_end \
 		} \
 	} while (0)
 
-#define foreach_diag_neighbor(board_, coord_) \
+/* For each diag neighbor (NOT VALID on S_OFFBOARD coordinates) */
+#define foreach_diag_neighbor(b, coord) \
 	do { \
 		int fn__i; \
-		coord_t c = (coord_); \
+		coord_t coord__ = (coord);  /* needed if coord = c */ \
+		coord_t c = coord__; \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
 			c += board_statics.dnei[fn__i];
 #define foreach_diag_neighbor_end \
