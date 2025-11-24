@@ -112,6 +112,7 @@ enum rules {
 typedef struct {
 	int rsize;                          /* real board size     (19x19: 19) */
 	int stride;                         /* padded board size   (19x19: 21) */
+	int rsize2;			    /* rsize^2 */
 	int max_coords;                     /* stride^2 */
 	int bits2;                          /* ceiling(log2(size2)) */
 	
@@ -212,19 +213,22 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 
 
 #ifdef BOARD_SIZE
-#define board_rsize(b)          BOARD_SIZE
-#define the_board_rsize()       BOARD_SIZE
-#define the_board_stride()        (BOARD_SIZE + 2)
-#define board_max_coords(b)       (board_stride(b) * board_stride(b))
+#define board_rsize(b)		(BOARD_SIZE)
+#define board_rsize2(b)		(BOARD_SIZE * BOARD_SIZE)
+#define board_stride(b)		(BOARD_SIZE + 2)
+#define the_board_rsize()	(BOARD_SIZE)
+#define the_board_rsize2()	(BOARD_SIZE * BOARD_SIZE)
+#define the_board_stride()	(BOARD_SIZE + 2)
+#define board_max_coords(b)	(board_stride(b) * board_stride(b))
 #else
-#define board_rsize(b)          ((b)->rsize)
-#define the_board_rsize()       (board_statics.rsize)
-#define the_board_stride()        (board_statics.stride)
-#define board_max_coords(b)       (board_statics.max_coords)
+#define board_rsize(b)		((b)->rsize)
+#define board_rsize2(b)		(board_statics.rsize2)
+#define board_stride(b)		(board_statics.stride)
+#define the_board_rsize()	(board_statics.rsize)
+#define the_board_rsize2()	(board_statics.rsize2)
+#define the_board_stride()	(board_statics.stride)
+#define board_max_coords(b)	(board_statics.max_coords)
 #endif
-
-#define board_stride(b)           (board_rsize(b) + 2)
-#define board_rsize2(b)		  (board_rsize(b) * board_rsize(b))
 
 
 /* This is a shortcut for taking different action on smaller and large boards 

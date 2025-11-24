@@ -112,6 +112,7 @@ board_statics_init(board_t *board)
 	memset(bs, 0, sizeof(*bs));
 	bs->rsize = size;
 	bs->stride = stride;
+	bs->rsize2 = size * size;
 	bs->max_coords = stride * stride;
 
 	bs->bits2 = 1;
