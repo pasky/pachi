@@ -396,11 +396,11 @@ const char *rules2str(enum rules rules);
 #define foreach_neighbor(b, coord, loop_body) \
 	do { \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
-		coord_t c; \
-		c = coord__ + offset_down;  do { loop_body } while (0); \
-		c = coord__ + offset_left;  do { loop_body } while (0); \
-		c = coord__ + offset_right; do { loop_body } while (0); \
-		c = coord__ + offset_up;    do { loop_body } while (0); \
+		coord_t c = coord__; \
+		c += offset_down;                  do { loop_body } while (0); \
+		c += offset_up    + offset_left;   do { loop_body } while (0); \
+		c += offset_right + offset_right;  do { loop_body } while (0); \
+		c += offset_up    + offset_left;   do { loop_body } while (0); \
 	} while (0)
 
 /* For each coord neighbor or diag neighbor (NOT VALID on S_OFFBOARD coordinates) */
