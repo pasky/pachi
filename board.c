@@ -828,7 +828,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 		board->pat3[coord] = pattern3_hash(board, coord);
 	else
 		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
-	foreach_8neighbor(board, coord) {
+	foreach_8neighbor(board, coord, {
 		/* Internally, the loop uses fn__i=[0..7]. We can use
 		 * it directly to address bits within the bitmap of the
 		 * neighbors since the bitmap order is reverse to the
@@ -841,7 +841,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 			board->pat3[c] &= ~(1 << (16 + ataribits[fn__i]));
 			board->pat3[c] |= in_atari << (16 + ataribits[fn__i]);
 		}
-	} foreach_8neighbor_end;
+	});
 #endif
 }
 

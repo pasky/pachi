@@ -223,16 +223,16 @@ apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, gmq_t *q)
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return;
 
-	foreach_8neighbor(b, m->coord) {
+	foreach_8neighbor(b, m->coord, {
 		apply_pattern_here(p, b, c, stone_other(m->color), q);
-	} foreach_8neighbor_end;
+	});
 
 	if (mm) { /* Second move for pattern searching */
-		foreach_8neighbor(b, mm->coord) {
+		foreach_8neighbor(b, mm->coord, {
 			if (coord_is_8adjecent(m->coord, c))
 				continue;
 			apply_pattern_here(p, b, c, stone_other(m->color), q);
-		} foreach_8neighbor_end;
+		});
 	}
 
 	if (DEBUGL(5) && q->moves)
@@ -454,7 +454,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	 * or wasted moves around alive groups. */
 
 	group_t group2 = 0;
-	foreach_8neighbor(b, m->coord) {
+	foreach_8neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || group2 == g || board_at(b, c) != color)
 			continue;
@@ -462,7 +462,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 			continue;
 		group_nlib_defense_check(b, g, color, q);
 		group2 = g; // prevent trivial repeated checks
-	} foreach_8neighbor_end;
+	});
 
 	if (DEBUGL(5) && q->moves)
 		mq_print_line(q, "Moggy local nlib: ");

@@ -404,14 +404,14 @@ const char *rules2str(enum rules rules);
 	} while (0)
 
 /* For each coord neighbor or diag neighbor (NOT VALID on S_OFFBOARD coordinates) */
-#define foreach_8neighbor(b, coord) \
+#define foreach_8neighbor(b, coord, loop_body) \
 	do { \
 		int fn__i; \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c = coord__; \
 		for (fn__i = 0; fn__i < 8; fn__i++) { \
-			c += board_statics.nei8[fn__i];
-#define foreach_8neighbor_end \
+			c += board_statics.nei8[fn__i]; \
+			do { loop_body } while (0); \
 		} \
 	} while (0)
 
