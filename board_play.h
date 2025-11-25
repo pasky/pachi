@@ -232,28 +232,26 @@ new_group(board_t *board, coord_t coord)
 }
 
 static inline group_t
-play_one_neighbor(board_t *board,
-		  coord_t coord, enum stone color, enum stone other_color,
-		  coord_t c, group_t group)
+play_one_neighbor(board_t *board, coord_t coord, enum stone color,
+		  coord_t c, group_t group, group_t ngroup)
 {
 	enum stone ncolor = board_at(board, c);
-	group_t ngroup = group_at(board, c);
 
-	inc_neighbor_count_at(board, c, color);
-
-	if (!ngroup)  return group;
-
+	/* Faster to always rmlib even though not needed when (ncolor == color && ngroup == group).
+	 * I guess better help branch predictor even if that means extra work. */
 	board_group_rmlib(board, ngroup, coord);
 	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: reducing libs for %s group %s\n",
 				 stone2str(ncolor), coord2sstr(group_base(ngroup)));
 
-	if (ncolor == color && ngroup != group) {
-		if (!group) {
-			group = ngroup;
-			add_to_group(board, group, c, coord);
-		} else
-			merge_groups(board, group, ngroup);
-	} else if (ncolor == other_color) {
+	if (ncolor == color) {
+		if (ngroup != group) {
+			if (!group) {
+				group = ngroup;
+				add_to_group(board, group, c, coord);
+			} else
+				merge_groups(board, group, ngroup);
+		}
+	} else { // ncolor == other_color
 		if (DEBUGL(10)) {
 			group_info_t *gi = &board_group_info(board, ngroup);
 			fprintf(stderr, "testing captured group %s: ", coord2sstr(group_base(ngroup)));
@@ -274,7 +272,6 @@ board_play_outside(board_t *board, move_t *m, int f)
 {
 	coord_t coord = m->coord;
 	enum stone color = m->color;
-	enum stone other_color = stone_other(color);
 	group_t group = 0;
 
 #ifdef BOARD_UNDO	
@@ -285,7 +282,11 @@ board_play_outside(board_t *board, move_t *m, int f)
 #endif
 	
 	foreach_neighbor(board, coord, {
-			group = play_one_neighbor(board, coord, color, other_color, c, group);
+		inc_neighbor_count_at(board, c, color);
+
+		group_t ngroup = group_at(board, c);
+		if (ngroup)
+			group = play_one_neighbor(board, coord, color, c, group, ngroup);
 	});
 
 	board_at(board, coord) = color;
