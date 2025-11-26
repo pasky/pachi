@@ -12,7 +12,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-#define swap(x, y)  do { typeof(x) __tmp;  __tmp = (x);  (x) = (y);  (y) = __tmp;  } while(0)
+#define swap(x, y)  do { typeof(x) tmp__;  tmp__ = (x);  (x) = (y);  (y) = tmp__;  } while(0)
 
 #ifdef __cplusplus
 #define typeof decltype

@@ -57,12 +57,12 @@ board_get_atari_neighbors(board_t *b, coord_t c, enum stone group_color, mq_t *q
 	});
 }
 
-#define foreach_atari_neighbor(b, c, group_color)			\
-	do {								\
-		mq_t __q;					\
-		board_get_atari_neighbors(b, (c), (group_color), &__q);	\
-		for (int __i = 0; __i < __q.moves; __i++) {		\
-			group_t g = __q.move[__i];
+#define foreach_atari_neighbor(b, c, group_color)				\
+	do {									\
+		mq_t q__;							\
+		board_get_atari_neighbors((b), (c), (group_color), &q__);	\
+		for (int i__ = 0; i__ < q__.moves; i__++) {			\
+			group_t g = q__.move[i__];
 
 #define foreach_atari_neighbor_end  \
 			} \
