@@ -1,5 +1,17 @@
 /* board_play() implementation */
 
+
+static bool
+group_has_lib(group_info_t *gi, coord_t lib)
+{
+	/* Normal would be to loop through the group libs (i < gi->libs), but
+	 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
+	for (int i = 0; i < GROUP_KEEP_LIBS; i++)
+		if (gi->lib[i] == lib)
+			return true;
+	return false;
+}
+
 static void
 board_group_addlib(board_t *board, group_t group, coord_t coord)
 {
@@ -9,12 +21,8 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 
 	group_info_t *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
-		/* Normal would be to loop through the group libs (i < gi->libs), but
-		 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
-		for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
-			if (unlikely(gi->lib[i] == coord))
-				return;
-		}
+		if (group_has_lib(gi, coord))
+			return;
 #ifdef FULL_BOARD
 		if      (gi->libs == 0)  board_capturable_add(board, group, coord);
 		else if (gi->libs == 1)  board_capturable_rm(board, group, gi->lib[0]);
@@ -26,22 +34,15 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 static void
 board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
 {
-	/* Liberties we know about. */
-	mq_t visited;  mq_init(&visited);
-	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
-		mq_add(&visited, gi->lib[i]);
-	mq_add(&visited, avoid);
-
 	foreach_in_group(board, group) {
 		coord_t coord2 = c;
 		foreach_neighbor(board, coord2, {
-			if (board_at(board, c) != S_NONE || mq_has(&visited, c))
+			if (board_at(board, c) != S_NONE || group_has_lib(gi, c) || c == avoid)
 				continue;
-			mq_add(&visited, c);
 			gi->lib[gi->libs++] = c;
 			if (unlikely(gi->libs >= GROUP_KEEP_LIBS))
 				return;
-		} );
+		});
 	} foreach_in_group_end;
 }
 
@@ -169,17 +170,15 @@ merge_groups(board_t *board, group_t group_to, group_t group_from)
 
 	if (gi_to->libs < GROUP_KEEP_LIBS) {
 		for (int i = 0; i < gi_from->libs; i++) {
-			for (int j = 0; j < gi_to->libs; j++)
-				if (gi_to->lib[j] == gi_from->lib[i])
-					goto next_from_lib;
-#ifdef FULL_BOARD				
+			if (group_has_lib(gi_to, gi_from->lib[i]))
+				continue;
+#ifdef FULL_BOARD
 			if      (gi_to->libs == 0)  board_capturable_add(board, group_to, gi_from->lib[i]);
 			else if (gi_to->libs == 1)  board_capturable_rm(board, group_to, gi_to->lib[0]);
 #endif
 			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
 			if (gi_to->libs >= GROUP_KEEP_LIBS)
 				break;
-next_from_lib:;
 		}
 	}
 
