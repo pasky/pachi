@@ -375,6 +375,14 @@ const char *rules2str(enum rules rules);
 #define foreach_point_end \
 	} while (0)
 
+/* For each board point, in order suitable for printing (no offboard margin) */
+#define foreach_point_for_print(b) \
+	for (int y_ = board_rsize(b); y_ >= 1; y_--) \
+		for (int x_ = 1; x_ <= board_rsize(b); x_++) { \
+			coord_t c = coord_xy(x_, y_);
+#define foreach_point_for_print_end \
+	}
+
 /* For each empty point */
 #define foreach_free_point(b) \
 	do { \

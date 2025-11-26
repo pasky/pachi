@@ -272,15 +272,12 @@ gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color, best_moves_t
 		if (!is_pass(best->c[i]))
 			vals[best->c[i]] = best->r[i];
 
-	int size = board_rsize(b);
-	for (int y = size; y >= 1; y--)
-		for (int x = 1; x <= size; x++) {
-			coord_t c = coord_xy(x, y);
-			int rr, gg, bb;
-			value2color(vals[c], &rr, &gg, &bb);
+	foreach_point_for_print(b) {
+		int rr, gg, bb;
+		value2color(vals[c], &rr, &gg, &bb);
 
-			fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
-		}
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+	} foreach_point_for_print_end;
 }
 
 static void
