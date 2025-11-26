@@ -186,7 +186,7 @@ next_from_lib:;
 	board_pat3_fix(board, group_from, group_to);
 #endif
 
-	coord_t last_in_group;
+	coord_t last_in_group = 0;
 	foreach_in_group(board, group_from) {
 		last_in_group = c;
 		group_at(board, c) = group_to;
