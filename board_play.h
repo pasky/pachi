@@ -87,9 +87,8 @@ board_group_rmlib(board_t *board, group_t group, coord_t coord)
 /* This is a low-level routine that doesn't maintain consistency
  * of all the board data structures. */
 static void
-board_remove_stone(board_t *board, group_t group, coord_t c)
+board_remove_stone(board_t *board, group_t group, coord_t c, enum stone color)
 {
-	enum stone color = board_at(board, c);
 	board_at(board, c) = S_NONE;
 	group_at(board, c) = 0;
 #ifdef FULL_BOARD
@@ -117,11 +116,13 @@ board_remove_stone(board_t *board, group_t group, coord_t c)
 static int profiling_noinline
 board_group_capture(board_t *board, group_t group)
 {
+	enum stone color = board_at(board, group);
+	enum stone other_color = stone_other(color);
 	int stones = 0;
 
 	foreach_in_group(board, group) {
-		board->captures[stone_other(board_at(board, c))]++;
-		board_remove_stone(board, group, c);
+		board->captures[other_color]++;
+		board_remove_stone(board, group, c, color);
 		stones++;
 	} foreach_in_group_end;
 
