@@ -117,7 +117,7 @@ DATADIR=$(PREFIX)/share/pachi-go
 # unless PROFILING=gprof.)
 OPT ?= -O3
 COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
-CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length -Winit-self -Wimplicit-fallthrough
 CXXFLAGS     := -std=c++11
 
 
