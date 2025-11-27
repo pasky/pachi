@@ -278,13 +278,9 @@ engine_board_print(engine_t *e, board_t *b, FILE *f)
 }
 
 void
-engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
-		  coord_t *best_c, float *best_r, int nbest)
+engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	e->best_moves(e, b, ti, color, best_c, best_r, nbest);
+	e->best_moves(e, b, ti, color, best);
 }
 
 ownermap_t*
@@ -367,47 +363,88 @@ engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err)
 
 /**************************************************************************************************/
 
-/* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
 void
-best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest)
+best_moves_init(best_moves_t *best, coord_t c[], float r[], int size)
 {
-	for (int i = 0; i < nbest; i++)
-		if (r > best_r[i]) {
-			for (int j = nbest - 1; j > i; j--) { // shift
-				best_r[j] = best_r[j - 1];
-				best_c[j] = best_c[j - 1];
-			}
-			best_r[i] = r;
-			best_c[i] = c;
-			break;
-		}
+	best->n = 0;
+	best->size = size;
+	best->c = c;
+	best->r = r;
+	best->d = NULL;
+
+	memset(c, 0, size * sizeof(*c));
+	memset(r, 0, size * sizeof(*r));
 }
 
 void
-best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest)
+best_moves_init_full(best_moves_t *best, coord_t c[], float r[], void* d[], int size)
 {
-	for (int i = 0; i < nbest; i++)
-		if (r > best_r[i]) {
-			for (int j = nbest - 1; j > i; j--) { // shift
-				best_r[j] = best_r[j - 1];
-				best_c[j] = best_c[j - 1];
-				best_d[j] = best_d[j - 1];
+	best->n = 0;
+	best->size = size;
+	best->c = c;
+	best->r = r;
+	best->d = d;
+
+	memset(c, 0, size * sizeof(*c));
+	memset(r, 0, size * sizeof(*r));
+	memset(d, 0, size * sizeof(*d));
+}
+
+/* For engines best_move(): Add move @c with prob @r to best moves */
+void
+best_moves_add(best_moves_t *best, coord_t c, float r)
+{
+	int i;
+	for (i = 0; i < best->n; i++)
+		if (r > best->r[i]) {
+			/* Found position, shift following moves */
+			for (int j = MIN(best->n, best->size - 1); j > i; j--) {
+				best->r[j] = best->r[j - 1];
+				best->c[j] = best->c[j - 1];
 			}
-			best_r[i] = r;
-			best_c[i] = c;
-			best_d[i] = d;
 			break;
 		}
+
+	/* Add move if we found a spot or there is room left. */
+	if (i < best->size) {
+		best->r[i] = r;
+		best->c[i] = c;
+		best->n = MIN(best->n + 1, best->size);
+	}
+}
+
+void
+best_moves_add_full(best_moves_t *best, coord_t c, float r, void *d)
+{
+	int i;
+	for (i = 0; i < best->n; i++)
+		if (r > best->r[i]) {
+			/* Found position, shift following moves */
+			for (int j = MIN(best->n, best->size - 1); j > i; j--) {
+				best->r[j] = best->r[j - 1];
+				best->c[j] = best->c[j - 1];
+				best->d[j] = best->d[j - 1];
+			}
+			break;
+		}
+
+	/* Add move if we found a spot or there is room left. */
+	if (i < best->size) {
+		best->r[i] = r;
+		best->c[i] = c;
+		best->d[i] = d;
+		best->n = MIN(best->n + 1, best->size);
+	}
 }
 
 int
-best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest)
+best_moves_print(best_moves_t *best, char *str)
 {
 	fprintf(stderr, "%s[ ", str);
-	for (int i = 0; i < nbest; i++) {
-		const char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
-		fprintf(stderr, "%-3s ", str);
-	}
+	for (int i = 0; i < best->n; i++)
+		fprintf(stderr, "%-3s ", coord2sstr(best->c[i]));
+	for (int i = best->n; i < best->size; i++)
+		fprintf(stderr, "%-3s ", "");
 	fprintf(stderr, "]\n");
 	return strlen(str);
 }
