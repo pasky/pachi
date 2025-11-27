@@ -35,6 +35,7 @@ typedef struct {
 
 typedef struct {
 	float probs_sum;
+	int   n;
 	float devs_sum;
 } avg_stats_t;
 
@@ -93,7 +94,7 @@ collect_topn_stats(predict_stats_t *stats, move_t *m, best_moves_t *best)
 
 /* Assumes properly scaled probs in [0.0 - PROB_MAX] */
 static void
-collect_avg_val(int i, float val, float prob_max, avg_stats_t *avg_stats, int total)
+collect_avg_val(int i, float val, float prob_max, avg_stats_t *avg_stats)
 {
 	if (!(0 <= val && val <= prob_max)) {
 		fprintf(stderr, "predict: prob for top%i not in [0.0 - %.1f]: %.2f\n", 
@@ -101,27 +102,27 @@ collect_avg_val(int i, float val, float prob_max, avg_stats_t *avg_stats, int to
 		assert(0);
 	}
 	avg_stats[i].probs_sum += val;
-	// XXX only valid if engine generates 20 moves each time
-	float avg = avg_stats[i].probs_sum / total;
+	avg_stats[i].n++;
+	float avg = avg_stats[i].probs_sum / avg_stats[i].n;
 	avg_stats[i].devs_sum += DEVIATION_TERM(val, avg);
 }
 
 /* Average values */
 static void
-collect_avg_stats(predict_stats_t *stats, best_moves_t *best, int moves)
+collect_avg_stats(predict_stats_t *stats, best_moves_t *best)
 {
 	for (int i = 0; i < best->n; i++)
-		collect_avg_val(i, best->r[i], PROB_MAX, stats->avg_stats, moves);
+		collect_avg_val(i, best->r[i], PROB_MAX, stats->avg_stats);
 }
 
 /* Average log values */
 #define RESCALE_LOG(p)  (log(1 + p * 1000))
 
 static void
-collect_avg_log_stats(predict_stats_t *stats, best_moves_t *best, int moves)
+collect_avg_log_stats(predict_stats_t *stats, best_moves_t *best)
 {
 	for (int i = 0; i < best->n; i++)
-		collect_avg_val(i, RESCALE_LOG(best->r[i]), RESCALE_LOG(PROB_MAX), stats->avg_log_stats, moves);
+		collect_avg_val(i, RESCALE_LOG(best->r[i]), RESCALE_LOG(PROB_MAX), stats->avg_log_stats);
 }
 
 static void
@@ -150,10 +151,10 @@ collect_stats(engine_t *e, predict_stats_t *stats, board_t *b,
 	collect_move_stats(stats, b, guessed);
 
 	/* Average values */
-	collect_avg_stats(stats, best, moves);
+	collect_avg_stats(stats, best);
 
 	/* Average log values */
-	collect_avg_log_stats(stats, best, moves);
+	collect_avg_log_stats(stats, best);
 
 	/* Check Probabilities */
 	collect_prob_stats(stats, m, best);
@@ -235,18 +236,18 @@ print_by_move_number_stats_short(predict_stats_t *stats, strbuf_t *buf)
 }
 
 static void
-print_avg_stats(strbuf_t *buf, char *title, int scale,
-		float prob_max, avg_stats_t *avg_stats, int total)
+print_avg_stats(strbuf_t *buf, char *title, int scale, float prob_max, avg_stats_t *avg_stats)
 {
 	sbprintf(buf, "%s\n", title);
 	for (int i = 0; i < PREDICT_TOPN; i++) {
+		int total = avg_stats[i].n;
 		float avg = avg_stats[i].probs_sum / total;
 		float dev = DEVIATION(avg_stats[i].devs_sum, total);
 		char diag[scale];
 		avg_dev_diagram(diag, sizeof(diag), avg, dev, prob_max);
 		
 		sbprintf(buf, "  #%-2i: %.2f ±%.2f  %s\n", i+1, avg, dev, diag);
-		if (avg < 0.01 * prob_max)
+		if (avg < 0.02 * prob_max)
 			break;
 	}
 	sbprintf(buf, " \n");
@@ -319,8 +320,8 @@ print_stats(engine_t *e, predict_stats_t *stats, strbuf_t *buf, int moves, int g
 	print_by_move_number_stats(stats, buf);
 	print_by_move_number_stats_short(stats, buf);
 	print_prob_stats(stats, buf);
-	print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(PROB_MAX), stats->avg_log_stats, moves);
-	print_avg_stats(buf, "Average values:",     50, PROB_MAX,              stats->avg_stats,     moves);
+	print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(PROB_MAX), stats->avg_log_stats);
+	print_avg_stats(buf, "Average values:",     50, PROB_MAX,              stats->avg_stats);
 	print_topn_stats(stats, buf, moves, games);
 }
 
