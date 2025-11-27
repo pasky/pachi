@@ -521,13 +521,15 @@ board_regression_test(board_t *b, char *arg)
 	gtp_t gtp;  gtp_init(&gtp, b);
 	char buf[4096];
 	engine_t e;  memset(&e, 0, sizeof(e));  /* dummy engine */
-	while (fgets(buf, 4096, stdin)) {
+	
+	for (int lineno = 1; fgets(buf, 4096, stdin); lineno++) {
 		if (buf[0] == '#') continue;
 		//if (!strncmp(buf, "clear_board", 11))  printf("\nGame %i:\n", gtp.played_games + 1);
 		if (DEBUGL(2))  fprintf(stderr, "IN: %s", buf);
 
-		gtp_parse(&gtp, b, &e, ti, buf);
-		assert(!gtp.error);
+		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);
+		if (gtp.error || (c != P_OK && c != P_ENGINE_RESET))
+			die("stdin:%i  gtp command '%s' failed, aborting.\n", lineno, buf);
 
 		if (DEBUGL(2))  board_print(b, stderr);
 
