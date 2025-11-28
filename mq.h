@@ -49,6 +49,8 @@ static void mq_sub(mq_t *a, mq_t *b, mq_t *res);
  * in that case. */
 static void mq_nodup(mq_t *q);
 
+/* Print queue contents. */
+static int  mq_print_file(mq_t *q, FILE *f, char *label);
 /* Print queue contents on stderr. */
 static int  mq_print(mq_t *q, char *label);
 static void mq_print_line(mq_t *q, char *label);
@@ -128,12 +130,18 @@ mq_nodup(mq_t *q)
 }
 
 static inline int
+mq_print_file(mq_t *q, FILE *f, char *label)
+{
+	int n = fprintf(f, "%s", label);
+	for (int i = 0; i < q->moves; i++)
+		n += fprintf(f, "%s ", coord2sstr(q->move[i]));
+	return n;
+}
+
+static inline int
 mq_print(mq_t *q, char *label)
 {
-	int n = fprintf(stderr, "%s", label);
-	for (int i = 0; i < q->moves; i++)
-		n += fprintf(stderr, "%s ", coord2sstr(q->move[i]));
-	return n;
+	return mq_print_file(q, stderr, label);
 }
 
 static inline void
