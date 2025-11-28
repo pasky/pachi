@@ -283,9 +283,8 @@ check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	return -1;
 }
 
-
 static inline bool
-is_neighbor_group(board_t *b, enum stone color, group_t g, selfatari_state_t *s)
+is_neighbor_group(selfatari_state_t *s, enum stone color, group_t g)
 {
 	for (int i = 0; i < s->groupcts[color]; i++)
 		if (g == s->groupids[color][i])
@@ -336,7 +335,7 @@ is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_
 
 		group_t g2 = group_at(b, c);
 		/* Looking for a group we don't know about */
-		if (is_neighbor_group(b, color, g2, s))
+		if (is_neighbor_group(s, color, g2))
 			continue;
 		
 		/* Should connect these groups instead of self-atari on the other side. */
@@ -807,15 +806,9 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 		group_t group = group_at(b, c);
 		if (!group) { continue; }
 
-		bool dup = false;
-		for (int i = 0; i < s->groupcts[color]; i++)
-			if (s->groupids[color][i] == group) {
-				dup = true;
-				break;
-			}
-		if (!dup)
+		if (!is_neighbor_group(s, color, group))
 			s->groupids[color][s->groupcts[color]++] = group;
-	});	
+	});
 }
 
 /* Check if move sets up a snapback.
