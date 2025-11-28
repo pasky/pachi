@@ -72,6 +72,17 @@ cmd_gogui_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Show debugging analyze commands ? */
+static int debugging_commands = -1;
+
+/* Toggle show/hide debugging analyze commands */
+enum parse_code
+cmd_gogui_toggle_debugging_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	debugging_commands = !debugging_commands;
+	return P_OK;
+}
+
 enum parse_code
 cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -120,17 +131,28 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
 		printf("gfx/Live gfx = None/gogui-livegfx\n");
 	}
+
+	/* Show debugging commands by default ? */
+	if (debugging_commands == -1)
+		debugging_commands = DEBUGL(3);
+
+	/* Debugging commands:
+	 * Can toggle from analyze window (gogui >= 1.4.12) */
+	bool can_toggle = (gogui_version >= GOGUI_VERSION(1, 4, 12) && gogui_version < GOGUI_VERSION(1, 5, 0));
+	printf("gfx/ /echo\n");
+	if (!debugging_commands) {
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands\n");
+	} else {
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands\n");
+		else             printf("gfx/[ Debugging ]/echo\n");
 #ifdef JOSEKIFIX
 		printf("gfx/Josekifix Show Pattern/gogui-josekifix_show_pattern %%p\n");
 		printf("gfx/Josekifix Dump Templates/gogui-josekifix_dump_templates %%p\n");
 #endif
-	
-	/* Debugging */
-	if (DEBUGL(3)) {
 		printf("gfx/Bad Selfatari/gogui-bad_selfatari\n");
 		printf("gfx/Color Palette/gogui-color_palette\n");
 	}
-	
+
 	return P_OK;
 }
 

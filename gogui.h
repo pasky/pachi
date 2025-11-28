@@ -21,6 +21,7 @@ extern char gogui_gfx_buf[];
 
 enum parse_code cmd_gogui_analyze_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_version(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_toggle_debugging_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_bad_selfatari(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_livegfx(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_best_moves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
