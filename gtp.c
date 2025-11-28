@@ -1155,6 +1155,7 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-score_est",		cmd_gogui_score_est },
 	{ "gogui-show_spatial",		cmd_gogui_show_spatial },
 	{ "gogui-spatial_size",		cmd_gogui_spatial_size },
+	{ "gogui-version",              cmd_gogui_version },
 	{ "gogui-winrates",		cmd_gogui_winrates },
 								/* KGS commands */
 	{ "kgs-chat",			cmd_kgs_chat },

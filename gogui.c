@@ -34,6 +34,43 @@ typedef enum {
 	GOGUI_RESCALE_LOG =    (1 << 1),
 } gogui_rescale_t;
 
+#define GOGUI_VERSION(major, minor, patch)	(((major) << 16) | ((minor) << 8) | (patch))
+#define GOGUI_VERSION_MAJOR(version)		(((version) & 0xff0000) >> 16)
+#define GOGUI_VERSION_MINOR(version)		(((version) & 0xff00) >> 8)
+#define GOGUI_VERSION_PATCH(version)		((version) & 0xff)
+
+/* Version of GoGui we're running in (0 if unknown). */
+static int gogui_version = 0;
+
+/* GoGui >= 1.4.12 declares its version with gogui-version command. */
+enum parse_code
+cmd_gogui_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+
+	/* Parse gogui version */
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int major = atoi(arg);
+	while (isdigit(*arg))
+		arg++;
+	if (*arg++ != '.')  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int minor = atoi(arg);
+	while (isdigit(*arg))
+		arg++;
+	if (*arg++ != '.')  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int patch = atoi(arg);
+
+	int v = gogui_version = GOGUI_VERSION(major, minor, patch);
+
+	if (DEBUGL(3))  fprintf(stderr, "Running in gogui version %i.%i.%i\n", GOGUI_VERSION_MAJOR(v), GOGUI_VERSION_MINOR(v), GOGUI_VERSION_PATCH(v));
+
+	return P_OK;
+}
 
 enum parse_code
 cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
