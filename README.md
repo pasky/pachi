@@ -44,7 +44,7 @@ or use [kgsGtp][3] to connect it to KGS.
 > since the parser is not secure - see [HACKING](HACKING?raw=true)
 > for details.
 
-[1]: https://sourceforge.net/projects/gogui/
+[1]: https://github.com/lemonsqueeze/gogui
 [2]: http://sabaki.yichuanshen.de/
 [3]: http://www.michna.com/kgsbot.htm
 
@@ -138,8 +138,10 @@ are the only ones you really want to tweak.
 
 ## Analyze commands
 
-When running Pachi through GoGui, a number of graphic tools are available
-through the `Tools -> Analyze commands` window:
+When running Pachi through GoGui ([1.4.12][1] recommended), a number of graphic
+tools are available through the `Tools -> Analyze commands` window:
+
+[1]: https://github.com/lemonsqueeze/gogui/releases/
 
 - Best moves
 - Score estimate
