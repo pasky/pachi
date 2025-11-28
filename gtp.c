@@ -224,7 +224,8 @@ cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", gtp->next);
+	chomp(gtp->next);
+	gtp_printf(gtp, "%s\n", gtp->next);
 	return P_OK;
 }
 
