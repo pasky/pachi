@@ -43,8 +43,7 @@ char2stone(char s)
 static inline enum stone __attribute__((always_inline))
 stone_other(enum stone s)
 {
-	static const enum stone o[S_MAX] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-	return o[s];
+	return (S_OFFBOARD - s);
 }
 
 #endif
