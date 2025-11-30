@@ -118,7 +118,7 @@ fbook_init(char *filename, board_t *b)
 
 			for (int i = 0; i < 8; i++) {
 				coord_t coord = coord_transform(b, c, i);
-				move_t m = move(coord, stone_other(last_move(bs[i]).color));
+				move_t m = move(coord, board_to_play(bs[i]));
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
 			}

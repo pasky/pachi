@@ -137,7 +137,7 @@ check_override_last(struct board *b, override_t *override, int *prot, hash_t las
 bool
 sane_override_move(struct board *b, coord_t c, char *name, char *title)
 {
-	enum stone color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c) && DEBUGL(0)) {
 		/* Override returned an invalid move.

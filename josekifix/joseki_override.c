@@ -316,7 +316,7 @@ static bool
 sane_joseki_override_move(struct board *b, coord_t c, char *name, int n)
 {
 	assert(c != EXTERNAL_ENGINE_MOVE);
-	enum stone color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c)) {
 		/* Override or external engine returned an invalid move.
