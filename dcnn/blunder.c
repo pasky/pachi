@@ -260,14 +260,16 @@ static int
 find_atari_moves(mq_t *q, int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
 {
 	int n = 0;
-	
-	foreach_free_point(b) {
+
+	/* Can't foreach_free_point(b), we get called from within with_move() */
+	foreach_point(b) {
+		if (board_at(b, c) != S_NONE)  continue;
 		move_t m = move(c, to_play);
 		if (pattern_match_atari(b, &m, ownermap) == feature) {
 			n++;
 			if (q)  mq_add(q, c);
 		}
-	} foreach_free_point_end;
+	} foreach_point_end;
 
 	return n;
 }
