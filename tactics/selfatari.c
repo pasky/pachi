@@ -30,7 +30,12 @@ three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfa
 	 * O X X X X X O   . O X X X X X O   . . . O O
 	 * O X ! . ! X O   . O X ! . ! O .   O X X . O
 	 * O X X X X X O   # # # # # # # #   O O O O O */
-
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
 	/* Extract the other two liberties. */
 	coord_t other_libs[2];
 	bool other_libs_adj[2];
@@ -126,6 +131,11 @@ selfatari_group_stones(board_t *b, enum stone color, selfatari_state_t *s, int m
 static int
 examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int flags)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));	
+	assert(is_player_color(color));
+	assert(board_at(b, to) == S_NONE);
+#endif	
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
@@ -179,6 +189,11 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 static int
 examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));	
+	assert(is_player_color(color));
+	assert(board_at(b, to) == S_NONE);
+#endif
 	/* We may be able to gain a liberty by capturing this group. */
 	group_t can_capture = 0;
 
@@ -233,6 +248,14 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 static bool
 capturing_would_be_snapback_for(board_t *b, enum stone color, group_t group, coord_t to, coord_t lib)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_group(b, group));
+	assert(sane_coord(to));
+	assert(sane_coord(lib));
+	assert(board_at(b, to) == S_NONE);
+	assert(board_at(b, lib) == S_NONE);
+#endif
 	foreach_neighbor(b, lib, {
 		enum stone col = board_at(b, c);
 		if (col == S_NONE || col == S_OFFBOARD)
@@ -257,6 +280,11 @@ capturing_would_be_snapback_for(board_t *b, enum stone color, group_t group, coo
 static int
 check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+	assert(board_at(b, to) == S_NONE);
+#endif	
 	enum stone other_color = stone_other(color);
 
 	/* Must be single-stone throw-in. */
@@ -286,6 +314,10 @@ check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 static inline bool
 is_neighbor_group(selfatari_state_t *s, enum stone color, group_t g)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(g));
+#endif
 	for (int i = 0; i < s->groupcts[color]; i++)
 		if (g == s->groupids[color][i])
 			return true;
@@ -296,6 +328,11 @@ static bool
 unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 			       coord_t lib)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(sane_coord(lib));
+#endif	
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		group_t g = s->groupids[color][i];
 		for (int j = 0; j < group_libs(b, g); j++)
@@ -309,6 +346,12 @@ static bool
 unreachable_lib(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 		coord_t lib)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(sane_coord(lib));
+	assert(board_at(b, lib) == S_NONE);
+#endif
 	if (coord_is_adjecent(to, lib))
 		return false;
 	return unreachable_lib_from_neighbors(b, color, to, s, lib);
@@ -319,6 +362,13 @@ unreachable_lib(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 static inline bool
 is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(sane_coord(lib2));
+	assert(board_at(b, to) == S_NONE);
+	assert(board_at(b, lib2) == S_NONE);
+#endif	
 	/* If the other liberty has empty neighbor, it must be the original liberty;
 	 * otherwise, since the whole group has only 2 liberties, the other liberty
 	 * may not be internal and we are nakade'ing eyeless group from outside,
@@ -356,6 +406,10 @@ is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_
 static inline bool
 can_escape_instead(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+#endif
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		group_t g = s->groupids[color][i];
 		if (group_libs(b, g) != 2)
@@ -374,6 +428,10 @@ can_escape_instead(board_t *b, enum stone color, coord_t to, selfatari_state_t *
 static inline bool
 capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+#endif
 	foreach_neighbor(b, to, {
 		if (board_at(b, c) == S_NONE)
 			if (unreachable_lib_from_neighbors(b, color, to, s, c))
@@ -386,6 +444,10 @@ capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari
 static bool
 nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+#endif	
 	/* Breaking seki ? */
 	bool breaking_seki = breaking_local_seki(b, s, to);
 	
@@ -423,10 +485,14 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 	int cap_would_make_eye = false;
 
 	if (stones == 1)
-		return false;	
+		return false;
+
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
 	assert(stones != 2);
 	assert(stones <= 6);
-	
+#endif
 	/* If not atariing surrounding group it's a good move if:
 	 *   - Shape after capturing us is dead   AND 
 	 *     - Oponent gets extra eye if he plays first OR
@@ -514,6 +580,10 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 static int
 setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	/* Look at the enemy groups and determine the other contended
 	 * liberty. We must make sure the liberty:
 	 * (i) is an internal liberty
@@ -592,6 +662,10 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 static int
 setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	// Throwing a single stone in ? Fine.
 	if (!s->groupcts[color])
 		return false;
@@ -724,6 +798,10 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 static int
 check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif	
 	enum stone other_color = stone_other(color);
 
 	/* Throw-in situation ? */
@@ -789,6 +867,10 @@ check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 static void
 init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	// memset() slower here ...
 	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
 	s->libs = immediate_liberty_count(b, to);
@@ -816,6 +898,10 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 bool
 is_3lib_selfatari(board_t *b, enum stone color, coord_t to)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	selfatari_state_t s;
 	init_selfatari_state(b, color, to, &s);
 
@@ -833,6 +919,10 @@ is_3lib_selfatari(board_t *b, enum stone color, coord_t to)
 bool
 is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	if (immediate_liberty_count(b, to) > 1 ||
 	    neighbor_count_at(b, to, color) ||			  // fast examine_friendly_groups()
 	    board_get_atari_neighbor(b, to, stone_other(color)))  // fast examine_enemy_groups()
@@ -863,10 +953,13 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 
 	selfatari_state_t s;
 	init_selfatari_state(b, color, to, &s);
-	
+
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
 	/* We have shortage of liberties; that's the point. */
 	assert(s.libs <= 1);
-
+#endif
 	int d;
 	d = examine_friendly_groups(b, color, to, &s, flags);
 	if (d >= 0)     return d;
@@ -902,6 +995,11 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 coord_t
 selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(coord));
+	assert(board_at(b, coord) == S_NONE);
+#endif
 	group_t groups[4]; int groups_n = 0;
 	int groupsbycolor[4] = {0, 0, 0, 0};
 	if (DEBUGL(6))

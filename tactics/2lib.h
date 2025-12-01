@@ -23,6 +23,10 @@ static void board_get_2lib_neighbors(board_t *b, coord_t c, enum stone color, mq
 static inline group_t
 board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(is_player_color(color));
+#endif
 	foreach_neighbor(b, c, {
 		group_t g = group_at(b, c);
 		if (board_at(b, c) == color && group_libs(b, g) == 2)
@@ -34,6 +38,10 @@ board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color)
 static inline void
 board_get_2lib_neighbors(board_t *b, coord_t c, enum stone color, mq_t *q)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(is_player_color(color));
+#endif
 	q->moves = 0;
 	foreach_neighbor(b, c, {
 		group_t g = group_at(b, c);

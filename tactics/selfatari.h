@@ -68,6 +68,11 @@ bool is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags);
 static inline bool
 is_bad_selfatari(board_t *b, enum stone color, coord_t to)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
 		return false;
@@ -78,6 +83,11 @@ is_bad_selfatari(board_t *b, enum stone color, coord_t to)
 static inline bool
 is_really_bad_selfatari(board_t *b, enum stone color, coord_t to)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
 		return false;
@@ -88,6 +98,11 @@ is_really_bad_selfatari(board_t *b, enum stone color, coord_t to)
 static inline bool
 is_selfatari(board_t *b, enum stone color, coord_t to)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
         /* More than one immediate liberty, thumbs up! */
         if (immediate_liberty_count(b, to) > 1)
                 return false;

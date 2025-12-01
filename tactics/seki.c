@@ -26,7 +26,10 @@
 bool
 breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
 	assert(board_at(b, c) == S_NONE);
+#endif
 	if (!s->groupcts[S_BLACK] || !s->groupcts[S_WHITE])
 		return false;
 
@@ -70,6 +73,11 @@ breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
 bool
 breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+#endif
 	enum stone other_color = stone_other(color);	
 	if (!board_is_eyelike(b, coord, color))
 		return false;
@@ -119,6 +127,11 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 bool
 breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+#endif
 	enum stone other_color = stone_other(color);
 	
 	/* Opponent's 3-stone group with 2 libs nearby ? */

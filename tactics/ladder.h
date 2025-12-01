@@ -35,9 +35,10 @@ bool is_middle_ladder_any(board_t *b, group_t laddered);
 static inline bool
 is_ladder(board_t *b, group_t laddered, bool test_middle)
 {
-	assert(laddered);
-	assert(group_at(b, laddered) == laddered);
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
 	assert(group_libs(b, laddered) == 1);
+#endif
 
 	if (DEBUGL(6)) {
 		coord_t coord = group_lib(b, laddered, 0);
@@ -67,9 +68,10 @@ is_ladder(board_t *b, group_t laddered, bool test_middle)
 static inline bool
 is_ladder_any(board_t *b, group_t laddered, bool test_middle)
 {
-	assert(laddered);
-	assert(group_at(b, laddered) == laddered);
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
 	assert(group_libs(b, laddered) == 1);
+#endif
 
 	if (DEBUGL(6)) {
 		coord_t coord = group_lib(b, laddered, 0);

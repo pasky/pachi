@@ -22,6 +22,11 @@
 static bool
 miai_2lib(board_t *b, group_t group, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
 	bool can_connect = false, can_pull_out = false;
 	/* We have miai if we can either connect on both libs,
 	 * or connect on one lib and escape on another. (Just
@@ -60,6 +65,14 @@ defense_is_hopeless(board_t *b, group_t group, enum stone owner,
 		    enum stone to_play, coord_t lib, coord_t otherlib,
 		    bool use)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(owner));
+	assert(is_player_color(to_play));
+	assert(group_libs(b, group) == 2);
+	assert(board_at(b, lib) == S_NONE);
+	assert(board_at(b, otherlib) == S_NONE);
+#endif
 	/* If we are the defender not connecting out, do not
 	 * escape with moves that do not gain liberties anyway
 	 * - either the new extension has just single extra
@@ -84,11 +97,18 @@ void
 can_atari_group(board_t *b, group_t group, enum stone owner,
 		enum stone to_play, mq_t *q, bool use_def_no_hopeless)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(owner));
+	assert(is_player_color(to_play));
+	assert(group_libs(b, group) == 2);
+	assert(board_at(b, group_lib(b, group, 0)) == S_NONE);
+	assert(board_at(b, group_lib(b, group, 1)) == S_NONE);
+#endif
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = group_lib(b, group, i);
-		assert(board_at(b, lib) == S_NONE);
 		if (!board_is_valid_play(b, to_play, lib))  continue;
 
 		if (DEBUGL(6))  fprintf(stderr, "- checking liberty %s of %s %s, filled by %s\n",
@@ -202,8 +222,13 @@ void
 group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group);
-	assert(color != S_OFFBOARD && color != S_NONE);
 
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
 	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib check of color %d\n",
 				coord2sstr(group), color);
 
@@ -237,7 +262,10 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool us
 bool
 can_capture_2lib_group(board_t *b, group_t g, mq_t *q)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
 	assert(group_libs(b, g) == 2);
+#endif
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = group_lib(b, g, i);
 		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib));
@@ -253,8 +281,14 @@ void
 group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group);
-	assert(color != S_OFFBOARD && color != S_NONE);
 	
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
+
 	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
 				coord2sstr(group), color);
 

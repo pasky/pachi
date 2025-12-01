@@ -23,6 +23,10 @@
 bool
 is_border_ladder(board_t *b, group_t laddered)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(group_libs(b, laddered) == 1);
+#endif
 	coord_t coord = group_lib(b, laddered, 0);
 	enum stone lcolor = board_at(b, laddered);
 	
@@ -79,6 +83,10 @@ static int middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, c
 static int
 middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(laddered));
+	assert(is_player_color(lcolor));
+#endif
 	laddered = group_at(b, laddered);
 	
 	if (DEBUGL(8)) {
@@ -136,6 +144,10 @@ middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t pre
 static bool
 chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, mq_t *ccq)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(is_player_color(lcolor));
+#endif
 	for (int i = 0; i < ccq->moves; i++) {
 		coord_t lib = ccq->move[i];
 		if (!board_is_valid_play(b, lcolor, lib))
@@ -173,8 +185,11 @@ chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, mq_t *cc
 static int
 middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(is_player_color(lcolor));
 	assert(group_libs(b, laddered) == 1);
-
+#endif
 	/* Check ko */
 	if (b->ko.coord != pass)
 		foreach_neighbor(b, last_move(b).coord, {
@@ -206,6 +221,10 @@ static __thread int length = 0;
 bool
 is_middle_ladder(board_t *b, group_t laddered)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(group_libs(b, laddered) == 1);
+#endif
 	coord_t coord = group_lib(b, laddered, 0);
 	enum stone lcolor = board_at(b, laddered);
 
@@ -230,6 +249,10 @@ is_middle_ladder(board_t *b, group_t laddered)
 bool
 is_middle_ladder_any(board_t *b, group_t laddered)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(group_libs(b, laddered) == 1);
+#endif
 	enum stone lcolor = board_at(b, laddered);
 	
 	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
@@ -239,11 +262,17 @@ is_middle_ladder_any(board_t *b, group_t laddered)
 bool
 wouldbe_ladder(board_t *b, group_t group, coord_t chaselib)
 {
-	assert(group_libs(b, group) == 2);
-	
 	enum stone lcolor = board_at(b, group);
 	enum stone other_color = stone_other(lcolor);
 	coord_t escapelib = group_other_lib(b, group, chaselib);
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(sane_coord(chaselib));
+	assert(board_at(b, chaselib) == S_NONE);
+	assert(board_at(b, escapelib) == S_NONE);
+	assert(group_libs(b, group) == 2);
+#endif
 
 	if (DEBUGL(8))  fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
 				stone2str(lcolor), coord2sstr(escapelib), coord2sstr(chaselib));
@@ -271,10 +300,15 @@ wouldbe_ladder(board_t *b, group_t group, coord_t chaselib)
 bool
 wouldbe_ladder_any(board_t *b, group_t group, coord_t chaselib)
 {
-	assert(group_libs(b, group) == 2);
-	
 	enum stone lcolor = board_at(b, group);
 	enum stone other_color = stone_other(lcolor);
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(sane_coord(chaselib));
+	assert(board_at(b, chaselib) == S_NONE);
+	assert(group_libs(b, group) == 2);
+#endif
 
 	// FIXME should assert instead here
 	if (!board_is_valid_play_no_suicide(b, other_color, chaselib))
@@ -302,6 +336,10 @@ wouldbe_ladder_any(board_t *b, group_t group, coord_t chaselib)
 bool
 useful_ladder(board_t *b, group_t laddered)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(group_libs(b, laddered) == 1);
+#endif
 	if (length >= 4 ||
 	    group_stone_count(b, laddered, 6) > 5 ||
 	    neighbor_is_safe(b, laddered))
@@ -358,8 +396,12 @@ useful_ladder(board_t *b, group_t laddered)
 static bool
 is_double_atari(board_t *b, coord_t c, enum stone color)
 {
-	if (board_at(b, c) != S_NONE ||
-	    immediate_liberty_count(b, c) < 2 ||  /* can't play there (hack) */
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(is_player_color(color));
+	assert(board_at(b, c) == S_NONE);
+#endif
+	if (immediate_liberty_count(b, c) < 2 ||  /* can't play there (hack) */
 	    neighbor_count_at(b, c, stone_other(color)) != 2)
 		return false;
 
@@ -376,13 +418,18 @@ is_double_atari(board_t *b, coord_t c, enum stone color)
 static bool
 ladder_with_tons_of_double_ataris(board_t *b, group_t laddered, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, laddered));
+	assert(is_player_color(color));
 	assert(board_at(b, laddered) == stone_other(color));
+#endif
 
 	int double_ataris = 0;
 	foreach_in_group(b, laddered) {
 		coord_t stone = c;
 		foreach_diag_neighbor(b, stone, {
-			if (is_double_atari(b, c, stone_other(color)))
+			if (board_at(b, c) == S_NONE &&
+			    is_double_atari(b, c, stone_other(color)))
 				double_ataris++;
 		});
 	} foreach_in_group_end;
@@ -393,8 +440,11 @@ ladder_with_tons_of_double_ataris(board_t *b, group_t laddered, enum stone color
 bool
 harmful_ladder_atari(board_t *b, coord_t atari, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(atari));
+	assert(is_player_color(color));
 	assert(board_at(b, atari) == S_NONE);
-	
+#endif	
 	if (neighbor_count_at(b, atari, stone_other(color)) != 1)
 		return false;
 

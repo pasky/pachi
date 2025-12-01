@@ -17,8 +17,12 @@ void
 group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 {
 	enum stone color = to_play;
-	assert(color != S_OFFBOARD && color != S_NONE
-	       && color == board_at(b, group));
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(board_at(b, group) == color);
+#endif
 
 	if (DEBUGL(6))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
 

@@ -38,7 +38,10 @@ static void board_get_atari_neighbors(board_t *b, coord_t coord, enum stone grou
 static inline group_t
 board_get_atari_neighbor(board_t *b, coord_t coord, enum stone group_color)
 {
-	assert(coord != pass);
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(group_color));
+#endif
 	foreach_neighbor(b, coord, {
 		if (board_at(b, c) != group_color)
 			continue;
@@ -53,7 +56,10 @@ board_get_atari_neighbor(board_t *b, coord_t coord, enum stone group_color)
 static inline void
 board_get_atari_neighbors(board_t *b, coord_t c, enum stone group_color, mq_t *q)
 {
-	assert(c != pass);
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(is_player_color(group_color));
+#endif
 	mq_init(q);
 	foreach_neighbor(b, c, {
 		if (board_at(b, c) != group_color)

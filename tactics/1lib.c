@@ -16,15 +16,18 @@
 bool
 capturing_group_is_snapback(board_t *b, group_t group)
 {
-	//assert(group_libs(b, group) == 1);
 	coord_t lib = group_lib(b, group, 0);
 
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(group_libs(b, group) == 1);
+	assert(board_at(b, lib) == S_NONE);
+#endif
 	if (immediate_liberty_count(b, lib) > 0 ||
 	    group_stone_count(b, group, 2) > 1)
 		return false;
 
 	enum stone other_color = board_at(b, group);
-	//enum stone to_play = stone_other(other_color);
 	if (board_is_eyelike(b, lib, other_color))
 		return false;
 	
@@ -56,12 +59,18 @@ capturing_group_is_snapback(board_t *b, group_t group)
 bool
 can_capture(board_t *b, group_t g, enum stone to_play)
 {
-	//assert(g && group_libs(b, g) == 1);
-	coord_t capture = group_lib(b, g, 0);
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
+	coord_t lib = group_lib(b, g, 0);
+
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(to_play));
+	assert(sane_group(b, g));
+	assert(group_libs(b, g) == 1);
+	assert(board_at(b, lib) == S_NONE);
+#endif
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
 	
 	/* Does playing on the liberty usefully capture the group? */
-	if (board_is_valid_play(b, to_play, capture)
+	if (board_is_valid_play(b, to_play, lib)
 	    && !capturing_group_is_snapback(b, g))
 		return true;
 
@@ -71,27 +80,36 @@ can_capture(board_t *b, group_t g, enum stone to_play)
 static inline bool
 can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 {
-	coord_t capture = group_lib(b, g, 0);
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
+	coord_t lib = group_lib(b, g, 0);
 
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(to_play));
+	assert(sane_group(b, g));
+	assert(board_at(b, lib) == S_NONE);
+#endif
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
+	
 	/* Does playing on the liberty usefully capture the group? */
-	if (board_is_valid_play(b, to_play, capture)
-	    && !is_bad_selfatari(b, to_play, capture))
+	if (board_is_valid_play(b, to_play, lib)
+	    && !is_bad_selfatari(b, to_play, lib))
 		return true;
 
 	return false;
 }
 
-/* Checks snapbacks */
+/* Checks snapbacks.
+ * We can't use b->clen, not maintained by board_quick_play(). */
 bool
 can_countercapture(board_t *b, group_t group, mq_t *q)
 {
-	if (q) mq_init(q);
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
-	assert(color == S_BLACK || color == S_WHITE);	
-	// Not checking b->clen, not maintained by board_quick_play()
-	
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+#endif
+	if (q) mq_init(q);
 	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
@@ -116,10 +134,14 @@ can_countercapture(board_t *b, group_t group, mq_t *q)
 bool
 countercapturable_groups(board_t *b, group_t group, mq_t *q)
 {
-	q->moves = 0;
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
-	assert(color == S_BLACK || color == S_WHITE);	
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+#endif
+	q->moves = 0;
 	// Not checking b->clen, not maintained by board_quick_play()
 	
 	foreach_in_group(b, group) {
@@ -137,14 +159,18 @@ countercapturable_groups(board_t *b, group_t group, mq_t *q)
 	return (q->moves > 0);
 }
 
+/* Doesn't check snapbacks.
+ * We can't use b->clen, not maintained by board_quick_play(). */
 bool
 can_countercapture_any(board_t *b, group_t group, mq_t *q)
 {
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
-	assert(color == S_BLACK || color == S_WHITE);
-	// Not checking b->clen, not maintained by board_quick_play()
-	
+
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+#endif
 	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
@@ -171,6 +197,11 @@ can_countercapture_any(board_t *b, group_t group, mq_t *q)
 static bool
 can_be_rescued(board_t *b, group_t group, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 1);
+#endif
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(b, group, color))
 		return true;
@@ -186,10 +217,16 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 {
 	enum stone color = board_at(b, group);
 	coord_t lib = group_lib(b, group, 0);
-
-	assert(color != S_OFFBOARD && color != S_NONE);
-	if (DEBUGL(6))  fprintf(stderr, "group_atari_check group %s (%s)\n", coord2sstr(group), stone2str(color));
+	
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 1);
 	assert(board_at(b, lib) == S_NONE);
+#endif
+
+	if (DEBUGL(6))  fprintf(stderr, "group_atari_check group %s (%s)\n", coord2sstr(group), stone2str(color));
 
 	if (to_play != color) {
 		/* We are the attacker! In that case, do not try defending
