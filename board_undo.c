@@ -121,7 +121,7 @@ board_quick_play(board_t *b, move_t *m, board_undo_t *u)
 	int r = board_play_(b, m);
 #ifdef BOARD_UNDO_CHECKS
 	if (r >= 0)
-		board->quicked++;
+		b->quicked++;
 #endif
 
 	b->u = NULL;
@@ -311,6 +311,7 @@ void
 board_quick_undo(board_t *b, move_t *m, board_undo_t *u)
 {
 #ifdef BOARD_UNDO_CHECKS
+	assert(quick_board(b));
 	b->quicked--;
 #endif
 	

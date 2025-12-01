@@ -385,11 +385,11 @@ print_target_move_handler(board_t *b, coord_t c, void *data)
 }
 
 void
-board_print_target_move(board_t *b, FILE *f, coord_t target_move)
+board_print_target_move(board_t *b, FILE *f, coord_t target)
 {
-	assert(!is_pass(target_move));
-	assert(board_at(b, target_move) == S_NONE);
-	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target_move);
+	assert(sane_coord(target));
+	assert(board_at(b, target) == S_NONE);
+	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target);
 }
 
 static char*
@@ -407,8 +407,7 @@ print_group_handler(board_t *b, coord_t c, void *data)
 void
 board_print_group(board_t *board, FILE *f, group_t group)
 {
-	assert(group);
-	assert(group_at(board, group) == group);
+	assert(sane_group(board, group));
 	board_hprint(board, f, print_group_handler, (void*)(intptr_t)group);
 }
 
@@ -479,6 +478,9 @@ board_try_random_move(board_t *b, int f, move_t *m, ppr_permit permit, void *per
 coord_t
 board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+#endif
 	permit = (permit ? permit : board_permit);
 
 	/* XXX picking of playout endgame moves is pretty biased and inefficient:
@@ -512,6 +514,11 @@ board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_
 bool
 board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(eye_color));
+	assert(sane_coord(coord));
+	assert(board_at(board, coord) == S_NONE);
+#endif
 	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
 	foreach_diag_neighbor(board, coord, {
@@ -528,6 +535,11 @@ board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 bool
 board_is_one_point_eye(board_t *b, coord_t c, enum stone eye_color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(eye_color));
+	assert(sane_coord(c));
+	assert(board_at(b, c) == S_NONE);
+#endif
 	return (board_is_eyelike(b, c, eye_color) &&
 		!board_is_false_eyelike(b, c, eye_color));
 }
@@ -535,6 +547,10 @@ board_is_one_point_eye(board_t *b, coord_t c, enum stone eye_color)
 enum stone
 board_eye_color(board_t *b, coord_t c)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(board_at(b, c) == S_NONE);
+#endif
 	if (board_is_eyelike(b, c, S_WHITE))  return S_WHITE;
 	if (board_is_eyelike(b, c, S_BLACK))  return S_BLACK;
 	return S_NONE;
@@ -746,6 +762,7 @@ board_official_score_str(board_t *b, mq_t *dead)
 floating_t
 board_official_score_color(board_t *b, mq_t *dead, enum stone color)
 {
+	assert(is_player_color(color));
 	floating_t score = board_official_score(b, dead);
 	return (color == S_WHITE ? score : -score);
 }
@@ -970,7 +987,7 @@ int
 board_play(board_t *b, move_t *m)
 {
 #ifdef BOARD_UNDO_CHECKS
-        assert(!b->quicked);
+        assert(!quick_board(b));
 #endif
 
 	return board_play_(b, m);

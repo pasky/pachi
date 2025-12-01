@@ -48,6 +48,8 @@ coord_t str2coord_for(char *str, int size);
 coord_t rotate_coord(coord_t c, int rot);
 /* Check string coord is valid for current board. */
 bool valid_coord(char *s);
+/* Check coord doesn't lie outside (board + offboard margin) area. */
+#define sane_coord(c)	((c) >= 0 && (c) < board_statics.max_coords)
 
 typedef struct {
 	coord_t coord;
@@ -63,5 +65,6 @@ move_cmp(move_t *m1, move_t *m2)
 		return m1->color - m2->color;
 	return m1->coord - m2->coord;
 }
+
 
 #endif

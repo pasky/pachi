@@ -24,7 +24,9 @@ struct ownermap;
 
 //#define BOARD_HASH_COMPAT	  /* Enable to get same hashes as old Pachi versions. */
 
-//#define BOARD_UNDO_CHECKS 1     /* Guard against invalid quick_play() / quick_undo() uses */
+#ifdef EXTRA_CHECKS
+#define BOARD_UNDO_CHECKS 1     /* Guard against invalid quick_play() / quick_undo() uses */
+#endif
 
 #define BOARD_LAST_N 4            /* Previous moves. */
 
@@ -198,7 +200,7 @@ FB_ONLY(int influence_fuseki_by_quadrant)[4];	  /* Keep track where influence fu
 FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 #endif
 
-#ifdef BOARD_UNDO_CHECKS	
+#ifdef BOARD_UNDO_CHECKS
 	int quicked;                       /* Guard against invalid quick_play() / quick_undo() uses */
 #endif
 	
@@ -212,7 +214,11 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 } board_t;
 
 
-#define playout_board(b) ((b)->playout_board)
+#define playout_board(b)	((b)->playout_board)
+
+#ifdef BOARD_UNDO_CHECKS
+#define quick_board(b)		((b)->quicked)
+#endif
 
 
 #ifdef BOARD_SIZE
@@ -273,6 +279,9 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 #define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
 
 #define groupnext_at(b_, c) ((b_)->p[c])
+
+/* Check g looks like a valid group. */
+#define sane_group(b, g)   ((g) && sane_coord(g) && group_at((b), (g)) == (g))
 
 static group_info_t *group_info(board_t *b, group_t g);
 static int           group_libs(board_t *b, group_t g);
@@ -387,9 +396,16 @@ const char *rules2str(enum rules rules);
 #define foreach_point_for_print_end \
 	}
 
+#ifdef EXTRA_CHECKS
+#define FOREACH_FREE_POINT_CHECKS(b)	assert(!quick_board(b))
+#else
+#define FOREACH_FREE_POINT_CHECKS(b)
+#endif
+
 /* For each empty point */
 #define foreach_free_point(b) \
 	do { \
+		FOREACH_FREE_POINT_CHECKS(b); \
 		int fmax__ = (b)->flen; \
 		for (int f__ = 0; f__ < fmax__; f__++) { \
 			coord_t c = (b)->f[f__];
@@ -397,18 +413,32 @@ const char *rules2str(enum rules rules);
 		} \
 	} while (0)
 
+#ifdef EXTRA_CHECKS
+#define FOREACH_IN_GROUP_CHECKS(b, g)	assert(sane_group((b), (g)))
+#else
+#define FOREACH_IN_GROUP_CHECKS(b, g)
+#endif
+
 /* For each stone in group */
 #define foreach_in_group(b, group) \
 	do { \
+		FOREACH_IN_GROUP_CHECKS(b, group); \
 		for (coord_t c = group; c; c = groupnext_at((b), c))
 #define foreach_in_group_end \
 	} while (0)
+
+#ifdef EXTRA_CHECKS
+#define FOREACH_NEIGHBOR_CHECKS(b, c)	assert(sane_coord(c) && board_at((b), (c)) != S_OFFBOARD)
+#else
+#define FOREACH_NEIGHBOR_CHECKS(b, c)
+#endif
 
 /* For each coord neighbor (NOT VALID on S_OFFBOARD coordinates) */
 #define foreach_neighbor(b, coord, loop_body) \
 	do { \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c = coord__; \
+		FOREACH_NEIGHBOR_CHECKS(b, c); \
 		c += offset_down;                  do { loop_body } while (0); \
 		c += offset_up    + offset_left;   do { loop_body } while (0); \
 		c += offset_right + offset_right;  do { loop_body } while (0); \
@@ -421,6 +451,7 @@ const char *rules2str(enum rules rules);
 		int fn__i; \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c = coord__; \
+		FOREACH_NEIGHBOR_CHECKS(b, c); \
 		for (fn__i = 0; fn__i < 8; fn__i++) { \
 			c += board_statics.nei8[fn__i]; \
 			do { loop_body } while (0); \
@@ -433,6 +464,7 @@ const char *rules2str(enum rules rules);
 		int fn__i; \
 		coord_t coord__ = (coord);  /* needed if coord = c */ \
 		coord_t c = coord__; \
+		FOREACH_NEIGHBOR_CHECKS(b, c); \
 		/* Unrolling loop like foreach_neighbor() is slower somehow. */ \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
 			c += board_statics.dnei[fn__i]; \
@@ -446,24 +478,37 @@ const char *rules2str(enum rules rules);
 static inline group_info_t *  __attribute__((always_inline))
 group_info(board_t *b, group_t g)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+#endif
 	return (&b->gi[g]);
 }
 
 static inline int  __attribute__((always_inline))
 group_libs(board_t *b, group_t g)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+#endif
 	return (b->gi[g].libs);
 }
 
 static inline coord_t  __attribute__((always_inline))
 group_lib(board_t *b, group_t g, int i)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+	assert(i >= 0 && i < group_libs(b, g));
+#endif
 	return (b->gi[g].lib[i]);
 }
 
 static inline int __attribute__((always_inline))
 group_stone_count(board_t *b, group_t group, int max)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+#endif
 	int n = 0;
 	foreach_in_group(b, group) {
 		n++;
@@ -475,18 +520,29 @@ group_stone_count(board_t *b, group_t group, int max)
 static inline bool  __attribute__((always_inline))
 group_is_onestone(board_t *b, group_t g)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+#endif
 	return (groupnext_at(b, g) == 0);
 }
 
 static inline bool  __attribute__((always_inline))
 group_captured(board_t *b, group_t g)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+#endif
 	return (group_libs(b, g) == 0);
 }
 
 static inline coord_t  __attribute__((always_inline))
 group_other_lib(board_t *b, group_t g, coord_t lib)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+	assert(group_libs(b, g) == 2);
+	assert(sane_coord(lib));
+#endif
 	return (group_lib(b, g, 0) != lib ? group_lib(b, g, 0) : group_lib(b, g, 1));
 }
 
@@ -500,6 +556,11 @@ board_to_play(board_t *b)
 static inline bool
 board_is_eyelike(board_t *b, coord_t coord, enum stone eye_color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(board_at(b, coord) == S_NONE);
+	assert(is_player_color(eye_color));
+#endif
 	return (neighbor_count_at(b, coord, eye_color) +
 	        neighbor_count_at(b, coord, S_OFFBOARD)) == 4;
 }
@@ -508,6 +569,10 @@ board_is_eyelike(board_t *b, coord_t coord, enum stone eye_color)
 static inline bool
 board_is_valid_play(board_t *b, enum stone color, coord_t coord)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+#endif
 	if (board_at(b, coord) != S_NONE)                    return false;
 	if (!board_is_eyelike(b, coord, stone_other(color))) return true;
 	
@@ -525,6 +590,10 @@ board_is_valid_play(board_t *b, enum stone color, coord_t coord)
 static inline bool
 board_is_valid_play_no_suicide(board_t *b, enum stone color, coord_t coord)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+#endif
 	if (board_at(b, coord) != S_NONE)           return false;
 	if (immediate_liberty_count(b, coord) >= 1) return true;
 	if (board_is_eyelike(b, coord, stone_other(color)) &&

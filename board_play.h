@@ -382,6 +382,13 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 static int
 board_play_f(board_t *board, move_t *m, int f)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(m->color));
+	assert(sane_coord(m->coord));
+	assert(board_at(board, m->coord) == S_NONE);
+	if (f != -1)
+		assert(board->f[f] == m->coord);
+#endif
 	if (DEBUGL(10))
 		fprintf(stderr, "board_play(%s):\n", coord2sstr(m->coord));
 	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
@@ -407,8 +414,11 @@ board_play_f(board_t *board, move_t *m, int f)
 static int
 board_play_(board_t *board, move_t *m)
 {
-	assert(!is_resign(m->coord));  // XXX remove
-
+#ifdef EXTRA_CHECKS
+	assert(!is_resign(m->coord));
+	assert(is_pass(m->coord) || sane_coord(m->coord));
+	assert(is_player_color(m->color));
+#endif
 	if (unlikely(is_pass(m->coord))) {
 		board->passes[m->color]++;
 		/* On pass, the player gives a pass stone to the opponent. */
