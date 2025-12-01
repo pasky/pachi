@@ -515,7 +515,7 @@ board_is_valid_play(board_t *b, enum stone color, coord_t coord)
 	if (b->ko.coord == coord && b->ko.color == color) return false;
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 1)
+		if (group_libs(b, g) == 1)
 			return true;
 	});
 	return false;
@@ -533,14 +533,14 @@ board_is_valid_play_no_suicide(board_t *b, enum stone color, coord_t coord)
 	// Capturing something ?
 	foreach_neighbor(b, coord, {
 		if (board_at(b, c) == stone_other(color) &&
-		    board_group_info(b, group_at(b, c)).libs == 1)
+		    group_libs(b, group_at(b, c)) == 1)
 			return true;
 	});
 
 	// Neighbour with 2 libs ?
 	foreach_neighbor(b, coord, {
 		if (board_at(b, c) == color &&
-		    board_group_info(b, group_at(b, c)).libs > 1)
+		    group_libs(b, group_at(b, c)) > 1)
 			return true;
 	});
 

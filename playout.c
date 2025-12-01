@@ -133,23 +133,23 @@ fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_
 		coord_t corner = coord_xy(xs[i], ys[i]);
 		group_t g = group_at(b, corner);
 		if (!g || board_at(b, corner) != color ||
-		    group_stone_count(b, g, 4) != 3 || board_group_info(b, g).libs != 2)
+		    group_stone_count(b, g, 4) != 3 || group_libs(b, g) != 2)
 			continue;
 
 		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
 		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
 			continue;
 
 		/* check really surrounding */
-		if (!check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[0], surrounding) ||
-		    !check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[1], surrounding))
+		if (!check_bent_four_surrounding(b, other_color, group_lib(b, g, 0), surrounding) ||
+		    !check_bent_four_surrounding(b, other_color, group_lib(b, g, 1), surrounding))
 			continue;
 
 		/* find suitable lib to fill  (first line and other coord == 2 or 3)  */
 		coord_t fill;
 		for (int j = 0; j < 2; j++) {
-			fill = board_group_info(b, g).lib[j];
+			fill = group_lib(b, g, j);
 			int x = coord_x(fill),  y = coord_y(fill);
 			
 			if (x == xs[i] && (y == ys[i] + dy[i]  ||  y == ys[i] + 2 * dy[i])) {
@@ -170,7 +170,7 @@ fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_
 		
 		move_t m = move(fill, color);
 		if (board_permit(b, &m, NULL)) {
-			*bent4_lib = board_group_other_lib(b, g, fill);
+			*bent4_lib = group_other_lib(b, g, fill);
 			return fill;
 		}
 	}
@@ -212,12 +212,12 @@ fill_bent_three(board_t *b, enum stone color)
 		group_t g1 = group_at(b, c1);
 		group_t g2 = group_at(b, c2);
 		if (!group_is_onestone(b, g1) || !group_is_onestone(b, g2) ||
-		    board_group_info(b, g1).libs != 2 || board_group_info(b, g2).libs != 2)
+		    group_libs(b, g1) != 2 || group_libs(b, g2) != 2)
 			continue;
 
 		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
 		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
 			continue;
 
 		/* Check really surrounding */

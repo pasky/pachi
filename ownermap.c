@@ -212,8 +212,8 @@ is_ko_stone(board_t *b, coord_t c)
 {
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);  assert(g);
-	coord_t lib = board_group_info(b, g).lib[0];
-	if (board_group_info(b, g).libs != 1)  return false;
+	coord_t lib = group_lib(b, g, 0);
+	if (group_libs(b, g) != 1)  return false;
 	if (!group_is_onestone(b, g))          return false;
 	if (!board_is_eyelike(b, lib, color))  return false;
 
@@ -228,8 +228,8 @@ border_atari_stone(board_t *b, coord_t c, int *final_ownermap)
 {
 	group_t g = group_at(b, c);  assert(g);
 	enum stone color = board_at(b, c);
-	coord_t lib = board_group_info(b, g).lib[0];
-	if (board_group_info(b, g).libs != 1)
+	coord_t lib = group_lib(b, g, 0);
+	if (group_libs(b, g) != 1)
 		return false;
 	
 	/* Next to own territory (group may be dead or not, we don't care) */
@@ -285,7 +285,7 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 	foreach_point(b) {
 		if (!group_at(b, c))  continue;
 		group_t g = group_at(b, c);
-		coord_t lib = board_group_info(b, g).lib[0];
+		coord_t lib = group_lib(b, g, 0);
 		enum stone color = board_at(b, c);
 		
 		if (!border_atari_stone(b, c, final_ownermap))  continue;

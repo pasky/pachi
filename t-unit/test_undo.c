@@ -53,7 +53,7 @@ board_dump_group(board_t *b, group_t g)
 {
         printf("group base: %s  color: %s  libs: %i  stones: %i\n",
                coord2sstr(g), stone2str(board_at(b, g)),
-               board_group_info(b, g).libs, group_stone_count(b, g, 500));
+               group_libs(b, g), group_stone_count(b, g, 500));
 
         printf("  stones: ");
         foreach_in_group(b, g) {
@@ -62,8 +62,8 @@ board_dump_group(board_t *b, group_t g)
         printf("\n");
 
         printf("  libs  : ");   
-        for (int i = 0; i < board_group_info(b, g).libs; i++) {
-                coord_t lib = board_group_info(b, g).lib[i];
+        for (int i = 0; i < group_libs(b, g); i++) {
+                coord_t lib = group_lib(b, g, i);
                 printf("%s ", coord2sstr(lib));
         }
         printf("\n");

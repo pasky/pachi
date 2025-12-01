@@ -223,9 +223,9 @@ set_ko(board_t *b, char *arg)
 
 	/* Sanity checks */
 	group_t g = group_at(b, last.coord);
-	assert(board_group_info(b, g).libs == 1);
+	assert(group_libs(b, g) == 1);
 	assert(group_stone_count(b, g, 2) == 1);
-	coord_t lib = board_group_info(b, g).lib[0];
+	coord_t lib = group_lib(b, g, 0);
 	assert(board_is_eyelike(b, lib, last.color));
 
 	b->ko.coord = lib;
@@ -327,7 +327,7 @@ test_3lib_selfatari(board_t *b, char *arg)
 	foreach_neighbor(b, c, {
 		if (board_at(b, c) != color)  continue;
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 3)
+		if (group_libs(b, g) == 3)
 			goto good;
 	});
 	die("no 3lib group near %s %s, bad test ?\n", stone2str(color), coord2sstr(c));
@@ -414,7 +414,7 @@ test_ladder(board_t *b, char *arg)
 	
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
-	assert(board_group_info(b, group).libs == 1);
+	assert(group_libs(b, group) == 1);
 	int rres = is_ladder(b, group, true);
 	
 	PRINT_RES();
@@ -436,7 +436,7 @@ test_ladder_any(board_t *b, char *arg)
 
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
-	assert(board_group_info(b, group).libs == 1);
+	assert(group_libs(b, group) == 1);
 	int rres = is_ladder_any(b, group, true);
 	
 	PRINT_RES();
@@ -1292,8 +1292,8 @@ test_first_line_blunder(board_t *b, char *arg)
 		group_t g = group_at(b, c);
 		assert(g);
 		assert(group_stone_count(b, g, 4) >= 3);
-		assert(board_group_info(b, g).libs == 3 ||
-		       board_group_info(b, g).libs == 2);
+		assert(group_libs(b, g) == 3 ||
+		       group_libs(b, g) == 2);
 	});
 	
 	move_t m = move(c, color);

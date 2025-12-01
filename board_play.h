@@ -17,9 +17,9 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(10))
 		fprintf(stderr, "Group %s (%d libs): Adding liberty %s\n",
-			coord2sstr(group), board_group_info(board, group).libs, coord2sstr(coord));
+			coord2sstr(group), group_libs(board, group), coord2sstr(coord));
 
-	group_info_t *gi = &board_group_info(board, group);
+	group_info_t *gi = group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
 		if (group_has_lib(gi, coord))
 			return;
@@ -51,11 +51,11 @@ board_group_rmlib(board_t *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(10))
 		fprintf(stderr, "Group %s (%d libs): Removing liberty %s\n",
-			coord2sstr(group), board_group_info(board, group).libs, coord2sstr(coord));
+			coord2sstr(group), group_libs(board, group), coord2sstr(coord));
 
 	/* Normal would be to loop through the group libs (i < gi->libs), but
 	 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
-	group_info_t *gi = &board_group_info(board, group);
+	group_info_t *gi = group_info(board, group);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
 		if (likely(gi->lib[i] != coord))
 			continue;
@@ -117,6 +117,9 @@ board_remove_stone(board_t *board, group_t group, coord_t c, enum stone color)
 static int profiling_noinline
 board_group_capture(board_t *board, group_t group)
 {
+#ifdef EXTRA_CHECKS
+	assert(group_libs(board, group) == 0);
+#endif
 	enum stone color = board_at(board, group);
 	enum stone other_color = stone_other(color);
 	int stones = 0;
@@ -127,8 +130,7 @@ board_group_capture(board_t *board, group_t group)
 		stones++;
 	} foreach_in_group_end;
 
-	group_info_t *gi = &board_group_info(board, group);
-	assert(gi->libs == 0);
+	group_info_t *gi = group_info(board, group);
 	memset(gi, 0, sizeof(*gi));
 
 	return stones;
@@ -159,8 +161,8 @@ merge_groups(board_t *board, group_t group_to, group_t group_from)
 	if (DEBUGL(10))
 		fprintf(stderr, "board_play_raw: merging groups %s -> %s\n",
 			coord2sstr(group_from), coord2sstr(group_to));
-	group_info_t *gi_from = &board_group_info(board, group_from);
-	group_info_t *gi_to = &board_group_info(board, group_to);
+	group_info_t *gi_from = group_info(board, group_from);
+	group_info_t *gi_to = group_info(board, group_to);
 #ifdef FULL_BOARD
 	/* We do this early before the group info is rewritten. */
 	if (gi_from->libs == 1)  board_capturable_rm(board, group_from, gi_from->lib[0]);
@@ -207,7 +209,7 @@ static group_t profiling_noinline
 new_group(board_t *board, coord_t coord)
 {
 	group_t group = coord;
-	group_info_t *gi = &board_group_info(board, group);
+	group_info_t *gi = group_info(board, group);
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
 			/* board_group_addlib is ridiculously expensive for us */
@@ -253,13 +255,12 @@ play_one_neighbor(board_t *board, coord_t coord, enum stone color,
 		}
 	} else { // ncolor == other_color
 		if (DEBUGL(10)) {
-			group_info_t *gi = &board_group_info(board, ngroup);
 			fprintf(stderr, "testing captured group %s: ", coord2sstr(ngroup));
-			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
-				fprintf(stderr, "%s ", coord2sstr(gi->lib[i]));
+			for (int i = 0; i < group_libs(board, ngroup); i++)
+				fprintf(stderr, "%s ", coord2sstr(group_lib(board, ngroup, i)));
 			fprintf(stderr, "\n");
 		}
-		if (unlikely(board_group_captured(board, ngroup)))
+		if (unlikely(group_captured(board, ngroup)))
 			board_group_capture(board, ngroup);
 	}
 	return group;
@@ -308,7 +309,7 @@ capturing_something(board_t *board, coord_t coord)
 {
 	foreach_neighbor(board, coord, {
 		group_t g = group_at(board, c);
-		if (g && board_group_info(board, g).libs == 1)
+		if (g && group_libs(board, g) == 1)
 			return true;
 	});
 	return false;
@@ -351,7 +352,7 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 		if (DEBUGL(10))
 			fprintf(stderr, "board_play_raw: reducing libs for group %s\n", coord2sstr(group));
 
-		if (board_group_captured(board, group)) {
+		if (group_captured(board, group)) {
 			ko_caps += board_group_capture(board, group);
 			cap_at = c;
 		}
@@ -388,7 +389,7 @@ board_play_f(board_t *board, move_t *m, int f)
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
 		 * suicide might fail.) */
 		group_t group = board_play_outside(board, m, f);
-		if (unlikely(board_group_captured(board, group))) {
+		if (unlikely(group_captured(board, group))) {
 #ifdef BOARD_UNDO
 			undo_save_suicide(board, m->coord, m->color, board->u);
 #endif

@@ -33,8 +33,8 @@ breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
 	/* 2 opposing groups with 2 libs */
 	group_t g  = s->groupids[S_BLACK][0];        assert(g  && board_at(b, g)  == S_BLACK);
 	group_t g2 = s->groupids[S_WHITE][0];        assert(g2 && board_at(b, g2) == S_WHITE);
-	if (board_group_info(b, g).libs  != 2 ||
-	    board_group_info(b, g2).libs != 2)
+	if (group_libs(b, g)  != 2 ||
+	    group_libs(b, g2) != 2)
 		return false;
 	
 	/* Play at c selfatari for both */
@@ -43,13 +43,13 @@ breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
 		return false;
 
 	/* Play at our other lib also */
-	coord_t other  = board_group_other_lib(b, g, c);
+	coord_t other  = group_other_lib(b, g, c);
 	if (!(is_selfatari(b, S_BLACK, other) &&
 	      is_selfatari(b, S_WHITE, other)))
 		return false;
 
 	/* Play at opp other lib also, if different */
-	coord_t other2 = board_group_other_lib(b, g2, c);
+	coord_t other2 = group_other_lib(b, g2, c);
 	if (other2 != other &&
 	    !(is_selfatari(b, S_BLACK, other2) &&
 	      is_selfatari(b, S_WHITE, other2)))
@@ -79,7 +79,7 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	foreach_neighbor(b, coord, {
 		if (board_at(b, c) != color)  continue;  /* And can't be other color since eyelike */
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs != 2)  return false;
+		if (group_libs(b, g) != 2)  return false;
 
 		if (!g1)     {  g1 = g;  continue;  }
 		if (g == g1)             continue;
@@ -90,19 +90,19 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	if (!g1 || !g2)  return false;
 	
 	/* Find inside group */
-	coord_t lib2 = board_group_other_lib(b, g1, coord);
+	coord_t lib2 = group_other_lib(b, g1, coord);
 	group_t in = 0;
 	foreach_neighbor(b, lib2, {
 		if (board_at(b, c) != other_color)  continue;
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs != 2)  return false;
+		if (group_libs(b, g) != 2)  return false;
 		if (!in)  {  in = g;  continue;  }		
 		if (in != g)  return false;  /* Multiple inside groups */
 	});
 	if (!in)  return false;
 
-	coord_t lib3 = board_group_other_lib(b, g2, coord);
-	if (board_group_other_lib(b, in, lib2) != lib3)
+	coord_t lib3 = group_other_lib(b, g2, coord);
+	if (group_other_lib(b, in, lib2) != lib3)
 		return false;
 	
 	return true;
@@ -127,7 +127,7 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 		if (board_at(b, c) != other_color)
 			continue;
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs != 2 ||
+		if (group_libs(b, g) != 2 ||
 		    group_stone_count(b, g, 4) != 3)
 			return false;
 		if (g3)  /* Multiple groups or bad bent-3 */
@@ -140,7 +140,7 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 	/* Check neighbours of the 2 liberties first (also checks shape :) */
 	// XXX is this enough to check all the bad shapes ?
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, g3).lib[i];
+		coord_t lib = group_lib(b, g3, i);
 		if (immediate_liberty_count(b, lib) >= 1)
 			return false;  /* Bad shape or can escape */
 		if (neighbor_count_at(b, lib, other_color) >= 2)
@@ -154,7 +154,7 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 	 *   O O . O O 	  O O . O O    O . O O O
 	 *   . O O O . 	  . O O O .    O O O . .   */
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, g3).lib[i];
+		coord_t lib = group_lib(b, g3, i);
 		foreach_neighbor(b, lib, {   /* Find adjacent stone */
 			if (board_at(b, c) == other_color &&
 			    neighbor_count_at(b, c, other_color) != 1)
@@ -181,8 +181,8 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 
 	/* Group alive after capturing these stones ? */
 	bool safe = false;
-	coord_t lib1 = board_group_info(b, g3).lib[0];
-	coord_t lib2 = board_group_info(b, g3).lib[1];
+	coord_t lib1 = group_lib(b, g3, 0);
+	coord_t lib2 = group_lib(b, g3, 1);
 	with_move(b, lib1, color, {
 		with_move(b, lib2, color, {
 			group_t g = group_at(b, own);

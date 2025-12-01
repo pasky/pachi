@@ -37,10 +37,10 @@ is_ladder(board_t *b, group_t laddered, bool test_middle)
 {
 	assert(laddered);
 	assert(group_at(b, laddered) == laddered);
-	assert(board_group_info(b, laddered).libs == 1);
+	assert(group_libs(b, laddered) == 1);
 
 	if (DEBUGL(6)) {
-		coord_t coord = board_group_info(b, laddered).lib[0];
+		coord_t coord = group_lib(b, laddered, 0);
 		enum stone lcolor = board_at(b, laddered);
 		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
 			coord2sstr(coord), stone2str(lcolor), coord2sstr(laddered));
@@ -49,7 +49,7 @@ is_ladder(board_t *b, group_t laddered, bool test_middle)
 	if (!test_middle) {
 		/* First, special-case first-line "ladders". This is a huge chunk
 		 * of ladders we actually meet and want to play. */
-		coord_t coord = board_group_info(b, laddered).lib[0];
+		coord_t coord = group_lib(b, laddered, 0);
 		enum stone lcolor = board_at(b, laddered);
 		if (neighbor_count_at(b, coord, S_OFFBOARD) == 1
 		    && neighbor_count_at(b, coord, lcolor) == 1) {
@@ -69,10 +69,10 @@ is_ladder_any(board_t *b, group_t laddered, bool test_middle)
 {
 	assert(laddered);
 	assert(group_at(b, laddered) == laddered);
-	assert(board_group_info(b, laddered).libs == 1);
+	assert(group_libs(b, laddered) == 1);
 
 	if (DEBUGL(6)) {
-		coord_t coord = board_group_info(b, laddered).lib[0];
+		coord_t coord = group_lib(b, laddered, 0);
 		enum stone lcolor = board_at(b, laddered);
 		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
 			coord2sstr(coord), stone2str(lcolor), coord2sstr(laddered));
@@ -81,7 +81,7 @@ is_ladder_any(board_t *b, group_t laddered, bool test_middle)
 	if (!test_middle) {
 		/* First, special-case first-line "ladders". This is a huge chunk
 		 * of ladders we actually meet and want to play. */
-		coord_t coord = board_group_info(b, laddered).lib[0];
+		coord_t coord = group_lib(b, laddered, 0);
 		enum stone lcolor = board_at(b, laddered);
 		if (neighbor_count_at(b, coord, S_OFFBOARD) == 1
 		    && neighbor_count_at(b, coord, lcolor) == 1) {

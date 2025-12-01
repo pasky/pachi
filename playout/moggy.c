@@ -304,13 +304,13 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	int force = false;
 
 	/* Did the opponent play a self-atari? */
-	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
+	if (group_libs(b, group_at(b, m->coord)) == 1) {
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, pp->middle_ladder);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 1)
+		if (!g || group_libs(b, g) != 1)
 			continue;
 
 		// Always defend big groups
@@ -339,11 +339,11 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
 	group_t group = group_at(b, m->coord);
 
-	if (board_group_info(b, group).libs != 2)
+	if (group_libs(b, group) != 2)
 		return;
 
 	for (int i = 0; i < 2; i++) {
-		coord_t chase = board_group_info(b, group).lib[i];
+		coord_t chase = group_lib(b, group, i);
 		if (wouldbe_ladder(b, group, chase))
 			mq_add(q, chase);
 	}
@@ -360,7 +360,7 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Does the opponent have just two liberties? */
-	if (board_group_info(b, group).libs == 2) {
+	if (group_libs(b, group) == 2) {
 		group_2lib_check(b, group, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
@@ -375,7 +375,7 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	/* Then he took a third liberty from neighboring chain? */
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
-		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
+		if (!g || g == group || g == group2 || group_libs(b, g) != 2)
 			continue;
 		group_2lib_check(b, g, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		group2 = g; // prevent trivial repeated checks
@@ -392,7 +392,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Nothing there normally since opponent avoided bad selfatari ... */
-	if (board_group_info(b, group).libs == 2) {
+	if (group_libs(b, group) == 2) {
 		group_2lib_capture_check(b, group, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
@@ -409,7 +409,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		if (board_at(b, c) != m->color)  /* Not opponent group, skip */
 			continue;
 		group_t g = group_at(b, c);
-		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
+		if (!g || g == group || g == group2 || group_libs(b, g) != 2)
 			continue;
 		group_2lib_capture_check(b, g, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		group2 = g; // prevent trivial repeated checks
@@ -458,7 +458,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 		group_t g = group_at(b, c);
 		if (!g || group2 == g || board_at(b, c) != color)
 			continue;
-		if (board_group_info(b, g).libs < 3 || board_group_info(b, g).libs > pp->nlib_count)
+		if (group_libs(b, g) < 3 || group_libs(b, g) > pp->nlib_count)
 			continue;
 		group_nlib_defense_check(b, g, color, q);
 		group2 = g; // prevent trivial repeated checks
@@ -552,9 +552,9 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mq
 					coord_t falsified = c;
 					int color_diag_libs[S_MAX] = {0};
 					foreach_diag_neighbor(b, falsified, {
-						if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1) {
+						if (board_at(b, c) == m->color && group_libs(b, group_at(b, c)) == 1) {
 							/* Suggest capturing a falsifying stone in atari. */
-							mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
+							mq_add(q, group_lib(b, group_at(b, c), 0));
 						} else {
 							color_diag_libs[board_at(b, c)]++;
 						}
@@ -907,9 +907,9 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 		foreach_diag_neighbor(b, m->coord, {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
-			switch (board_group_info(b, group_at(b, c)).libs) {
+			switch (group_libs(b, group_at(b, c))) {
 			case 1: /* Capture! */
-				c = board_group_info(b, group_at(b, c)).lib[0];
+				c = group_lib(b, group_at(b, c), 0);
 				if (!permit_move(c))
 					break;
 				if (DEBUGL(5))  fprintf(stderr, "Moggy: Redirecting to capture %s\n", coord2sstr(c));
@@ -917,7 +917,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 				return true;
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
-					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
+					coord_t l = group_lib(b, group_at(b, c), i);
 					if (!permit_move(l))
 						continue;
 					if (DEBUGL(5))  fprintf(stderr, "Moggy: Redirecting to %s atari\n", coord2sstr(l));

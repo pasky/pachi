@@ -162,8 +162,8 @@ foreach_in_connected_groups_(board_t *b, enum stone color, group_t g,
 	} foreach_in_group_end;	
 
 	// Look for virtually connected groups
-	for (int i = 0; i < board_group_info(b, g).libs; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];	
+	for (int i = 0; i < group_libs(b, g); i++) {
+		coord_t lib = group_lib(b, g, i);
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
 				if (board_at(b, c) != color)
@@ -205,8 +205,8 @@ foreach_connected_group_(board_t *b, enum stone color, group_t g,
 		return -1;
 
 	// Look for virtually connected groups
-	for (int i = 0; i < board_group_info(b, g).libs; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];	
+	for (int i = 0; i < group_libs(b, g); i++) {
+		coord_t lib = group_lib(b, g, i);
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
 				if (board_at(b, c) != color)
@@ -242,8 +242,8 @@ static int
 foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 {
 	foreach_lib_data_t *d = (foreach_lib_data_t*)data;
-	for (int i = 0; i < board_group_info(b, g).libs; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];
+	for (int i = 0; i < group_libs(b, g); i++) {
+		coord_t lib = group_lib(b, g, i);
 		if (d->visited[lib])
 			continue;
 		d->visited[lib] = 1;
@@ -372,7 +372,7 @@ is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 		foreach_neighbor(b, to, {
 			if (enemy_stone_at(c))
 				return false;
-			if ((own_stone_at(c) && board_group_info(b, group_at(b, c)).libs > 1) ||
+			if ((own_stone_at(c) && group_libs(b, group_at(b, c)) > 1) ||
 			    board_at(b, c) == S_OFFBOARD)
 				good++;
 		});

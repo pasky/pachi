@@ -43,7 +43,7 @@ board_get_atari_neighbor(board_t *b, coord_t coord, enum stone group_color)
 		if (board_at(b, c) != group_color)
 			continue;
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 1)
+		if (group_libs(b, g) == 1)
 			return g;
 		/* We return first match. */
 	});
@@ -59,7 +59,7 @@ board_get_atari_neighbors(board_t *b, coord_t c, enum stone group_color, mq_t *q
 		if (board_at(b, c) != group_color)
 			continue;
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 1)
+		if (group_libs(b, g) == 1)
 			mq_add_nodup(q, g);
 	});
 }

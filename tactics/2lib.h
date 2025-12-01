@@ -25,7 +25,7 @@ board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color)
 {
 	foreach_neighbor(b, c, {
 		group_t g = group_at(b, c);
-		if (board_at(b, c) == color && board_group_info(b, g).libs == 2)
+		if (board_at(b, c) == color && group_libs(b, g) == 2)
 			return g;
 	});
 	return 0;
@@ -37,7 +37,7 @@ board_get_2lib_neighbors(board_t *b, coord_t c, enum stone color, mq_t *q)
 	q->moves = 0;
 	foreach_neighbor(b, c, {
 		group_t g = group_at(b, c);
-		if (board_at(b, c) == color && board_group_info(b, g).libs == 2)
+		if (board_at(b, c) == color && group_libs(b, g) == 2)
 			mq_add(q, g);
 	});
 }

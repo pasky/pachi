@@ -30,9 +30,9 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 	/* First, look at our liberties. */
 	int continuous = 0, enemy = 0, spacy = 0, eyes = 0;
 	for (int i = 0; i < 3; i++) {
-		coord_t c = board_group_info(b, group).lib[i];
+		coord_t c = group_lib(b, group, i);
 		eyes += board_is_one_point_eye(b, c, to_play);
-		continuous += coord_is_adjecent(c, board_group_info(b, group).lib[(i + 1) % 3], b);
+		continuous += coord_is_adjecent(c, group_lib(b, group, (i + 1) % 3), b);
 		enemy += neighbor_count_at(b, c, stone_other(color));
 		spacy += immediate_liberty_count(b, c) > 1;
 	}
@@ -49,10 +49,10 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 		assert(!eyes);
 		int i;
 		for (i = 0; i < 3; i++)
-			if (immediate_liberty_count(b, board_group_info(b, group).lib[i]) == 2)
+			if (immediate_liberty_count(b, group_lib(b, group, i)) == 2)
 				break;
 		/* Play at middle point. */
-		mq_add_nodup(q, board_group_info(b, group).lib[i]);
+		mq_add_nodup(q, group_lib(b, group, i));
 		return;
 	}
 #endif
@@ -78,7 +78,7 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 			if (board_at(b, c) != stone_other(color))
 				continue;
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs != 2)
+			if (group_libs(b, g2) != 2)
 				continue;
 			can_atari_group(b, g2, stone_other(color), to_play, q, true /* XXX */);
 		});

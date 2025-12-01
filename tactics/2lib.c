@@ -30,26 +30,26 @@ miai_2lib(board_t *b, group_t group, enum stone color)
 	 * X X X O
 	 * X . . O
 	 * O O X O - left dot would be pull-out, right dot connect */
-	foreach_neighbor(b, board_group_info(b, group).lib[0], {
+	foreach_neighbor(b, group_lib(b, group, 0), {
 		enum stone cc = board_at(b, c);
-		if (cc == S_NONE && cc != board_at(b, board_group_info(b, group).lib[1]))
+		if (cc == S_NONE && cc != board_at(b, group_lib(b, group, 1)))
 			can_pull_out = true;
 		else if (cc != color)
 			continue;
 
 		group_t cg = group_at(b, c);
-		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+		if (cg && cg != group && group_libs(b, cg) > 1)
 			can_connect = true;
 	});
 	
-	foreach_neighbor(b, board_group_info(b, group).lib[1], {
+	foreach_neighbor(b, group_lib(b, group, 1), {
 		enum stone cc = board_at(b, c);
-		if (c == board_group_info(b, group).lib[0])  continue;
+		if (c == group_lib(b, group, 0))  continue;
 		if (cc == S_NONE && can_connect)     return true;
 		else if (cc != color)		     continue;
 
 		group_t cg = group_at(b, c);
-		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+		if (cg && cg != group && group_libs(b, cg) > 1)
 			return (can_connect || can_pull_out);
 	});
 	return false;
@@ -87,7 +87,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, group).lib[i];
+		coord_t lib = group_lib(b, group, i);
 		assert(board_at(b, lib) == S_NONE);
 		if (!board_is_valid_play(b, to_play, lib))  continue;
 
@@ -111,7 +111,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 
 		/* Prevent hopeless escape attempts. */
 		if (defense_is_hopeless(b, group, owner, to_play, lib,
-					board_group_info(b, group).lib[1 - i],
+					group_lib(b, group, 1 - i),
 					use_def_no_hopeless))
 			continue;
 
@@ -174,7 +174,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
 			if (!preference[0]) {
-				if (q->move[q->moves - 1] == board_group_info(b, group).lib[0])
+				if (q->move[q->moves - 1] == group_lib(b, group, 0))
 					q->moves--;
 				/* ...else{ may happen, since we call
 				 * mq_nodup() and the move might have
@@ -221,13 +221,13 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool us
 			if (board_at(b, c) != stone_other(color))  continue;
 			
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs == 1 &&
-			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
+			if (group_libs(b, g2) == 1 &&
+			    board_is_valid_play(b, to_play, group_lib(b, g2, 0))) {
 				/* We can capture a neighbor. */
-				mq_add_nodup(q, board_group_info(b, g2).lib[0]);
+				mq_add_nodup(q, group_lib(b, g2, 0));
 				continue;
 			}
-			if (board_group_info(b, g2).libs != 2)  continue;
+			if (group_libs(b, g2) != 2)  continue;
 			can_atari_group(b, g2, stone_other(color), to_play, q, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
@@ -237,9 +237,9 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool us
 bool
 can_capture_2lib_group(board_t *b, group_t g, mq_t *q)
 {
-	assert(board_group_info(b, g).libs == 2);
+	assert(group_libs(b, g) == 2);
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];
+		coord_t lib = group_lib(b, g, i);
 		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib));
 		if (wouldbe_ladder_any(b, g, lib)) {
 			if (q)  mq_add(q, lib);
@@ -269,13 +269,13 @@ group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mq_t *q,
 			if (board_at(b, c) != stone_other(color))  continue;
 			
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs == 1 &&
-			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
+			if (group_libs(b, g2) == 1 &&
+			    board_is_valid_play(b, to_play, group_lib(b, g2, 0))) {
 				/* We can capture a neighbor. */
-				mq_add_nodup(q, board_group_info(b, g2).lib[0]);
+				mq_add_nodup(q, group_lib(b, g2, 0));
 				continue;
 			}
-			if (board_group_info(b, g2).libs != 2)  continue;
+			if (group_libs(b, g2) != 2)  continue;
 			can_capture_2lib_group(b, g2, q);
 		});
 	} foreach_in_group_end;

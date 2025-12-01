@@ -188,7 +188,7 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
-		int libs = board_group_info(b, g).libs - 1;
+		int libs = group_libs(b, g) - 1;
 		if (libs > 3) libs = 3;
 		
 		if (bc == S_NONE)                    data[8][y][x] = 1.0;
@@ -304,7 +304,7 @@ darkforest_dcnn_eval(board_t *b, enum stone color, float result[])
 		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
-		int libs = board_group_info(b, g).libs;
+		int libs = group_libs(b, g);
 		if (libs > 3) libs = 3;
 			
 		/* plane 0: our stones with 1 liberty */

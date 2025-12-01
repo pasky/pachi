@@ -209,16 +209,15 @@ board_print_all_structures(board_t *b)
 	printf("\n\ngroup info:\n");
 	foreach_point(b) {
 		group_t g = group_at(b, c);
-		group_info_t *gi = &board_group_info(b, g);
 		if (!g || g != c)  continue;  /* foreach group really */
 		
-		printf("%3s: %i libs  ", coord2sstr(g), gi->libs);
+		printf("%3s: %i libs  ", coord2sstr(g), group_libs(b, g));
 
 		/* Sort liberties in canonical order so functionally
 		 * equivalent implementations print identically. */
 		mq_t q;  mq_init(&q);
-		for (int i = 0; i < board_group_info(b, g).libs; i++)
-			mq_add(&q, board_group_info(b, g).lib[i]);
+		for (int i = 0; i < group_libs(b, g); i++)
+			mq_add(&q, group_lib(b, g, i));
 		mq_sort(&q);
 		mq_print(&q, "[ ");
 		printf("]\n");
@@ -396,8 +395,8 @@ hash_board(board_t *b)
 		/* Sort liberties in canonical order before hashing so 
 		 * functionally equivalent implementations hash identically. */
 		mq_t q;  mq_init(&q);
-		for (int i = 0; i < board_group_info(b, g).libs; i++)
-			mq_add(&q, board_group_info(b, g).lib[i]);
+		for (int i = 0; i < group_libs(b, g); i++)
+			mq_add(&q, group_lib(b, g, i));
 		mq_sort(&q);
 		hash_mq(&q);
 	} foreach_point_end;
@@ -488,7 +487,7 @@ print_board_hashes(board_t *b)
 		if (!g || g != c)  continue;  /* foreach group really */
 
 		groups++;
-		libs += board_group_info(b, g).libs;
+		libs += group_libs(b, g);
 	} foreach_point_end;
 	printf("groups: %-2i libs %-3i ", groups, libs);
 

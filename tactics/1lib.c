@@ -16,8 +16,8 @@
 bool
 capturing_group_is_snapback(board_t *b, group_t group)
 {
-	//assert(board_group_info(b, group).libs == 1);
-	coord_t lib = board_group_info(b, group).lib[0];
+	//assert(group_libs(b, group) == 1);
+	coord_t lib = group_lib(b, group, 0);
 
 	if (immediate_liberty_count(b, lib) > 0 ||
 	    group_stone_count(b, group, 2) > 1)
@@ -38,10 +38,10 @@ capturing_group_is_snapback(board_t *b, group_t group)
 			continue;
 
 		if (st == other_color) {
-			if (board_group_info(b, g).libs == 1)  // capture more than one group
+			if (group_libs(b, g) == 1)  // capture more than one group
 				return false;
 		} else  // to_play
-			if (board_group_info(b, g).libs > 1)
+			if (group_libs(b, g) > 1)
 				return false;
 	});
 	return true;
@@ -56,8 +56,8 @@ capturing_group_is_snapback(board_t *b, group_t group)
 bool
 can_capture(board_t *b, group_t g, enum stone to_play)
 {
-	//assert(g && board_group_info(b, g).libs == 1);
-	coord_t capture = board_group_info(b, g).lib[0];
+	//assert(g && group_libs(b, g) == 1);
+	coord_t capture = group_lib(b, g, 0);
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
 	
 	/* Does playing on the liberty usefully capture the group? */
@@ -71,9 +71,9 @@ can_capture(board_t *b, group_t g, enum stone to_play)
 static inline bool
 can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 {
-	coord_t capture = board_group_info(b, g).lib[0];
+	coord_t capture = group_lib(b, g, 0);
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
-	
+
 	/* Does playing on the liberty usefully capture the group? */
 	if (board_is_valid_play(b, to_play, capture)
 	    && !is_bad_selfatari(b, to_play, capture))
@@ -98,12 +98,12 @@ can_countercapture(board_t *b, group_t group, mq_t *q)
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
 			if (board_at(b, c) != other ||
-			    board_group_info(b, g).libs > 1 ||
+			    group_libs(b, g) > 1 ||
 			    !can_capture(b, g, color))
 				continue;
 
 			if (!q) return true;
-			mq_add_nodup(q, board_group_info(b, group_at(b, c)).lib[0]);
+			mq_add_nodup(q, group_lib(b, group_at(b, c), 0));
 		});
 	} foreach_in_group_end;
 
@@ -126,7 +126,7 @@ countercapturable_groups(board_t *b, group_t group, mq_t *q)
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
 			if (likely(board_at(b, c) != other
-				   || board_group_info(b, g).libs > 1) ||
+				   || group_libs(b, g) > 1) ||
 			    !can_capture(b, g, color))
 				continue;
 
@@ -151,14 +151,14 @@ can_countercapture_any(board_t *b, group_t group, mq_t *q)
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
 			if (board_at(b, c) != other ||
-			    board_group_info(b, g).libs > 1)
+			    group_libs(b, g) > 1)
 				continue;
-			coord_t lib = board_group_info(b, g).lib[0];
+			coord_t lib = group_lib(b, g, 0);
 			if (!board_is_valid_play(b, color, lib))
 				continue;
 
 			if (!q) return true;
-			mq_add_nodup(q, board_group_info(b, group_at(b, c)).lib[0]);
+			mq_add_nodup(q, group_lib(b, group_at(b, c), 0));
 		});
 	} foreach_in_group_end;
 
@@ -185,7 +185,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
                   mq_t *q, bool middle_ladder)
 {
 	enum stone color = board_at(b, group);
-	coord_t lib = board_group_info(b, group).lib[0];
+	coord_t lib = group_lib(b, group, 0);
 
 	assert(color != S_OFFBOARD && color != S_NONE);
 	if (DEBUGL(6))  fprintf(stderr, "group_atari_check group %s (%s)\n", coord2sstr(group), stone2str(color));

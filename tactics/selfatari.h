@@ -95,7 +95,7 @@ is_selfatari(board_t *b, enum stone color, coord_t to)
         bool r = true;
         with_move(b, to, color, {
                 group_t g = group_at(b, to);
-                if (g && board_group_info(b, g).libs > 1)
+                if (g && group_libs(b, g) > 1)
                         r = false;
         });
 

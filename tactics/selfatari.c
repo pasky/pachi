@@ -35,7 +35,7 @@ three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfa
 	coord_t other_libs[2];
 	bool other_libs_adj[2];
 	for (int i = 0, j = 0; i < 3; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];
+		coord_t lib = group_lib(b, g, i);
 		if (lib != to) {
 			other_libs_adj[j] = coord_is_adjecent(lib, to);
 			other_libs[j++] = lib;
@@ -54,7 +54,7 @@ three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfa
 	/* Playing on the third liberty might be useful if it enables
 	 * capturing some group (are we doing nakade or semeai?). */
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++)
-		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 3)
+		if (group_libs(b, s->groupids[stone_other(color)][i]) <= 3)
 			return false;
 
 
@@ -89,7 +89,7 @@ next_lib:
 		foreach_neighbor(b, other_libs[i], {
 			if (board_at(b, c) == color
 			    && group_at(b, c) != g
-			    && board_group_info(b, group_at(b, c)).libs > 1) {
+			    && group_libs(b, group_at(b, c)) > 1) {
 				/* Can connect to a friend. */
 				/* TODO: > 2? But maybe the group can capture
 				 * a neighbor! But then better let it do that
@@ -131,17 +131,17 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 		 * not in atari. */
 		group_t g = s->groupids[color][i];
 
-		if (board_group_info(b, g).libs == 1) {
+		if (group_libs(b, g) == 1) {
 			if (!s->needs_more_lib)
 				s->friend_has_no_libs = true;
 			// or we already have a friend with 1 lib
 			continue;
 		}
 		
-		if (board_group_info(b, g).libs > 2) {
+		if (group_libs(b, g) > 2) {
 			/* Could we self-atari the group here? */
 			if (flags & SELFATARI_3LIB_SUICIDE &&
-			    board_group_info(b, g).libs == 3
+			    group_libs(b, g) == 3
 			    && three_liberty_suicide(b, g, color, to, s))
 				return true;
 			return false;
@@ -150,7 +150,7 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 		/* We need to have another liberty, and
 		 * it must not be the other liberty of
 		 * the group. */
-		int lib2 = board_group_other_lib(b, g, to);
+		int lib2 = group_other_lib(b, g, to);
 		/* Maybe we already looked at another
 		 * group providing one liberty? */
 		if (s->needs_more_lib && s->needs_more_lib != g
@@ -186,7 +186,7 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		/* We can escape by capturing this group if it's in atari. */
 		group_t g = s->groupids[stone_other(color)][i];
-		if (board_group_info(b, g).libs > 1)
+		if (group_libs(b, g) > 1)
 			continue;
 
 		/* But we need to get to at least two liberties by this;
@@ -239,14 +239,14 @@ capturing_would_be_snapback_for(board_t *b, enum stone color, group_t group, coo
 			continue;
 
 		group_t g = group_at(b, c);
-		int libs = board_group_info(b, g).libs;
+		int libs = group_libs(b, g);
 		if (col == color) {
 			if (libs == 1)  // capture more than one group
 				return false;
 		} else { // other_color
 			if (libs > 2)   // will gain extra libs
 				return false;
-			if (libs == 2 && board_group_other_lib(b, g, lib) != to)
+			if (libs == 2 && group_other_lib(b, g, lib) != to)
 				return false;
 		}
 	});
@@ -274,7 +274,7 @@ check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	/* Examine enemy groups */
 	for (int i = 0; i < s->groupcts[other_color]; i++) {
 		group_t g = s->groupids[other_color][i];
-		if (board_group_info(b, g).libs == 2 &&
+		if (group_libs(b, g) == 2 &&
 		    capturing_would_be_snapback_for(b, color, g, to, s->lib)) {
 			s->snapback_group = g;
 			return false;
@@ -298,8 +298,8 @@ unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfata
 {
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		group_t g = s->groupids[color][i];
-		for (int j = 0; j < board_group_info(b, g).libs; j++)
-			if (board_group_info(b, g).lib[j] == lib)
+		for (int j = 0; j < group_libs(b, g); j++)
+			if (group_lib(b, g, j) == lib)
 				return false;
 	}
 	return true;
@@ -358,9 +358,9 @@ can_escape_instead(board_t *b, enum stone color, coord_t to, selfatari_state_t *
 {
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		group_t g = s->groupids[color][i];
-		if (board_group_info(b, g).libs != 2)
+		if (group_libs(b, g) != 2)
 			continue;
-		coord_t other = board_group_other_lib(b, g, to);
+		coord_t other = group_other_lib(b, g, to);
 		
 		/* Let's look at the other liberty of that group. */
 		if (immediate_liberty_count(b, other) >= 2 ||      /* Can escape ! */
@@ -401,14 +401,14 @@ nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coo
 				foreach_neighbor(b, c, {
 					if (board_at(b, c) != other_color) continue;
 					group_t g2 = group_at(b, c);
-					if (board_group_info(b, g2).libs > 1)
+					if (group_libs(b, g2) > 1)
 						with_move_return(false);  /* Surrounding group not in atari */
 					});
 			} foreach_in_group_end;
 		}
 		
 		/* Play capture */
-		with_move_strict(b, board_group_info(b, g).lib[0], stone_other(color), {
+		with_move_strict(b, group_lib(b, g, 0), stone_other(color), {
 				assert(!group_at(b, to));
 				dead_shape = nakade_dead_shape(b, to, stone_other(color));
 		});
@@ -455,13 +455,13 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 			foreach_neighbor(b, to, {
 				group_t g = group_at(b, c);		    
 				if (board_at(b, c) == color) {
-					assert(board_group_info(b, g).libs == 1);  /* Should be in atari */
+					assert(group_libs(b, g) == 1);  /* Should be in atari */
 					standing = g;
 				}
 			});
 			assert(standing != -1);
 			
-			with_move_strict(b, board_group_info(b, standing).lib[0], stone_other(color), {
+			with_move_strict(b, group_lib(b, standing, 0), stone_other(color), {
 				/* Empty now since it's been captured */
 				coord_t empty = s->groupids[color][0];
 				would_live = !nakade_dead_shape(b, empty, stone_other(color));
@@ -494,8 +494,8 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 #define check_throw_in_or_inside_capture(b, color, to, s, capturing)			\
 	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {	\
 		group_t g2 = s->groupids[color][0];					\
-		assert(board_group_info(b, g2).libs <= 2);				\
-		if (board_group_info(b, g2).libs == 1)					\
+		assert(group_libs(b, g2) <= 2);						\
+		if (group_libs(b, g2) == 1)						\
 			return false;  /*  b */						\
 		return !capturing;							\
 	}
@@ -521,10 +521,10 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	coord_t lib2 = pass;
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		group_t g = s->groupids[stone_other(color)][i];
-		if (board_group_info(b, g).libs != 2)
+		if (group_libs(b, g) != 2)
 			continue;
 
-		coord_t this_lib2 = board_group_other_lib(b, g, to);
+		coord_t this_lib2 = group_other_lib(b, g, to);
 		if (is_pass(lib2)) 
 			lib2 = this_lib2;
 		else if (this_lib2 != lib2) {
@@ -572,13 +572,13 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	 * indicating this really is a nakade. */
 	for (int j = 0; j < s->groupcts[color]; j++) {
 		group_t g2 = s->groupids[color][j];
-		assert(board_group_info(b, g2).libs <= 2);
-		if (board_group_info(b, g2).libs == 2) {
-			if (board_group_info(b, g2).lib[0] != lib2
-			    && board_group_info(b, g2).lib[1] != lib2)
+		assert(group_libs(b, g2) <= 2);
+		if (group_libs(b, g2) == 2) {
+			if (group_lib(b, g2, 0) != lib2
+			    && group_lib(b, g2, 1) != lib2)
 				return -1;
 		} else
-			assert(board_group_info(b, g2).lib[0] == to);
+			assert(group_lib(b, g2, 0) == to);
 	}
 
 	/* No good nakade above 6 stones. */
@@ -631,10 +631,10 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 	coord_t lib2 = pass;
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		group_t g = s->groupids[stone_other(color)][i];
-		if (board_group_info(b, g).libs != 2)
+		if (group_libs(b, g) != 2)
 			continue;
 
-		coord_t this_lib2 = board_group_other_lib(b, g, to);
+		coord_t this_lib2 = group_other_lib(b, g, to);
 		if (is_pass(lib2)) 
 			lib2 = this_lib2;
 		else if (this_lib2 != lib2) {
@@ -651,13 +651,13 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 		 * indicating this really is a nakade. */
 		for (int j = 0; j < s->groupcts[color]; j++) {
 			group_t g2 = s->groupids[color][j];
-			assert(board_group_info(b, g2).libs <= 2);
-			if (board_group_info(b, g2).libs == 2) {
-				if (board_group_info(b, g2).lib[0] != lib2 &&
-				    board_group_info(b, g2).lib[1] != lib2)
+			assert(group_libs(b, g2) <= 2);
+			if (group_libs(b, g2) == 2) {
+				if (group_lib(b, g2, 0) != lib2 &&
+				    group_lib(b, g2, 1) != lib2)
 					return -1;
 			} else
-				assert(board_group_info(b, g2).lib[0] == to);
+				assert(group_lib(b, g2, 0) == to);
 		}
 	}
 	
@@ -691,8 +691,8 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 		 * X O . X
 		 * X . O X  can make trouble, bottom O is
 		 * O X X X  irrelevant. */
-		if (board_group_info(b, group_at(b, c)).lib[0] == to
-		    || board_group_info(b, group_at(b, c)).lib[1] == to)
+		if (group_lib(b, group_at(b, c), 0) == to ||
+		    group_lib(b, group_at(b, c), 1) == to)
 			touch8++;
 	});
 	if (touch8 == stones)
@@ -708,8 +708,8 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 	int ltouch8 = neighbor_count_at(b, lib2, color);
 	foreach_diag_neighbor(b, lib2, {
 		if (board_at(b, c) != color) continue;
-		if (board_group_info(b, group_at(b, c)).lib[0] == to
-		    || board_group_info(b, group_at(b, c)).lib[1] == to)
+		if (group_lib(b, group_at(b, c), 0) == to ||
+		    group_lib(b, group_at(b, c), 1) == to)
 			ltouch8++;
 	});
 	return ltouch8 == touch8;
@@ -767,17 +767,17 @@ check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	assert(s->groupcts[color] == 1);
 	group_t g = s->groupids[color][0];
 
-	assert(board_group_info(b, g).libs <= 2);
+	assert(group_libs(b, g) <= 2);
 	/* Suicide is definitely NOT ok, no matter what else
 	 * we could test. */
-	if (board_group_info(b, g).libs == 1)
+	if (group_libs(b, g) == 1)
 		return true;
 
 	/* In that case, we must be connected to at most one stone,
 	 * or throwin will not destroy any eyes. */
 	if (group_is_onestone(b, g)) {
 		/* Must be somewhat enclosed */
-		coord_t other_lib = board_group_other_lib(b, g, to);
+		coord_t other_lib = group_other_lib(b, g, to);
 		int other_own = neighbor_count_at(b, other_lib, color) - 1;
 		if (immediate_liberty_count(b, other_lib) + other_own < 2)
 			return false;
@@ -821,8 +821,7 @@ is_3lib_selfatari(board_t *b, enum stone color, coord_t to)
 
 	for (int i = 0; i < s.groupcts[color]; i++) {
 		group_t g = s.groupids[color][i];
-		group_info_t *gi = &board_group_info(b, g);
-		if (gi->libs == 3 &&
+		if (group_libs(b, g) == 3 &&
 		    three_liberty_suicide(b, g, color, to, &s))
 			return true;
 	}
@@ -910,7 +909,7 @@ selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
 	foreach_neighbor(b, coord, {
 		enum stone s = board_at(b, c);
 		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 2) {
+		if (group_libs(b, g) == 2) {
 			groups[groups_n++] = g;
 			groupsbycolor[s]++;
 			if (DEBUGL(6))
@@ -951,7 +950,7 @@ found:;
 			lib2 = mq_pick(&ccq);
 
 		} else {
-			lib2 = board_group_other_lib(b, group, coord);
+			lib2 = group_other_lib(b, group, coord);
 			if (board_is_one_point_eye(b, lib2, board_at(b, group)))
 				continue;
 			if (is_bad_selfatari(b, color, lib2))

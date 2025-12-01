@@ -75,13 +75,13 @@ dcnn_first_line_connect_blunder(board_t *b, move_t *m)
 		 *   # O X X
 		 *   # X . .
 		 *   # . . .     */
-		if (board_group_info(b, g).libs == 2 && can_capture_2lib_group(b, g, NULL))
+		if (group_libs(b, g) == 2 && can_capture_2lib_group(b, g, NULL))
 			with_move_return(true);
 		
 		/* 3 libs case */
-		if (board_group_info(b, g).libs != 3)  break;
-		for (int i = 0; i < board_group_info(b, g).libs; i++) {
-			coord_t c = board_group_info(b, g).lib[i];
+		if (group_libs(b, g) != 3)  break;
+		for (int i = 0; i < group_libs(b, g); i++) {
+			coord_t c = group_lib(b, g, i);
 			move_t m2 = move(c, stone_other(m->color));
 			if (pattern_match_l1_blunder_punish(b, &m2) != -1)
 				with_move_return(true);
@@ -147,8 +147,8 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 	with_move(b, m->coord, color, {
 		group_t g = group_at(b, m->coord);
 		if (!g)  break;
-		if (board_group_info(b, g).libs != 2)  break;	/* 2 libs */
-		if (group_stone_count(b, g, 4) < 3)    break;	/* creates own group with at least 3 stones */
+		if (group_libs(b, g) != 2)           break;	/* 2 libs */
+		if (group_stone_count(b, g, 4) < 3)  break;	/* creates own group with at least 3 stones */
 		if (can_capture_2lib_group(b, g, NULL))		/* can be captured now */
 			with_move_return(true);
 	});
@@ -292,7 +292,7 @@ really_defends_atari(board_t *b, board_t *orig_board, enum stone color, coord_t 
 	bool found = false;
 	for (int i = 0; i < targets.moves; i++) {
 		group_t g = group_at(b, targets.move[i]);  assert(g);
-		int libs = board_group_info(b, g).libs;  /* May not have 2 libs anymore */
+		int libs = group_libs(b, g);  /* May not have 2 libs anymore */
 		bool can_cap = (libs == 2 && can_capture_2lib_group(b, g, NULL));
 		if (can_cap && group_stone_count(b, g, 4) >= 3)
 			return false;

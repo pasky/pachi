@@ -846,7 +846,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 	if (new_color == S_NONE)
 		board->pat3[coord] = pattern3_hash(board, coord);
 	else
-		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
+		in_atari = (group_libs(board, group_at(board, coord)) == 1);
 	foreach_8neighbor(board, coord, {
 		/* Internally, the loop uses fn__i=[0..7]. We can use
 		 * it directly to address bits within the bitmap of the
@@ -897,11 +897,11 @@ static inline void
 board_pat3_fix(board_t *b, group_t group_from, group_t group_to)
 {
 #ifdef BOARD_PAT3
-	group_info_t *gi_from = &board_group_info(b, group_from);
-	group_info_t *gi_to = &board_group_info(b, group_to);
+	group_info_t *gi_from = group_info(b, group_from);
+	group_info_t *gi_to = group_info(b, group_to);
 	
 	if (gi_to->libs == 1) {
-		coord_t lib = board_group_info(b, group_to).lib[0];
+		coord_t lib = gi_to->lib[0];
 		if (gi_from->libs == 1) {
 			/* We removed group_from from capturable groups,
 			 * therefore switching the atari flag off.
