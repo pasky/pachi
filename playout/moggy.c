@@ -267,7 +267,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (DEBUGL(5) && q->moves)
 			mq_print_line(q, "Moggy global atari: ");
 		if (pp->fullchoose)
@@ -276,7 +276,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (DEBUGL(5))
@@ -286,7 +286,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, pp->middle_ladder);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (DEBUGL(5))
@@ -315,7 +315,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 
 		// Always defend big groups
 		enum stone to_play = stone_other(m->color);
-		enum stone color = board_at(b, group_base(g));
+		enum stone color = board_at(b, g);
 		if (to_play == color &&			// Defender
 		    group_stone_count(b, g, 5) >= 3)
 			force = true;

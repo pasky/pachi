@@ -184,7 +184,7 @@ void
 group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
                   mq_t *q, bool middle_ladder)
 {
-	enum stone color = board_at(b, group_base(group));
+	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	assert(color != S_OFFBOARD && color != S_NONE);

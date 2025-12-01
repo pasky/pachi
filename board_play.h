@@ -17,7 +17,7 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(10))
 		fprintf(stderr, "Group %s (%d libs): Adding liberty %s\n",
-			coord2sstr(group_base(group)), board_group_info(board, group).libs, coord2sstr(coord));
+			coord2sstr(group), board_group_info(board, group).libs, coord2sstr(coord));
 
 	group_info_t *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
@@ -51,7 +51,7 @@ board_group_rmlib(board_t *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(10))
 		fprintf(stderr, "Group %s (%d libs): Removing liberty %s\n",
-			coord2sstr(group_base(group)), board_group_info(board, group).libs, coord2sstr(coord));
+			coord2sstr(group), board_group_info(board, group).libs, coord2sstr(coord));
 
 	/* Normal would be to loop through the group libs (i < gi->libs), but
 	 * fixed loop on all GROUP_KEEP_LIBS is faster (unused slots are 0). */
@@ -150,7 +150,7 @@ add_to_group(board_t *board, group_t group, coord_t prevstone, coord_t coord)
 	if (DEBUGL(10))
 		fprintf(stderr, "add_to_group: added (%s ->) %s (-> %s) to group %s\n",
 			coord2sstr(prevstone), coord2sstr(coord), coord2sstr(groupnext_at(board, coord)),
-			coord2sstr(group_base(group)));
+			coord2sstr(group));
 }
 
 static void profiling_noinline
@@ -158,7 +158,7 @@ merge_groups(board_t *board, group_t group_to, group_t group_from)
 {
 	if (DEBUGL(10))
 		fprintf(stderr, "board_play_raw: merging groups %s -> %s\n",
-			coord2sstr(group_base(group_from)), coord2sstr(group_base(group_to)));
+			coord2sstr(group_from), coord2sstr(group_to));
 	group_info_t *gi_from = &board_group_info(board, group_from);
 	group_info_t *gi_to = &board_group_info(board, group_to);
 #ifdef FULL_BOARD
@@ -196,11 +196,11 @@ merge_groups(board_t *board, group_t group_to, group_t group_from)
 	board_undo_t *u = board->u;
 	u->merged[++u->nmerged_tmp].last = last_in_group;
 #endif
-	groupnext_at(board, last_in_group) = groupnext_at(board, group_base(group_to));
-	groupnext_at(board, group_base(group_to)) = group_base(group_from);
+	groupnext_at(board, last_in_group) = groupnext_at(board, group_to);
+	groupnext_at(board, group_to) = group_from;
 	memset(gi_from, 0, sizeof(group_info_t));
 
-	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: merged group: %d\n", group_base(group_to));
+	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: merged group: %d\n", group_to);
 }
 
 static group_t profiling_noinline
@@ -226,7 +226,7 @@ new_group(board_t *board, coord_t coord)
 
 	if (DEBUGL(10))
 		fprintf(stderr, "new_group: added %s to group %s\n",
-			coord2sstr(coord), coord2sstr(group_base(group)));
+			coord2sstr(coord), coord2sstr(group));
 
 	return group;
 }
@@ -241,7 +241,7 @@ play_one_neighbor(board_t *board, coord_t coord, enum stone color,
 	 * I guess better help branch predictor even if that means extra work. */
 	board_group_rmlib(board, ngroup, coord);
 	if (DEBUGL(10))  fprintf(stderr, "board_play_raw: reducing libs for %s group %s\n",
-				 stone2str(ncolor), coord2sstr(group_base(ngroup)));
+				 stone2str(ncolor), coord2sstr(ngroup));
 
 	if (ncolor == color) {
 		if (ngroup != group) {
@@ -254,7 +254,7 @@ play_one_neighbor(board_t *board, coord_t coord, enum stone color,
 	} else { // ncolor == other_color
 		if (DEBUGL(10)) {
 			group_info_t *gi = &board_group_info(board, ngroup);
-			fprintf(stderr, "testing captured group %s: ", coord2sstr(group_base(ngroup)));
+			fprintf(stderr, "testing captured group %s: ", coord2sstr(ngroup));
 			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
 				fprintf(stderr, "%s ", coord2sstr(gi->lib[i]));
 			fprintf(stderr, "\n");
@@ -349,7 +349,7 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 
 		board_group_rmlib(board, group, coord);
 		if (DEBUGL(10))
-			fprintf(stderr, "board_play_raw: reducing libs for group %s\n", coord2sstr(group_base(group)));
+			fprintf(stderr, "board_play_raw: reducing libs for group %s\n", coord2sstr(group));
 
 		if (board_group_captured(board, group)) {
 			ko_caps += board_group_capture(board, group);

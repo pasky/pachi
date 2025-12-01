@@ -463,12 +463,12 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 			
 			with_move_strict(b, board_group_info(b, standing).lib[0], stone_other(color), {
 				/* Empty now since it's been captured */
-				coord_t empty = group_base(s->groupids[color][0]);
+				coord_t empty = s->groupids[color][0];
 				would_live = !nakade_dead_shape(b, empty, stone_other(color));
 			});
 		}
 		else {  /* Empty now since it's been captured */			
-			coord_t empty = group_base(s->groupids[color][0]);
+			coord_t empty = s->groupids[color][0];
 			would_live = !nakade_dead_shape(b, empty, stone_other(color));
 		}
 	    });

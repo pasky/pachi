@@ -152,9 +152,9 @@ static int
 foreach_in_connected_groups_(board_t *b, enum stone color, group_t g, 
 			     foreach_in_connected_groups_t f, void *data, int *visited)
 {
-	if (visited[group_base(g)])
+	if (visited[g])
 		return 0;
-	visited[group_base(g)] = 1;
+	visited[g] = 1;
 
 	foreach_in_group(b, g) {
 		if (f(b, color, c, data) == -1)
@@ -197,10 +197,10 @@ static int
 foreach_connected_group_(board_t *b, enum stone color, group_t g, 
 			 foreach_connected_group_t f, void *data, int *visited)
 {
-	if (visited[group_base(g)])
+	if (visited[g])
 		return 0;
 
-	visited[group_base(g)] = 1;
+	visited[g] = 1;
 	if (f(b, color, g, data) == -1)
 		return -1;
 

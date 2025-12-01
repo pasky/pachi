@@ -145,7 +145,7 @@ undo_merge(board_t *b, board_undo_t *u, move_t *m)
 			
 		board_group_info(b, old_group) = merged[i].info;
 			
-		groupnext_at(b, group_base(group)) = groupnext_at(b, merged[i].last);
+		groupnext_at(b, group) = groupnext_at(b, merged[i].last);
 		groupnext_at(b, merged[i].last) = 0;
 
 #if 0

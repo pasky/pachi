@@ -24,7 +24,7 @@ bool
 is_border_ladder(board_t *b, group_t laddered)
 {
 	coord_t coord = board_group_info(b, laddered).lib[0];
-	enum stone lcolor = board_at(b, group_base(laddered));
+	enum stone lcolor = board_at(b, laddered);
 	
 	if (can_countercapture(b, laddered, NULL))
 		return false;
@@ -207,7 +207,7 @@ bool
 is_middle_ladder(board_t *b, group_t laddered)
 {
 	coord_t coord = board_group_info(b, laddered).lib[0];
-	enum stone lcolor = board_at(b, group_base(laddered));
+	enum stone lcolor = board_at(b, laddered);
 
 	/* If we can move into empty space or do not have enough space
 	 * to escape, this is obviously not a ladder. */
@@ -230,7 +230,7 @@ is_middle_ladder(board_t *b, group_t laddered)
 bool
 is_middle_ladder_any(board_t *b, group_t laddered)
 {
-	enum stone lcolor = board_at(b, group_base(laddered));
+	enum stone lcolor = board_at(b, laddered);
 	
 	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 	return (length != 0);
@@ -241,7 +241,7 @@ wouldbe_ladder(board_t *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
 	
-	enum stone lcolor = board_at(b, group_base(group));
+	enum stone lcolor = board_at(b, group);
 	enum stone other_color = stone_other(lcolor);
 	coord_t escapelib = board_group_other_lib(b, group, chaselib);
 
@@ -273,7 +273,7 @@ wouldbe_ladder_any(board_t *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
 	
-	enum stone lcolor = board_at(b, group_base(group));
+	enum stone lcolor = board_at(b, group);
 	enum stone other_color = stone_other(lcolor);
 
 	// FIXME should assert instead here

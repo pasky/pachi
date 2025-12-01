@@ -271,8 +271,7 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 
 #define groupnext_at(b_, c) ((b_)->p[c])
 
-#define group_base(g_) (g_)
-#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
+#define group_is_onestone(b_, g_) (groupnext_at(b_, g_) == 0)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 /* board_group_other_lib() makes sense only for groups with two liberties. */
@@ -398,7 +397,7 @@ const char *rules2str(enum rules rules);
 /* For each stone in group */
 #define foreach_in_group(b, group) \
 	do { \
-		for (coord_t c = group_base(group); c; c = groupnext_at((b), c))
+		for (coord_t c = group; c; c = groupnext_at((b), c))
 #define foreach_in_group_end \
 	} while (0)
 

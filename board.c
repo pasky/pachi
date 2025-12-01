@@ -364,7 +364,7 @@ board_hprint(board_t *board, FILE *f, board_print_handler handler, void *data)
 static void
 cprint_group(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
-	sbprintf(buf, "%d ", group_base(group_at(board, c)));
+	sbprintf(buf, "%d ", group_at(board, c));
 }
 
 void
@@ -957,7 +957,7 @@ board_capturable_rm(board_t *board, group_t group, coord_t lib)
 			board->c[i] = board->c[--board->clen];
 			return;
 		}
-	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group_base(group)));
+	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group));
 	assert(0);
 #endif
 }
