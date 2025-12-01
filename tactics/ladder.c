@@ -194,10 +194,10 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 	/* Check ko */
 	if (b->ko.coord != pass)
 		foreach_neighbor(b, last_move(b).coord, {
-				if (group_at(b, c) == laddered) {
-					if (DEBUGL(8))  fprintf(stderr, "* ko, no ladder\n");
-					return 0;
-				}
+			if (group_at(b, c) == laddered) {
+				if (DEBUGL(8))  fprintf(stderr, "* ko, no ladder\n");
+				return 0;
+			}
 		});
 
 	/* Check countercaptures */
@@ -371,9 +371,9 @@ useful_ladder(board_t *b, group_t laddered)
 				
 				coord_t cap = group_lib(b, group_at(b, lib), 0);
 				with_move(b, cap, stone_other(lcolor), {
-						assert(!group_at(b, lib));
-						cap_ok = true;
-						still_safe = dragon_is_safe(b, group_at(b, cap), stone_other(lcolor));
+					assert(!group_at(b, lib));
+					cap_ok = true;
+					still_safe = dragon_is_safe(b, group_at(b, cap), stone_other(lcolor));
 				});
 			});
 		}

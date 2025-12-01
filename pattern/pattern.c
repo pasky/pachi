@@ -304,7 +304,7 @@ is_neighbor_group(board_t *b, coord_t coord, group_t g)
 {
 	assert(!is_pass(coord));  assert(g);
 	foreach_neighbor(b, coord, {
-			if (group_at(b, c) == g)  return true;
+		if (group_at(b, c) == g)  return true;
 	});
 	return false;
 }
@@ -626,9 +626,9 @@ owner_around(board_t *b, ownermap_t *ownermap, coord_t coord)
 	if (own == S_NONE)  return S_NONE;
 	
 	foreach_neighbor(b, coord, {
-			if (board_at(b, c) == S_OFFBOARD)  continue;
-			enum stone own2 = ownermap_color(ownermap, c, 0.67);
-			if (own2 != own)  return S_NONE;
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		enum stone own2 = ownermap_color(ownermap, c, 0.67);
+		if (own2 != own)  return S_NONE;
 	});
 	return own;
 }
@@ -758,11 +758,11 @@ safe_diag_neighbor_reaches_two_opp_groups(board_t *b, move_t *m,
 		
 		/* Find how many known opponent groups we reach */
 		foreach_neighbor(b, c, {
-				if (board_at(b, c) != other_color) continue;
-				group_t g = group_at(b, c);
-				for (int i = 0; i < ngroups; i++)
-					if (gs[i] == g)  {  found++;  gs[i] = 0;  break;  }
-			});
+			if (board_at(b, c) != other_color) continue;
+			group_t g = group_at(b, c);
+			for (int i = 0; i < ngroups; i++)
+				if (gs[i] == g)  {  found++;  gs[i] = 0;  break;  }
+		});
 		if (found >= 2)  return true;
 	});
 	
@@ -796,18 +796,18 @@ pattern_match_cut(board_t *b, move_t *m, ownermap_t *ownermap)
 
 	/* Find neighbor groups */
 	foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) != other_color) continue;
-			group_t g = group_at(b, c);
-			if (group_libs(b, g) <= 2) continue;  /* Not atari / capture */
-			if (group_is_onestone(b, g)) continue;
-
-			int found = 0;
-			for (int i = 0; i < ngroups; i++)
-				if (g == groups[i])  found = 1;
-			if (found)  continue;
-			
-			groups[ngroups++] = g;
-		});
+		if (board_at(b, c) != other_color) continue;
+		group_t g = group_at(b, c);
+		if (group_libs(b, g) <= 2) continue;  /* Not atari / capture */
+		if (group_is_onestone(b, g)) continue;
+		
+		int found = 0;
+		for (int i = 0; i < ngroups; i++)
+			if (g == groups[i])  found = 1;
+		if (found)  continue;
+		
+		groups[ngroups++] = g;
+	});
 
 	if (ngroups >= 2 &&
 	    safe_diag_neighbor_reaches_two_opp_groups(b, m, groups, ngroups) &&

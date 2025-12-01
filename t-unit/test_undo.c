@@ -106,17 +106,17 @@ show_suicide_info(board_t *b, board_t *orig, coord_t c, enum stone color)
 	int groups[4] = { 0, };
 	int n = 0, stones = 0;
 	foreach_neighbor(orig, c, {
-			if (board_at(orig, c) != color)
-				continue;
-			group_t g = group_at(orig, c);
-			int i;
-			for (i = 0; groups[i] && groups[i] != g; i++)
-				;
-			groups[i] = g;
-			if (i > n)
-				n = i;
-			stones += group_stone_count(orig, g, 400);
-		});
+		if (board_at(orig, c) != color)
+			continue;
+		group_t g = group_at(orig, c);
+		int i;
+		for (i = 0; groups[i] && groups[i] != g; i++)
+			;
+		groups[i] = g;
+		if (i > n)
+			n = i;
+		stones += group_stone_count(orig, g, 400);
+	});
 
 	if (++n > 1)
 		fprintf(stderr, "multi-group suicide: %i groups    %i stones\n", n, stones);

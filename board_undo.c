@@ -209,13 +209,13 @@ restore_enemies(board_t *b, board_undo_t *u, move_t *m)
 
 			// Update liberties of neighboring groups
 			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->merged[0].group || g == u->merged[1].group || g == u->merged[2].group || g == u->merged[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j]);
-				});
+				if (board_at(b, c) != color)
+					continue;
+				group_t g = group_at(b, c);
+				if (g == u->merged[0].group || g == u->merged[1].group || g == u->merged[2].group || g == u->merged[3].group)
+					continue;
+				board_group_rmlib(b, g, stones[j]);
+			});
 		}
 	}
 }
@@ -242,7 +242,7 @@ board_undo_stone(board_t *b, board_undo_t *u, move_t *m)
 	groupnext_at(b, coord) = u->next_at;
 	
 	foreach_neighbor(b, coord, {
-			dec_neighbor_count_at(b, c, color);
+		dec_neighbor_count_at(b, c, color);
 	});
 
 	// Restore enemy groups
@@ -282,14 +282,14 @@ restore_suicide(board_t *b, board_undo_t *u, move_t *m)
 
 			// Update liberties of neighboring groups
 			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->enemies[0].group || g == u->enemies[1].group || 
-					    g == u->enemies[2].group || g == u->enemies[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j]);
-				});
+				if (board_at(b, c) != color)
+					continue;
+				group_t g = group_at(b, c);
+				if (g == u->enemies[0].group || g == u->enemies[1].group || 
+				    g == u->enemies[2].group || g == u->enemies[3].group)
+					continue;
+				board_group_rmlib(b, g, stones[j]);
+			});
 		}
 	}
 }

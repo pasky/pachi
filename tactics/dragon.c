@@ -175,14 +175,14 @@ foreach_in_connected_groups_(board_t *b, enum stone color, group_t g,
 		coord_t lib = group_lib(b, g, i);
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
-				if (board_at(b, c) != color)
-					continue;
-				group_t g2 = group_at(b, c);
-				if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
-					continue;
-				if (foreach_in_connected_groups_(b, color, g2, f, data, visited) == -1)
-					return -1;
-			});
+			if (board_at(b, c) != color)
+				continue;
+			group_t g2 = group_at(b, c);
+			if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
+				continue;
+			if (foreach_in_connected_groups_(b, color, g2, f, data, visited) == -1)
+				return -1;
+		});
 	}
 	return 0;
 }
@@ -227,14 +227,14 @@ foreach_connected_group_(board_t *b, enum stone color, group_t g,
 		coord_t lib = group_lib(b, g, i);
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
-				if (board_at(b, c) != color)
-					continue;
-				group_t g2 = group_at(b, c);
-				if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
-					continue;
-				if (foreach_connected_group_(b, color, g2, f, data, visited) == -1)
-					return -1;
-			});
+			if (board_at(b, c) != color)
+				continue;
+			group_t g2 = group_at(b, c);
+			if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
+				continue;
+			if (foreach_connected_group_(b, color, g2, f, data, visited) == -1)
+				return -1;
+		});
 	}
 	return 0;
 }
@@ -480,14 +480,14 @@ is_real_two_point_eye(board_t *b, coord_t to, enum stone color, coord_t *pother)
 		return false;
 	coord_t other = pass;
 	foreach_neighbor(b, to, {	/* Find the other point ... */
-			if ((board_at(b, c) == S_NONE ||
-			     board_at(b, c) == stone_other(color)) &&
-			    (neighbor_count_at(b, c, color) +	    
-			     neighbor_count_at(b, c, S_OFFBOARD)) == 3) {
-				other = c;
-				break;
-			}
-		});
+		if ((board_at(b, c) == S_NONE ||
+		     board_at(b, c) == stone_other(color)) &&
+		    (neighbor_count_at(b, c, color) +	    
+		     neighbor_count_at(b, c, S_OFFBOARD)) == 3) {
+			other = c;
+			break;
+		}
+	});
 	*pother = other;
 	
 	return (!is_pass(other) && 
