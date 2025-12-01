@@ -19,6 +19,11 @@ playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool r
 	coord_t coord = m->coord;
 	if (coord == pass) return false;
 
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(m->color));
+	assert(sane_coord(coord));
+#endif
+
 	bool permit =  (board_permit(b, m, NULL) &&
 			(!p->permit || p->permit(p, b, m, alt, rnd)));
 
