@@ -212,6 +212,9 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 } board_t;
 
 
+#define playout_board(b) ((b)->playout_board)
+
+
 #ifdef BOARD_SIZE
 #define board_rsize(b)		(BOARD_SIZE)
 #define board_rsize2(b)		(BOARD_SIZE * BOARD_SIZE)
@@ -271,19 +274,22 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 
 #define groupnext_at(b_, c) ((b_)->p[c])
 
-#define group_is_onestone(b_, g_) (groupnext_at(b_, g_) == 0)
-#define board_group_info(b_, g_) ((b_)->gi[(g_)])
-#define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
-/* board_group_other_lib() makes sense only for groups with two liberties. */
-#define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
+static group_info_t *group_info(board_t *b, group_t g);
+static int           group_libs(board_t *b, group_t g);
+static coord_t       group_lib(board_t *b, group_t g, int i);
+/* Determine number of stones in a group, up to @max stones. */
+static int           group_stone_count(board_t *b, group_t group, int max);
+static bool          group_is_onestone(board_t *b, group_t g);
+static bool          group_captured(board_t *b, group_t g);
+/* group_other_lib() makes sense only for groups with two liberties. */
+static coord_t       group_other_lib(board_t *b, group_t g, coord_t lib);
+
 
 #ifdef BOARD_HASH_COMPAT
 #define hash_at(coord, color) (*(&board_statics.h[0][0] + ((color) == S_BLACK ? board_statics.max_coords : 0) + (coord)))
 #else
 #define hash_at(coord, color) (board_statics.h[coord][(color) == S_BLACK])
 #endif
-
-#define playout_board(b) ((b)->playout_board)
 
 board_t *board_new(int size, char *fbookfile);
 void board_delete(board_t **board);
@@ -328,9 +334,6 @@ static bool board_is_valid_play(board_t *b, enum stone color, coord_t coord);
 static bool board_is_valid_move(board_t *b, move_t *m);
 /* Returns true if ko was just taken. */
 static bool board_playing_ko_threat(board_t *b);
-
-/* Determine number of stones in a group, up to @max stones. */
-static int group_stone_count(board_t *b, group_t group, int max);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(board_t *b, coord_t coord, enum stone eye_color);
@@ -438,6 +441,55 @@ const char *rules2str(enum rules rules);
 	} while(0)
 
 
+/* Group functions */
+
+static inline group_info_t *  __attribute__((always_inline))
+group_info(board_t *b, group_t g)
+{
+	return (&b->gi[g]);
+}
+
+static inline int  __attribute__((always_inline))
+group_libs(board_t *b, group_t g)
+{
+	return (b->gi[g].libs);
+}
+
+static inline coord_t  __attribute__((always_inline))
+group_lib(board_t *b, group_t g, int i)
+{
+	return (b->gi[g].lib[i]);
+}
+
+static inline int __attribute__((always_inline))
+group_stone_count(board_t *b, group_t group, int max)
+{
+	int n = 0;
+	foreach_in_group(b, group) {
+		n++;
+		if (n >= max) return max;
+	} foreach_in_group_end;
+	return n;
+}
+
+static inline bool  __attribute__((always_inline))
+group_is_onestone(board_t *b, group_t g)
+{
+	return (groupnext_at(b, g) == 0);
+}
+
+static inline bool  __attribute__((always_inline))
+group_captured(board_t *b, group_t g)
+{
+	return (group_libs(b, g) == 0);
+}
+
+static inline coord_t  __attribute__((always_inline))
+group_other_lib(board_t *b, group_t g, coord_t lib)
+{
+	return (group_lib(b, g, 0) != lib ? group_lib(b, g, 0) : group_lib(b, g, 1));
+}
+
 /* XXX doesn't handle handicap placement phase */
 static inline enum stone
 board_to_play(board_t *b)
@@ -495,7 +547,6 @@ board_is_valid_play_no_suicide(board_t *b, enum stone color, coord_t coord)
 	return false;  // Suicide
 }
 
-
 static inline bool
 board_is_valid_move(board_t *b, move_t *m)
 {
@@ -506,18 +557,6 @@ static inline bool
 board_playing_ko_threat(board_t *b)
 {
 	return !is_pass(b->ko.coord);
-}
-
-
-static inline int
-group_stone_count(board_t *b, group_t group, int max)
-{
-	int n = 0;
-	foreach_in_group(b, group) {
-		n++;
-		if (n >= max) return max;
-	} foreach_in_group_end;
-	return n;
 }
 
 
