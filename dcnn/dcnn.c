@@ -142,6 +142,10 @@ dcnn_init(board_t *b)
 void
 dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(is_player_color(color));
+#endif
 	double time_start = time_now();
 	dcnn->eval(b, color, result);
 	
@@ -161,6 +165,10 @@ dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *owne
 void
 dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(is_player_color(color));
+#endif
 	dcnn_evaluate_raw(b, color, result, ownermap, debugl, extra_log);
 	dcnn_fix_blunders(b, color, result, ownermap, debugl);
 }
