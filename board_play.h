@@ -303,6 +303,17 @@ board_play_outside(board_t *board, move_t *m, int f)
 	return group;
 }
 
+static bool
+capturing_something(board_t *board, coord_t coord)
+{
+	foreach_neighbor(board, coord, {
+		group_t g = group_at(board, c);
+		if (g && board_group_info(board, g).libs == 1)
+			return true;
+	});
+	return false;
+}
+
 /* We played in an eye-like shape. Either we capture at least one of the eye
  * sides in the process of playing, or return -1. */
 static int profiling_noinline
@@ -310,35 +321,15 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 {
 	coord_t coord = m->coord;
 	enum stone color = m->color;
+
 	/* Check ko: Capture at a position of ko capture one move ago */
-	if (unlikely(color == board->ko.color && coord == board->ko.coord)) {
-		if (DEBUGL(10))
-			fprintf(stderr, "board_check: ko at %s color %s\n", coord2sstr(coord), stone2str(color));
+	if (unlikely(coord == board->ko.coord && color == board->ko.color))
 		return -1;
-	} else if (DEBUGL(10))
-		fprintf(stderr, "board_check: no ko at %s %s - ko is %s %s\n",
-			stone2str(color), coord2sstr(coord),
-			stone2str(board->ko.color), coord2sstr(board->ko.coord));
 
 	move_t ko = { pass, S_NONE };
 
-	int captured_groups = 0;
-
-	foreach_neighbor(board, coord, {
-		group_t g = group_at(board, c);
-		if (DEBUGL(10))
-			fprintf(stderr, "board_check: group %s has %d libs\n",
-				coord2sstr(g), board_group_info(board, g).libs);
-		captured_groups += (board_group_info(board, g).libs == 1);
-	});
-
-	if (likely(captured_groups == 0)) {
-		if (DEBUGL(10)) {
-			// board_print(board, stderr);
-			fprintf(stderr, "board_check: one-stone suicide\n");
-		}
-		return -1;
-	}
+	if (likely(!capturing_something(board, coord)))
+		return -1;  /* one-stone suicide */
 
 #ifdef FULL_BOARD
 	board_rmf(board, f);
@@ -365,7 +356,7 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 			cap_at = c;
 		}
 	});
-	if (ko_caps == 1) {
+	if (unlikely(ko_caps == 1)) {
 		ko.color = stone_other(color);
 		ko.coord = cap_at; // unique
 		board->last_ko = ko;
