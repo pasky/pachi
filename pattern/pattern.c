@@ -1045,7 +1045,7 @@ pattern_match_wedge(board_t *b, move_t *m)
 				    neighbor_count_at(b, c, m->color)    != 0 ||
 				    !check_wedge_neighbors(b, c, m->color))  return -1;
 				break;
-			case 3: if (group_libs(b, g) <= 2)  return -1; /* short of libs */
+			case 3: if (!g || group_libs(b, g) <= 2)  return -1; /* no group or short of libs */
 				break;
 			case 2: if (board_at(b, c) != other_color)  break;
 				groups++;

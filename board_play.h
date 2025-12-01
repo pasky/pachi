@@ -124,13 +124,13 @@ board_group_capture(board_t *board, group_t group)
 	enum stone other_color = stone_other(color);
 	int stones = 0;
 
+	group_info_t *gi = group_info(board, group);
 	foreach_in_group(board, group) {
 		board->captures[other_color]++;
 		board_remove_stone(board, group, c, color);
 		stones++;
 	} foreach_in_group_end;
 
-	group_info_t *gi = group_info(board, group);
 	memset(gi, 0, sizeof(*gi));
 
 	return stones;
@@ -209,6 +209,10 @@ static group_t profiling_noinline
 new_group(board_t *board, coord_t coord)
 {
 	group_t group = coord;
+
+	group_at(board, coord) = group;
+	groupnext_at(board, coord) = 0;
+
 	group_info_t *gi = group_info(board, group);
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
@@ -218,9 +222,6 @@ new_group(board_t *board, coord_t coord)
 #endif
 			gi->lib[gi->libs++] = c;
 	});
-
-	group_at(board, coord) = group;
-	groupnext_at(board, coord) = 0;
 
 #ifdef FULL_BOARD
 	if (gi->libs == 1)  board_capturable_add(board, group, gi->lib[0]);

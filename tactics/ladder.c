@@ -61,8 +61,9 @@ is_border_ladder(board_t *b, group_t laddered)
 	/* ...or can't block where we need because of shortage
 	 * of liberties. */
 	group_t g1 = group_atxy(b, x + xd - yd * dd, y + yd - xd * dd);
-	int libs1 = group_libs(b, g1);
 	group_t g2 = group_atxy(b, x - xd - yd * dd, y - yd - xd * dd);
+	if (!g1 || !g2)  return false;
+	int libs1 = group_libs(b, g1);
 	int libs2 = group_libs(b, g2);
 	if (DEBUGL(8))  fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);	
 	/* Already in atari? */

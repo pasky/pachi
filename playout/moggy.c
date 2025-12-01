@@ -392,7 +392,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Nothing there normally since opponent avoided bad selfatari ... */
-	if (group_libs(b, group) == 2) {
+	if (group && group_libs(b, group) == 2) {
 		group_2lib_capture_check(b, group, stone_other(m->color), q, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty

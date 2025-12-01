@@ -142,7 +142,11 @@ undo_merge(board_t *b, board_undo_t *u, move_t *m)
 	// Others groups, in reverse order ...
 	for (int i = u->nmerged - 1; i > 0; i--) {
 		group_t old_group = merged[i].group;
-			
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
 		*group_info(b, old_group) = merged[i].info;
 			
 		groupnext_at(b, group) = groupnext_at(b, merged[i].last);
@@ -184,7 +188,11 @@ restore_enemies(board_t *b, board_undo_t *u, move_t *m)
 	undo_enemy_t *enemy = u->enemies;
 	for (int i = 0; i < u->nenemies; i++) {
 		group_t old_group = enemy[i].group;
-			
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
 		*group_info(b, old_group) = enemy[i].info;
 			
 		coord_t *stones = enemy[i].stones;
@@ -253,9 +261,13 @@ restore_suicide(board_t *b, board_undo_t *u, move_t *m)
 	undo_enemy_t *enemy = u->enemies;
 	for (int i = 0; i < u->nenemies; i++) {
 		group_t old_group = enemy[i].group;
-			
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
 		*group_info(b, old_group) = enemy[i].info;
-			
+
 		coord_t *stones = enemy[i].stones;
 		if (!stones)  continue;
 

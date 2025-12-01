@@ -149,11 +149,15 @@ worker_thread(void *ctx_)
 		bool already_have = n->is_expanded;
 		enum stone node_color = stone_other(color);
 		assert(node_color == t->root_color);
-		
+
+		/* Make EXTRA_CHECKS happy:
+		 * copy main board so it doesn't get with_move()'d.
+		 * (ok here actually, other threads are waiting). */
+		board_t b2;  board_copy(&b2, b);
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, b, color, u, 1);
+			tree_expand_node(t, n, &b2, color, u, 1);
 		if (genmove_pondering(u) && using_dcnn(b))
-			uct_expand_next_best_moves(u, t, b, color);
+			uct_expand_next_best_moves(u, t, &b2, color);
 		
 		if (DEBUGL(2) && already_have && !restarted) {  /* Show previously computed priors */
 			print_joseki_moves(joseki_dict, b, color);

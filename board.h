@@ -580,7 +580,7 @@ board_is_valid_play(board_t *b, enum stone color, coord_t coord)
 	if (b->ko.coord == coord && b->ko.color == color) return false;
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
-		if (group_libs(b, g) == 1)
+		if (g && group_libs(b, g) == 1)
 			return true;
 	});
 	return false;

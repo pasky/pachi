@@ -1007,7 +1007,7 @@ selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
 	foreach_neighbor(b, coord, {
 		enum stone s = board_at(b, c);
 		group_t g = group_at(b, c);
-		if (group_libs(b, g) == 2) {
+		if (g && group_libs(b, g) == 2) {
 			groups[groups_n++] = g;
 			groupsbycolor[s]++;
 			if (DEBUGL(6))
