@@ -280,6 +280,7 @@ engine_board_print(engine_t *e, board_t *b, FILE *f)
 void
 engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
+	assert(is_player_color(color));
 	e->best_moves(e, b, ti, color, best);
 }
 
