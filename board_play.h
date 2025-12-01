@@ -378,7 +378,7 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 	return !!group;
 }
 
-static int __attribute__((flatten))
+static int
 board_play_f(board_t *board, move_t *m, int f)
 {
 	if (DEBUGL(10))
