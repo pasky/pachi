@@ -452,12 +452,12 @@ board_is_valid_play(board_t *b, enum stone color, coord_t coord)
 	
 	/* Play within {true,false} eye-ish formation */
 	if (b->ko.coord == coord && b->ko.color == color) return false;
-	int groups_in_atari = 0;
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
-		groups_in_atari += (board_group_info(b, g).libs == 1);
+		if (board_group_info(b, g).libs == 1)
+			return true;
 	});
-	return !!groups_in_atari;
+	return false;
 }
 
 /* Check group suicides, slower than board_is_valid_play() */
