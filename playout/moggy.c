@@ -331,7 +331,8 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	if (PLDEBUGL(5))
 		mq_print_line(q, "Local atari");
 
-	return (force || pp->lcapturerate > fast_random(100));
+	return (q->moves &&
+		(force || pp->lcapturerate > fast_random(100)));
 }
 
 
@@ -623,8 +624,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		/* Local group in atari? */
 		if (true) {  // pp->lcapturerate check in local_atari_check()
 			mq_t q;  mq_init(&q);
-			if (local_atari_check(p, b, &last_move(b), &q) && 
-			    q.moves > 0)
+			if (local_atari_check(p, b, &last_move(b), &q))
 				return mq_pick(&q);
 		}
 
