@@ -89,48 +89,47 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");  /* gtp prefix */
 
 	if (e->best_moves) {
-		printf("gfx/Best Moves/gogui-best_moves\n");
-		printf("gfx/Best Winrates/gogui-winrates\n");
+		printf("gfx/Best Moves/gogui-best_moves/Show engine best moves\n");
+		printf("gfx/Best Winrates/gogui-winrates/Show best moves' winrates\n");
 	}
 	if (e->ownermap) {
-		printf("gfx/Influence/gogui-influence\n");
-		printf("gfx/Score Est/gogui-score_est\n");
+		printf("gfx/Influence/gogui-influence/Show black and white areas of influence\n");
+		printf("gfx/Score Estimate/gogui-score_est/Score estimate\n");
 	}
 	if (e->dead_groups) {
-		printf("gfx/Final Score/gogui-final_score\n");
-		printf("plist/Dead Groups/final_status_list dead\n");
-		//printf("plist/Final Status List Dead/final_status_list dead\n");
+		printf("gfx/Final Score/gogui-final_score/Official score\n");
+		printf("plist/Dead Stones/final_status_list dead/Show dead stones\n");
 		//printf("plist/Final Status List Alive/final_status_list alive\n");
 		//printf("plist/Final Status List Seki/final_status_list seki\n");
 		//printf("plist/Final Status List Black/final_status_list black_territory\n");
 		//printf("plist/Final Status List White/final_status_list white_territory\n");
 	}
 	if (str_prefix("UCT", e->name) && using_joseki(b)) {
-		printf("gfx/Joseki Moves/gogui-joseki_moves\n");
-		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
+		printf("gfx/Joseki Moves/gogui-joseki_moves/Show engine's joseki moves\n");
+		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p/Show joseki spatial pattern at selected coordinate\n");
 	}
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (str_prefix("UCT", e->name) && using_dcnn(b)) {
-		printf("gfx/DCNN Best Moves/gogui-dcnn_best\n");
-		printf("gfx/DCNN Color Map/gogui-dcnn_colors\n");
-		printf("gfx/DCNN Ratings/gogui-dcnn_rating\n");
+		printf("gfx/DCNN Best Moves/gogui-dcnn_best/Show neural network best moves\n");
+		printf("gfx/DCNN Color Map/gogui-dcnn_colors/Show neural network ratings (red=best)\n");
+		printf("gfx/DCNN Ratings/gogui-dcnn_rating/Show neural network ratings\n");
 	}
 #endif
 	if (str_prefix("UCT", e->name) && using_patterns()) {
-		printf("gfx/Pattern Best Moves/gogui-pattern_best\n");
-		printf("gfx/Pattern Color Map/gogui-pattern_colors\n");
-		printf("gfx/Pattern Ratings/gogui-pattern_rating\n");
-		printf("gfx/Pattern Features At/gogui-pattern_features %%p\n");
-		printf("gfx/Pattern Gammas At/gogui-pattern_gammas %%p\n");
-		printf("gfx/Set Spatial Size/gogui-spatial_size %%o\n");
-		printf("gfx/Show Spatial/gogui-show_spatial %%p\n");
+		printf("gfx/Pattern Best Moves/gogui-pattern_best/Show pattern best moves\n");
+		printf("gfx/Pattern Color Map/gogui-pattern_colors/Show pattern ratings (red=best)\n");
+		printf("gfx/Pattern Ratings/gogui-pattern_rating/Show pattern ratings\n");
+		printf("gfx/Pattern Features At/gogui-pattern_features %%p/Show pattern features at selected coordinate\n");
+		printf("gfx/Pattern Gammas At/gogui-pattern_gammas %%p/Show pattern features and gammas at selected coordinate\n");
+		printf("gfx/Set Spatial Size/gogui-spatial_size %%o/Set spatial pattern size for Show Spatial command\n");
+		printf("gfx/Show Spatial/gogui-show_spatial %%p/Show spatial pattern at selected coordinate\n");
 	}
 	if (str_prefix("UCT", e->name)) {
-		printf("gfx/Playout Moves/gogui-playout_moves\n");
-		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
-		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
-		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
-		printf("gfx/Live gfx = None/gogui-livegfx\n");
+		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
+		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves/Show best moves while engine is thinking\n");
+		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq/Show best sequence while engine is thinking\n");
+		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates/Show best moves' winrates while engine is thinking\n");
+		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
 
 	/* Show debugging commands by default ? */
@@ -142,16 +141,16 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	bool can_toggle = (gogui_version >= GOGUI_VERSION(1, 4, 12) && gogui_version < GOGUI_VERSION(1, 5, 0));
 	printf("gfx/ /echo\n");
 	if (!debugging_commands) {
-		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands\n");
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands/Double click to show debugging commands\n");
 	} else {
-		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands\n");
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands/Debugging commands. Double click to hide\n");
 		else             printf("gfx/[ Debugging ]/echo\n");
 #ifdef JOSEKIFIX
-		printf("gfx/Josekifix Show Pattern/gogui-josekifix_show_pattern %%p\n");
-		printf("gfx/Josekifix Dump Templates/gogui-josekifix_dump_templates %%p\n");
+		printf("gfx/Josekifix Show Pattern/gogui-josekifix_show_pattern %%p/Show josekifix spatial pattern around selected coordinate and last move\n");
+		printf("gfx/Josekifix Dump Templates/gogui-josekifix_dump_templates %%p/Make josekifix override templates for selected coordinate and last move\n");
 #endif
-		printf("gfx/Bad Selfatari/gogui-bad_selfatari\n");
-		printf("gfx/Color Palette/gogui-color_palette\n");
+		printf("gfx/Bad Selfatari/gogui-bad_selfatari/Show selfataris (green=good, red=bad)\n");
+		printf("gfx/Color Palette/gogui-color_palette/Show color palette used by colormap functions\n");
 	}
 
 	return P_OK;
