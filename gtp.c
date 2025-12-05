@@ -1139,7 +1139,6 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-joseki_show_pattern",	cmd_gogui_joseki_show_pattern },
 #ifdef JOSEKIFIX
 	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
-	{ "gogui-josekifix_set_coord",      cmd_gogui_josekifix_set_coord },
 	{ "gogui-josekifix_show_pattern",   cmd_gogui_josekifix_show_pattern },
 #endif
 	{ "gogui-livegfx",		cmd_gogui_livegfx },

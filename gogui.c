@@ -83,9 +83,8 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Live gfx = None/gogui-livegfx\n");
 	}
 #ifdef JOSEKIFIX
-	printf("gfx/          Josekifix Set Coord/gogui-josekifix_set_coord %%p\n");
-	printf("gfx/          Josekifix Show Pattern/gogui-josekifix_show_pattern\n");
-	printf("gfx/          Josekifix Dump Templates/gogui-josekifix_dump_templates\n");
+		printf("gfx/Josekifix Show Pattern/gogui-josekifix_show_pattern %%p\n");
+		printf("gfx/Josekifix Dump Templates/gogui-josekifix_dump_templates %%p\n");
 #endif
 	
 	/* Debugging */
@@ -604,13 +603,6 @@ dump_template_entry(char *prefix, struct board *b, coord_t at)
 	dump_template_entry_full(prefix, b, at);
 }
 
-static bool dump_templates = false;
-static coord_t dump_patterns_coord = pass;
-
-//static bool josekifix_get_dump_templates()         {  return dump_templates;  }
-static void josekifix_set_dump_templates(bool val) {  dump_templates = val;   }
-static void josekifix_set_coord(coord_t c)         {  dump_patterns_coord = c;  }
-
 static void
 josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 			coord_t coord, int rr, int gg, int bb)
@@ -634,17 +626,18 @@ josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 }
 
 static void
-josekifix_gogui_show_patterns(struct board *b)
+josekifix_show_pattern(struct board *b, gtp_t *gtp, coord_t at, bool dump_templates)
 {
-	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
-	if (is_pass(dump_patterns_coord))
-		dump_patterns_coord = str2coord("E15");
+	gtp_printf(gtp, "");
 	
+	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
+	assert(!is_pass(at));
+
 	josekifix_paint_pattern(b, colors, last_move(b).coord, 0x00, 0x8a, 0xff);
-	josekifix_paint_pattern(b, colors, dump_patterns_coord, 0xff, 0xa2, 0x00);
+	josekifix_paint_pattern(b, colors, at, 0xff, 0xa2, 0x00);
 
 	if (dump_templates) {
-		dump_template_entry("TEXT ", b, dump_patterns_coord);
+		dump_template_entry("TEXT ", b, at);
 		dump_template_entry("TEXT ", b, last_move(b).coord);
 	}
 	
@@ -658,29 +651,22 @@ josekifix_gogui_show_patterns(struct board *b)
 }
 
 enum parse_code
-cmd_gogui_josekifix_set_coord(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_gogui_josekifix_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	coord_t coord;
 	gtp_arg_coord(coord);
 	
-	josekifix_set_coord(coord);
-	return cmd_gogui_josekifix_show_pattern(b, e, ti, gtp);
-}
-
-enum parse_code
-cmd_gogui_josekifix_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
-{
-	gtp_printf(gtp, "");
-	josekifix_gogui_show_patterns(b);
+	josekifix_show_pattern(b, gtp, coord, false);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_josekifix_dump_templates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	josekifix_set_dump_templates(true);
-	cmd_gogui_josekifix_show_pattern(b, e, ti, gtp);
-	josekifix_set_dump_templates(false);
+	coord_t coord;
+	gtp_arg_coord(coord);
+
+	josekifix_show_pattern(b, gtp, coord, true);
 	return P_OK;
 }
 
