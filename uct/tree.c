@@ -711,6 +711,9 @@ static void
 tree_expand_get_moves(mq_t *consider, board_t *b, enum stone color, uct_t *u)
 {
 	foreach_free_point(b) {
+#ifdef EXTRA_CHECKS
+		assert(board_at(b, c) == S_NONE);
+#endif
 		if (tree_expand_consider_move(b, c, color, u))
 			mq_add(consider, c);
 	} foreach_free_point_end;

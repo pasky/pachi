@@ -139,11 +139,11 @@ typedef struct uct {
 	int expanded_nodes;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
-	board_t *main_board;
 	tree_t *t;
 	bool tree_ready;
 } uct_t;
 
+extern board_t *uct_main_board;
 
 /* Whether search tree carries over for next move under current uct settings.
  * Only case where tree can't be reused is the default case: dcnn without pondering. */

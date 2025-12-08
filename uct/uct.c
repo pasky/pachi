@@ -48,12 +48,14 @@ static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, best_moves_t *b
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
 
+board_t *uct_main_board = NULL;
+
 static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
 	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
-	u->main_board = b;
+	uct_main_board = b;
 	u->t = tree_init(color, size, stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
@@ -77,7 +79,7 @@ reset_state(uct_t *u)
 	assert(u->t);
 	tree_done(u->t);
 	u->t = NULL;
-	u->main_board = NULL;
+	uct_main_board = NULL;
 }
 
 static void
@@ -159,13 +161,12 @@ uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (b->moves < board_earliest_pass(b))
 		return false;
 
-	/* Must be thread-safe inasmuch as this also gets called from the main thread
-	 * through uct policy choose() (uct_progress_status(), uct_search_check_stop())
-	 * and main board may not be changed even for a split second without risking
-	 * having another thread grab it in an invalid state.
-	 * board_position_final() uses with_move() so copy board first. */
+	/* Must be thread-safe, this gets called from the main thread through uct policy
+	 * choose() (uct_progress_status(), uct_search_check_stop()) and main board must
+	 * not be changed even temporarily without risking having another thread grab it
+	 * in an invalid state. board_position_final() uses with_move() so copy board first. */
 	board_t b2;
-	if (b == u->main_board) {  board_copy(&b2, b);  b = &b2;  }
+	if (b == uct_main_board) {  board_copy(&b2, b);  b = &b2;  }
 
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	mq_t dead_orig;

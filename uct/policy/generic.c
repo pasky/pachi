@@ -13,6 +13,8 @@
 #include "uct/policy.h"
 #include "uct/policy/generic.h"
 
+#define sane_node_coord(b, n)  (is_pass(node_coord(n)) || board_at(b, node_coord(n)) == S_NONE)
+
 tree_node_t *
 uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude)
 {
@@ -20,9 +22,16 @@ uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone c
 	if (!nbest) return NULL;
 	tree_node_t *nbest2 = nbest->sibling;
 
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(sane_node_coord(b, nbest));
+#endif	
 	/* This function is called while the tree is updated by other threads.
 	 * We rely on node->children being set only after the node has been fully expanded. */
 	for (tree_node_t *ni = nbest2; ni; ni = ni->sibling) {
+#ifdef EXTRA_CHECKS
+		assert(sane_node_coord(b, ni));
+#endif
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
 		if (node_coord(ni) == exclude || ni->hints & TREE_HINT_INVALID)

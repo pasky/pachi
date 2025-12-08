@@ -526,6 +526,9 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 int
 uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+#endif
 	board_t b2;
 	board_copy(&b2, b);
 	
