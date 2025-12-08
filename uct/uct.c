@@ -816,6 +816,37 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	uct_pondering_start(u, b, color, 0, flags);
 }
 
+/* Get best sequence for node @best  (find best move if NULL).
+ * Return sequence in @seq.
+ * @max_depth is maximum depth, or -1 to go as far as possible. */
+void
+uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *best,
+		      mq_t *seq, int max_depth, int min_playouts)
+{
+	board_t b2;  board_copy(&b2, board);
+	board_t *b = &b2;
+	mq_init(seq);
+
+	if (!best)
+		best = u->policy->choose(u->policy, u->t->root, b, color, resign);
+
+	if (max_depth == -1)
+		max_depth = INT_MAX;
+
+	for (int depth = 0; depth < max_depth; depth++) {
+		if (!best || best->u.playouts < min_playouts)
+			break;
+
+		mq_add(seq, node_coord(best));
+
+		move_t m = move(node_coord(best), color);
+		int r = board_play(b, &m);  assert(r >= 0);
+		color = stone_other(color);
+
+		best = u->policy->choose(u->policy, best, b, color, resign);
+	}
+}
+
 /* Same as uct_get_best_moves() for node @parent.
  * XXX pass can be a valid move in which case you need best_n to check. 
  *     have another function which exposes best_n ? */

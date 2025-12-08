@@ -47,14 +47,13 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 		fprintf(fh, "xkomi %.1f ", t->extra_komi);
 
 	/* Best sequence */
+	mq_t seq;
+	uct_get_best_sequence(u, b, color, best, &seq, 5, 25);
 	fprintf(fh, "| seq ");
-	for (int depth = 0; depth < 5; depth++) {
-		if (best && best->u.playouts >= 25) {
-			fprintf(fh, "%3s ", coord2sstr(node_coord(best)));
-			best = u->policy->choose(u->policy, best, b, color, resign);
-		}
-		else    fprintf(fh, "    ");
-	}
+	for (int i = 0; i < seq.moves; i++)
+		fprintf(fh, "%3s ", coord2sstr(seq.move[i]));
+	for (int i = seq.moves; i < 5; i++)
+		fprintf(fh, "    ");
 
 	/* Best candidates */
 	int nbest = 4;
@@ -119,13 +118,12 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 			(int)(priors[best_c[i]] * 10000), i);
 
 		/* Dump best variation */
+		tree_node_t *n = tree_get_node(node, best_c[i]);  assert(n);
+		mq_t seq;
+		uct_get_best_sequence(u, b, color, n, &seq, -1, 100);
 		fprintf(fh, "pv %s ", coord2sstr(best_c[i]));
-		tree_node_t *n = tree_get_node(node, best_c[i]);
-		while (1) {
-			n = u->policy->choose(u->policy, n, b, color, resign);
-			if (!n || n->u.playouts < 100) break;
-			fprintf(fh, "%s ", coord2sstr(node_coord(n)));
-		}
+		for (int i = 1; i < seq.moves; i++)
+			fprintf(fh, "%s ", coord2sstr(seq.move[i]));
 	}
 	fprintf(fh, "\n");
 }
@@ -134,19 +132,12 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 static void
 uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
-	int n = 20;
-	coord_t seq[n];   for (int i = 0; i < n; i++)  seq[i] = pass;
+	mq_t seq;
+	uct_get_best_sequence(u, b, color, NULL, &seq, GOGUI_NSEQ, 50);
 
-	/* Best move */
-	tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
-	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
-	
-	for (int i = 0; i < n && best && best->u.playouts >= 50; i++) {
-		seq[i] = node_coord(best);
-		best = u->policy->choose(u->policy, best, b, color, resign);
-	}
-	
-	gogui_show_best_seq(stderr, b, color, seq, n);
+	if (!seq.moves) {  fprintf(stderr, "... No moves left\n"); return;  }
+
+	gogui_show_best_seq(stderr, b, color, &seq);
 }
 
 /* GoGui live gfx: show best moves */
@@ -221,20 +212,18 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	bool first = true;
 	while (--cans >= 0 && can[cans]) {
 		/* Best sequence */
-		if (first == true) {
-			first = false;
-			fprintf(fh, "[");
-		} else {
-			fprintf(fh, ", [");
-		}
-		best = can[cans];
-		for (int depth = 0; depth < 20; depth++) {
-			if (!best || best->u.playouts < 1) break;
-			fprintf(fh, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
-				coord2sstr(best->coord),
+		if (first == true) {  fprintf(fh, "[");  first = false;  }
+		else                  fprintf(fh, ", [");
+		mq_t seq;
+		uct_get_best_sequence(u, b, color, can[cans], &seq, 20, 1);
+		best = t->root;
+		for (int depth = 0; depth < seq.moves; depth++) {
+			coord_t coord = seq.move[depth];
+			best = tree_get_node(best, coord);  assert(best);
+			fprintf(fh, "%s{\"%s\": [%.3f, %i]}", (depth > 0 ? "," : ""),
+				coord2sstr(coord),
 				tree_node_get_value(t, parity, best->u.value),
 				best->u.playouts);
-			best = u->policy->choose(u->policy, best, b, color, resign);
 		}
 		fprintf(fh, "]");
 	}

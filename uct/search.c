@@ -757,8 +757,12 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	if (desired_done) {
 		if (u->policy->winner && u->policy->evaluate)
 			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-		if (best)
-			bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
+		if (best) {
+			board_t b2;  board_copy(&b2, b);
+			move_t m = move(node_coord(best), color);
+			int r = board_play(&b2, &m);  assert(r >= 0);
+			bestr = u->policy->choose(u->policy, best, &b2, stone_other(color), resign);
+		}
 		if (!uct_search_keep_looking(u, ctx->t, b, ti, &s->stop, best, best2, bestr, winner, i))
 			return true;
 	}

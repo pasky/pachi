@@ -301,11 +301,12 @@ gogui_show_winrates(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 }
 
 void
-gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n)
-{	
+gogui_show_best_seq(FILE *f, board_t *b, enum stone color, mq_t *seq)
+{
+	/* Can have passes in the sequence, gogui handles it. */
 	fprintf(f, "VAR ");
-	for (int i = 0; i < n && seq[i] != pass; i++) {
-		fprintf(f, "%.1s %3s ", stone2str(color), coord2sstr(seq[i]));
+	for (int i = 0; i < seq->moves; i++) {
+		fprintf(f, "%.1s %3s ", stone2str(color), coord2sstr(seq->move[i]));
 		color = stone_other(color);
 	}
 	fprintf(f, "\n");

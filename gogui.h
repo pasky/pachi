@@ -6,6 +6,7 @@
 /* How many moves to display ? */
 #define GOGUI_NBEST 9
 #define GOGUI_MANY 30
+#define GOGUI_NSEQ 20
 
 typedef enum gogui_reporting {
 	UR_GOGUI_NONE,
@@ -48,7 +49,7 @@ enum parse_code cmd_gogui_josekifix_dump_templates(board_t *b, engine_t *e, time
 
 void gogui_show_best_moves(FILE *f, board_t *b, enum stone color, best_moves_t *best);
 void gogui_show_winrates(FILE *f, board_t *b, enum stone color, best_moves_t *best);
-void gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n);
+void gogui_show_best_seq(FILE *f, board_t *b, enum stone color, mq_t *seq);
 
 #endif
 
