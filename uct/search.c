@@ -114,21 +114,19 @@ worker_thread(void *ctx_)
 	fast_srandom(ctx->seed);
 	int restarted = search_restarted(u);
 
-	/* Fill ownermap for mcowner pattern feature. */
-	if (using_patterns()) {
-		double time_start = time_now();
-		uct_mcowner_playouts(u, b, color);
-		
-		if (!ctx->tid && !restarted) {
-			u->raw_playouts_per_sec = u->ownermap.playouts / (time_now() - time_start);
-			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
-			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
-			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
-		}
+	/* Compute initial ownermap */
+	double time_start = time_now();
+	uct_mcowner_playouts(u, b, color);
+
+	if (!ctx->tid && !restarted) {
+		u->raw_playouts_per_sec = u->ownermap.playouts / (time_now() - time_start);
+		if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
+		if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
+		if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
 	}
 
 	/* Stuff that depends on ownermap. */
-	if (!ctx->tid && using_patterns()) {
+	if (!ctx->tid) {
 		/* Save initial ownermap. */
 		memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
 		
