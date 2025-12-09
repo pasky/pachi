@@ -644,10 +644,9 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 
 /* Determine whether we should terminate the search later than expected. */
 static bool
-uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
-		time_info_t *ti, time_stop_t *stop,
-		tree_node_t *best, tree_node_t *best2,
-		tree_node_t *bestr, tree_node_t *winner, int i)
+uct_search_keep_looking(uct_t *u, board_t *b, enum stone color,
+			tree_t *t, time_info_t *ti, time_stop_t *stop,
+			tree_node_t *best, tree_node_t *best2, int i)
 {
 	if (!best) {
 		if (UDEBUGL(2))
@@ -682,6 +681,13 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 		/* Check best, best_best value difference. If the best move
 		 * and its best child do not give similar enough results,
 		 * keep simulating. */
+
+		/* Find best's best child. */
+		board_t b2;  board_copy(&b2, b);
+		move_t m = move(node_coord(best), color);
+		int r = board_play(&b2, &m);  assert(r >= 0);
+		tree_node_t *bestr = u->policy->choose(u->policy, best, &b2, stone_other(color), resign);
+
 		if (bestr && bestr->u.playouts
 		    && fabs((double)best->u.value - bestr->u.value) > u->bestr_ratio) {
 			if (UDEBUGL(3))
@@ -691,6 +697,10 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 			return true;
 		}
 	}
+
+	tree_node_t *winner = NULL;
+	if (u->policy->winner && u->policy->evaluate)
+		winner = u->policy->winner(u->policy, t, t->root);
 
 	if (winner && winner != best) {
 		/* Keep simulating if best explored
@@ -713,8 +723,6 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 		      tree_t *t, time_info_t *ti,
 		      uct_search_state_t *s, int i)
 {
-	uct_thread_ctx_t *ctx = s->ctx;
-
 	if (!u->tree_ready)
 		return false;
 
@@ -729,43 +737,32 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 
 	tree_node_t *best = NULL;
 	tree_node_t *best2 = NULL; // Second-best move.
-	tree_node_t *bestr = NULL; // best's best child.
-	tree_node_t *winner = NULL;
 
-	best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, node_coord(best));
+	best = u->policy->choose(u->policy, t->root, b, color, resign);
+	if (best) best2 = u->policy->choose(u->policy, t->root, b, color, node_coord(best));
 
 	/* Possibly stop search early if it's no use to try on. */
 	int played = played_all(u) + i - s->base_playouts;
-	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played, s->fullmem))
+	if (best && uct_search_stop_early(u, t, b, ti, &s->stop, best, best2, played, s->fullmem))
 		return true;
 
 	/* Check against time settings. */
 	bool desired_done;
 	if (ti->dim == TD_WALLTIME) {
 		double elapsed = time_now() - ti->timer_start;
-		if (elapsed > s->stop.worst.time) return true;
+		if (elapsed > s->stop.worst.time)  return true;
 		desired_done = elapsed > s->stop.desired.time;
-
-	} else { assert(ti->dim == TD_GAMES);
-		if (i > s->stop.worst.playouts) return true;
+	} else {
+		assert(ti->dim == TD_GAMES);
+		if (i > s->stop.worst.playouts)  return true;
 		desired_done = i > s->stop.desired.playouts;
 	}
 
 	/* We want to stop simulating, but are willing to keep trying
 	 * if we aren't completely sure about the winner yet. */
-	if (desired_done) {
-		if (u->policy->winner && u->policy->evaluate)
-			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-		if (best) {
-			board_t b2;  board_copy(&b2, b);
-			move_t m = move(node_coord(best), color);
-			int r = board_play(&b2, &m);  assert(r >= 0);
-			bestr = u->policy->choose(u->policy, best, &b2, stone_other(color), resign);
-		}
-		if (!uct_search_keep_looking(u, ctx->t, b, ti, &s->stop, best, best2, bestr, winner, i))
+	if (desired_done &&
+	    !uct_search_keep_looking(u, b, color, t, ti, &s->stop, best, best2, i))
 			return true;
-	}
 
 	/* TODO: Early break if best->variance goes under threshold
 	 * and we already have enough playouts (possibly thanks to tbook
