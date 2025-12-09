@@ -1140,12 +1140,12 @@ test_genmove(board_t *b, char *arg)
 		fprintf(stderr, "%s ", args[i]);
 	fprintf(stderr, "...\n\n");
 
-	/* Use main engine. Creating new engine messes up context which is important here. */
-	engine_t *e = pachi_main_engine();
-
-	/* Sanity checks */
-	board_t *tmp = board_new(19, NULL);
-	board_delete(&tmp);
+	engine_t *e;
+	if (tunit_over_gtp) {
+		/* Use main engine. Creating new engine messes up context which is important here. */
+		e = pachi_main_engine();
+	} else
+		e = new_engine(E_UCT, "", b);
 
 	static time_info_t ti = { 0, };
 	if (!time_parse(&ti, "=5000:10000"))  die("shouldn't happen");
@@ -1169,7 +1169,10 @@ test_genmove(board_t *b, char *arg)
 
 	fprintf(stderr, "\n");
 	PRINT_RES_VAL("%s", coord2sstr(c));
-	
+
+	if (!tunit_over_gtp)
+		engine_done(e);
+
 	return rres;
 }
 
