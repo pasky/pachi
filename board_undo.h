@@ -59,30 +59,34 @@ void board_quick_undo(board_t *b, move_t *m, board_undo_t *u);
  * (caught at run time if BOARD_UNDO_CHECKS defined). Can use
  * with_move_return(val) to return value for non-nested with_move()'s
  * though. */
-#define with_move(board_, coord_, color_, body_) \
+#define with_move(board, coord, color, body) \
        do { \
-	       board_t *board__ = (board_);  /* For with_move_return() */		\
-               move_t m_ = move((coord_), (color_));	  \
+	       board_t *board__ = (board);  /* For with_move_return() */ \
+               move_t m_ = move((coord), (color)); \
                board_undo_t u_; \
-               if (board_quick_play(board__, &m_, &u_) >= 0) {	  \
-	               do { body_ } while(0);                     \
+               if (board_quick_play(board__, &m_, &u_) >= 0) { \
+	               do {  body  } while(0); \
                        board_quick_undo(board__, &m_, &u_); \
-	       }					   \
+	       } \
        } while (0)
 
 /* Return value from within with_move() statement.
  * Valid for non-nested with_move() *ONLY* */
-#define with_move_return(val_)  \
-	do {  typeof(val_) val__ = (val_); board_quick_undo(board__, &m_, &u_); return val__;  } while (0)
+#define with_move_return(val)  \
+	do { \
+		typeof(val) val__ = (val); \
+		board_quick_undo(board__, &m_, &u_); \
+		return val__; \
+	} while (0)
 
 /* Same as with_move() but assert out in case of invalid move. */
-#define with_move_strict(board_, coord_, color_, body_) \
+#define with_move_strict(board, coord, color, body) \
        do { \
-	       board_t *board__ = (board_);   /* For with_move_return() */	\
-               move_t m_ = move((coord_), (color_));	   \
+	       board_t *board__ = (board);   /* For with_move_return() */ \
+               move_t m_ = move((coord), (color)); \
                board_undo_t u_; \
-               assert (board_quick_play(board__, &m_, &u_) >= 0);  \
-               do { body_ } while(0);                     \
+               assert (board_quick_play(board__, &m_, &u_) >= 0); \
+               do {  body  } while(0); \
                board_quick_undo(board__, &m_, &u_); \
        } while (0)
 
