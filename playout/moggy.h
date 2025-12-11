@@ -3,6 +3,10 @@
 
 #include "playout.h"
 
+/* Use joseki moves in moggy ? */
+//#define MOGGY_JOSEKI 1
+
+
 struct playout_policy *playout_moggy_init(char *arg, board_t *b);
 
 #endif

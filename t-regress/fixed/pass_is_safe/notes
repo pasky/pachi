@@ -1,0 +1,30 @@
+globax Swissbot1  2025-06-11 10:31
+
+Move:  299  Komi: 7.5  Handicap: 0  Captures B: 17 W: 28  [0 0 0 0]  Score Est: B+3.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . O O O O O O X . . . . X O O O O . O | 19 | O O O O O O O X X X X X X O O O O O O |
+ 18 | O X O O X O X X . . . . X X X O O . . | 18 | O O O O X O X X X X X X X X X O O O O |
+ 17 | . X . O X X . . . . . X . O X X O O O | 17 | O O O O X X X X X X X X X X X X O O O |
+ 16 | O O O O X X X . . . . . . . . X O O . | 16 | O O O O X X X X X X X X X X X X O O O |
+ 15 | O X O X O O X . . . . . . . X X X O X | 15 | O X O X O O X X X X X X X X X X X O O |
+ 14 | X X X X O O X . . . . . . O X O O X X | 14 | X X X X O O X X X X X X X X X O O O O |
+ 13 | . X X X O . O X . . . . . X O . O X X | 13 | X X X X O O O X X X X X X X O O O O O |
+ 12 | O O O X O O O X . . . . . X O . O X . | 12 | , , , X O O O X X X X X X X O O O O O |
+ 11 | . X X X O X X . . . . . . X O . O O . | 11 | X X X X O X X X X X X X X X O O O O O |
+ 10 | X X O O O O X X . . . . . X O . . . . | 10 | X X O O O O X X X X X X X X O O O O O |
+  9 | O O . O . O O X . X X X X O . O X . . |  9 | O O O O O O O X X X X X X O O O O O O |
+  8 | . O . . O O X X X O O O X O O O O O O |  8 | O O O O O O X X X O O O X O O O O O O |
+  7 | O . O . . . O O O O O X X O X O X O X |  7 | O O O O O O O O O O O X X O X O X O X |
+  6 | . O O . O . O . . . O X O X X X X X X |  6 | O O O O O O O O O O O X O X X X X X X |
+  5 | O O . . O O X O O O O O O X O X . . X |  5 | O O O O O O X O O O O O O X O X X X X |
+  4 | O X O O O O X X X X X X O O O O X X . |  4 | O X O O O O X X X X X X O O O O X X X |
+  3 | X X X X X O X . X . X X X O O X X X . |  3 | X X X X X O X : X : X X X O O X X X X |
+  2 | . . X . X O X O O O O X O O O O X . . |  2 | X X X X X O X O O O O X O O O O X X X |
+  1 | . X . X X O O X X X X X X O O X X X . |  1 | X X X X X O O X X X X X X O O X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+was refusing to pass many times  (A12 seki unclear).
+actually clear in playouts but tree search makes it unclear ...
+
+patching uct_pass_is_safe() to try with mcowner ownermap fixes it.

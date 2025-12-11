@@ -305,8 +305,7 @@ joseki_load(int bsize)
 
 		gtp.quiet = true;
 		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);  /* quiet */
-		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
-		if (c != P_OK && c != P_ENGINE_RESET)
+		if (gtp.error || (c != P_OK && c != P_ENGINE_RESET))
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		
 	}
 	engine_done(&e);
@@ -493,24 +492,20 @@ joseki_rate_moves(joseki_dict_t *jdict, board_t *b, enum stone color,
 
 void
 get_joseki_best_moves(board_t *b, coord_t *coords, float *ratings, int matches,
-		       coord_t *best_c, float *best_r, int nbest)
+		      best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	
 	for (int i = 0; i < matches; i++)
-		best_moves_add(coords[i], ratings[i], best_c, best_r, nbest);
+		best_moves_add(best, coords[i], ratings[i]);
 }
 
 void
-print_joseki_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
+print_joseki_best_moves(best_moves_t *best)
 {
-	int cols = best_moves_print(b, "joseki =   ", best_c, nbest);	
+	int cols = best_moves_print(best, "joseki =   ");
 
 	fprintf(stderr, "%*s[ ", cols, "");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100.0));
+	for (int i = 0; i < best->size; i++)
+		fprintf(stderr, "%-3i ", (int)(best->r[i] * 100.0));
 	fprintf(stderr, "]\n");
 }
 
@@ -524,11 +519,12 @@ print_joseki_moves(joseki_dict_t *jdict, board_t *b, enum stone color)
 	int n = joseki_list_moves(jdict, b, color, coords, ratings);
 	if (!n)  return;
 
-	int nbest = 20;
 	float best_r[20] = { 0.0, };
 	coord_t best_c[20];
-	get_joseki_best_moves(b, coords, ratings, n, best_c, best_r, nbest);
-	print_joseki_best_moves(b, best_c, best_r, nbest);
+	best_moves_setup(best, best_c, best_r, 20);
+	
+	get_joseki_best_moves(b, coords, ratings, n, &best);
+	print_joseki_best_moves(&best);
 }
 
 

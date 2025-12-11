@@ -81,7 +81,7 @@ pattern3_hash(board_t *b, coord_t c)
         int c8 = c + stride + 1;
 
         /* Stone and atari info. */
-#define atari_at(b, c) (group_at(b, c) && board_group_info(b, group_at(b, c)).libs == 1)
+#define atari_at(b, c) (group_at(b, c) && group_libs(b, group_at(b, c)) == 1)
         return ((board_at(b, c1) << 14) |
                 (board_at(b, c2) << 12) |
                 (board_at(b, c3) << 10) |

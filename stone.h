@@ -19,6 +19,8 @@ enum stone str2stone(char *str);
 
 static enum stone stone_other(enum stone s);
 
+#define is_player_color(color)	((color) == S_BLACK || (color) == S_WHITE)
+
 
 static inline char
 stone2char(enum stone s)
@@ -43,8 +45,10 @@ char2stone(char s)
 static inline enum stone __attribute__((always_inline))
 stone_other(enum stone s)
 {
-	static const enum stone o[S_MAX] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-	return o[s];
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(s));
+#endif
+	return (S_OFFBOARD - s);
 }
 
 #endif

@@ -229,6 +229,29 @@ There's also "pachi-genmoves" which is used by the distributed engine to start
 search in the background and report state periodically.
 
 
+Debugging
+=========
+
+Debug messages are shown depending on pachi's current debug level (`pachi -d
+debug_level` option) provided they haven't been disabled at compile time for
+that file/component. Lower levels control engine logs verbosity while higher
+levels give insight into playout logic (level 6), tactics (levels 7-10) and
+board logic (level 11).
+
+Compile-time switch:
+to enable debug messages for a given component source file must be compiled
+with:
+    #define DEBUG
+at the top otherwise they are disabled at compile-time (DEBUGL() statements
+all evaluate to false). Logging for low-level functions is normally disabled
+for performance reasons, to debug these you need a debug build, uncommenting
+#define DEBUG statements in the files you're interested in:
+
+  playout logic: playout.c, playout/moggy.c
+  tactics:       tactics/*.c
+  board logic:   board.c
+
+
 Board Implementation
 ====================
 

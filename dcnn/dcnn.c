@@ -142,6 +142,10 @@ dcnn_init(board_t *b)
 void
 dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(is_player_color(color));
+#endif
 	double time_start = time_now();
 	dcnn->eval(b, color, result);
 	
@@ -151,14 +155,20 @@ dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *owne
 		
 		coord_t best_c[DCNN_BEST_N];
 		float   best_r[DCNN_BEST_N];
-		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
-		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
+		best_moves_setup(best, best_c, best_r, DCNN_BEST_N);
+
+		get_dcnn_best_moves(b, result, &best);
+		print_dcnn_best_moves(&best);
 	}
 }
 
 void
 dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(is_player_color(color));
+#endif
 	dcnn_evaluate_raw(b, color, result, ownermap, debugl, extra_log);
 	dcnn_fix_blunders(b, color, result, ownermap, debugl);
 }
@@ -186,7 +196,7 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
-		int libs = board_group_info(b, g).libs - 1;
+		int libs = (g ? group_libs(b, g) - 1 : 0);
 		if (libs > 3) libs = 3;
 		
 		if (bc == S_NONE)                    data[8][y][x] = 1.0;
@@ -302,7 +312,7 @@ darkforest_dcnn_eval(board_t *b, enum stone color, float result[])
 		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
-		int libs = board_group_info(b, g).libs;
+		int libs = group_libs(b, g);
 		if (libs > 3) libs = 3;
 			
 		/* plane 0: our stones with 1 liberty */
@@ -359,26 +369,22 @@ darkforest_dcnn_eval(board_t *b, enum stone color, float result[])
 /********************************************************************************************************/
 
 void
-get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest)
+get_dcnn_best_moves(board_t *b, float *r, best_moves_t *best)
 {
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-
 	foreach_free_point(b) {
 		int k = coord2dcnn_idx(c);
-		best_moves_add(c, r[k], best_c, best_r, nbest);
+		best_moves_add(best, c, r[k]);
 	} foreach_free_point_end;
 }
 
 void
-print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
+print_dcnn_best_moves(best_moves_t *best)
 {
-	int cols = best_moves_print(b, "dcnn = ", best_c, nbest);
+	int cols = best_moves_print(best, "dcnn = ");
 
 	fprintf(stderr, "%*s[ ", cols, "");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
+	for (int i = 0; i < best->size; i++)
+		fprintf(stderr, "%-3i ", (int)(best->r[i] * 100));
 	fprintf(stderr, "]\n");
 }
 

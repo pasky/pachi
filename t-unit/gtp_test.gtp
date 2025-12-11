@@ -28,6 +28,8 @@ predict b a1
 clear_board
 pachi-predict b a1
 pachi-engine uct
+pachi-external_engine_mode 0 0 0 0
+external_engine_mode 0 0 0 0
 
 boardsize 19
 clear_board
@@ -310,6 +312,8 @@ lz-analyze 10
 name
 lz-analyze w 10
 
+gogui-version 1.4.12
+gogui-toggle_debugging_commands
 gogui-analyze_commands
 gogui-livegfx best_moves
 gogui-influence
@@ -329,12 +333,13 @@ gogui-pattern_features J9
 gogui-pattern_gammas J9
 gogui-show_spatial J9
 gogui-spatial_size 6
+gogui-playout_moves
 gogui-color_palette
+gogui-bad_selfatari A1
 gogui-analyze_commands
 
-gogui-josekifix_set_coord C4
-gogui-josekifix_show_pattern
-gogui-josekifix_dump_templates
+gogui-josekifix_show_pattern C4
+gogui-josekifix_dump_templates C4
 
 kgs-game_over
 quit

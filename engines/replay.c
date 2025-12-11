@@ -8,14 +8,16 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "joseki/joseki.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
 
+#ifdef MOGGY_JOSEKI
+#include "joseki/joseki.h"
+#endif
+
 /* Internal engine state. */
 typedef struct {
-	int debug_level;
 	int runs;
 	int no_suicide;
 	playout_policy_t *playout;
@@ -112,8 +114,7 @@ replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 }
 
 static void
-replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-		  coord_t *best_c, float *best_r, int nbest)
+replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	replay_t *r = (replay_t*)e->data;
 	
@@ -126,7 +127,8 @@ replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	replay_sample_moves(e, b, color, played, &most_played);
 	
 	for (coord_t c = pass; c < board_max_coords(b); c++)
-		best_moves_add(c, (float)played[c] / r->runs, best_c, best_r, nbest);
+		if (played[c])
+			best_moves_add(best, c, (float)played[c] / r->runs);
 }
 
 static void
@@ -146,11 +148,7 @@ replay_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 	static_strbuf(ebuf, 256);
 	replay_t *r = (replay_t*)e->data;
 
-	if (!strcasecmp(optname, "debug")) {
-		if (optval)  r->debug_level = atoi(optval);
-		else         r->debug_level++;
-	}
-	else if (!strcasecmp(optname, "runs") && optval) {
+	if (!strcasecmp(optname, "runs") && optval) {
 		/* runs=n  set number of playout runs to sample.
 		 *         use runs=1 for raw playout policy */
 		r->runs = atoi(optval);
@@ -184,10 +182,12 @@ replay_state_init(engine_t *e, board_t *b)
 	replay_t *r = calloc2(1, replay_t);
 	e->data = r;
 	
-	r->debug_level = 1;
 	r->runs = 1000;
 	r->no_suicide = 0;
+
+#ifdef MOGGY_JOSEKI
 	joseki_load(board_rsize(b));
+#endif
 
 	/* Process engine options. */
 	char *err;
@@ -197,7 +197,6 @@ replay_state_init(engine_t *e, board_t *b)
 
 	if (!r->playout)
 		r->playout = playout_moggy_init(NULL, b);
-	r->playout->debug_level = r->debug_level;
 
 	return r;
 }

@@ -60,7 +60,7 @@ startup:
 
 Minor updates to the SGF database are kept in a different branch
 ([joseki_fixes](https://github.com/pasky/pachi/tree/joseki_fixes))
-to avoid polluting the git history too much.
+to avoid polluting git history too much.
 
 If you're using a Pachi release, or even Pachi git repository, the included SGF
 database is likely not the latest.
@@ -90,16 +90,14 @@ Find an SGF editor that lets you visualize move tree and comments easily:
 </a>
 
 - cgoban3 (KGS client), Sabaki etc all work well.
-- GoGui is not ideal for navigating branches (doesn't draw the move tree !)
-  but can be workable if you show info panel (comments).
+- GoGui works too if you enable the move tree (Tools -> Tree Viewer) and
+  SGF comments display (View -> Info Panel).
+  
+  It's great to visualize pattern areas at different locations when creating
+  new overrides. For that attach Pachi engine first, then select:
 
-  The fact that it can show pattern areas interactively at different locations
-  can be of great help to visualize things.
-
-  You need to attach Pachi engine first.  
-  Then try clicking different locations after clicking:
-
-      Tools -> Analyze Commands -> Josekifix Set Coord -> Run
+      Tools -> Analyze Commands -> Debugging Commands -> Run
+      Tools -> Analyze Commands -> Josekifix Show Pattern -> Select coordinate
 
   - orange area is matching pattern area for that location
   - blue area the one around last move

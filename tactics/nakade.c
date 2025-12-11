@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "move.h"
@@ -14,6 +14,11 @@
 static inline int
 nakade_area(board_t *b, coord_t around, enum stone color, coord_t *area)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(around));
+	assert(is_player_color(color));
+	assert(board_at(b, around) == S_NONE);
+#endif
 	/* First, examine the nakade area. For sure, it must be at most
 	 * six points. And it must be within color group(s). */
 #define NAKADE_MAX 6
@@ -97,7 +102,11 @@ nakade_point_(coord_t *area, int area_n, int *neighbors, int *ptbynei)
 coord_t
 nakade_point(board_t *b, coord_t around, enum stone color)
 {
-	assert(board_at(b, around) == S_NONE);	
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(around));
+	assert(is_player_color(color));
+	assert(board_at(b, around) == S_NONE);
+#endif
 	coord_t area[NAKADE_MAX]; int area_n = 0;
 	area_n = nakade_area(b, around, color, area);
 	if (area_n == -1)
@@ -113,7 +122,11 @@ nakade_point(board_t *b, coord_t around, enum stone color)
 bool
 nakade_dead_shape(board_t *b, coord_t around, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(around));
+	assert(is_player_color(color));
 	assert(board_at(b, around) == S_NONE);
+#endif
 	coord_t area[NAKADE_MAX]; int area_n = 0;
 	area_n = nakade_area(b, around, color, area);
 	if (area_n == -1)	return false;

@@ -42,18 +42,20 @@ uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, enum stone color, coord_t our_move, int flags);
 static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
-static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,bool winrates, int min_playouts);
+static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, best_moves_t *best, bool winrates, int min_playouts);
 
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
+
+board_t *uct_main_board = NULL;
 
 static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
 	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
-	u->main_board = b;
+	uct_main_board = b;
 	u->t = tree_init(color, size, stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
@@ -77,7 +79,7 @@ reset_state(uct_t *u)
 	assert(u->t);
 	tree_done(u->t);
 	u->t = NULL;
-	u->main_board = NULL;
+	uct_main_board = NULL;
 }
 
 static void
@@ -114,6 +116,7 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #endif
 	} else  /* We need fresh state. */
 		setup_state(u, b, color);
+	ownermap_init(&u->initial_ownermap);
 	ownermap_init(&u->ownermap);
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
 #ifdef DISTRIBUTED
@@ -121,11 +124,13 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #endif
 }
 
-static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
-			 move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+static bool uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+			      ownermap_t *ownermap, mq_t *dead, char **msg, bool log);
+static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap,
+			 char **msg, bool log, mq_t *dead, mq_t *dead_extra, mq_t *unclear,
 			 bool unclear_kludge, char *label);
-static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
-			  move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge);
+static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ownermap_t *ownermap, char **msg,
+			  mq_t *dead, mq_t *unclear, bool unclear_kludge);
 
 /* Does the board look like a final position, and do we win counting ?
  * (if allow_losing_pass was set we don't care about score)
@@ -133,7 +138,21 @@ static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_
  * (possibly guessed if there are unclear groups). */
 bool
 uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
-		 move_queue_t *dead, char **msg, bool log)
+		 mq_t *dead, char **msg, bool log)
+{
+	/* Try tree search ownermap first. */
+	ownermap_t *ownermap = &u->ownermap;
+	if (uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, false))
+		return uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, log);
+
+	/* Try mcowner ownermap instead, tree search can make some seki groups unclear. */
+	ownermap = &u->initial_ownermap;
+	return uct_pass_is_safe_(u, b, color, pass_all_alive, ownermap, dead, msg, log);
+}
+
+static bool
+uct_pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+		  ownermap_t *ownermap, mq_t *dead, char **msg, bool log)
 {
 	mq_init(dead);
 	
@@ -142,19 +161,18 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (b->moves < board_earliest_pass(b))
 		return false;
 
-	/* Must be thread-safe inasmuch as this also gets called from the main thread
-	 * through uct policy choose() (uct_progress_status(), uct_search_check_stop())
-	 * and main board may not be changed even for a split second without risking
-	 * having another thread grab it in an invalid state.
-	 * board_position_final() uses with_move() so copy board first. */
+	/* Must be thread-safe, this gets called from the main thread through uct policy
+	 * choose() (uct_progress_status(), uct_search_check_stop()) and main board must
+	 * not be changed even temporarily without risking having another thread grab it
+	 * in an invalid state. board_position_final() uses with_move() so copy board first. */
 	board_t b2;
-	if (b == u->main_board) {  board_copy(&b2, b);  b = &b2;  }
-	
+	if (b == uct_main_board) {  board_copy(&b2, b);  b = &b2;  }
+
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	move_queue_t dead_orig;
-	move_queue_t unclear_orig;
-	uct_mcowner_playouts(u, b, color);
-	ownermap_dead_groups(b, &u->ownermap, &dead_orig, &unclear_orig);
+	mq_t dead_orig;
+	mq_t unclear_orig;
+	assert(ownermap->playouts >= GJ_MINGAMES);
+	ownermap_dead_groups(b, ownermap, &dead_orig, &unclear_orig);
 
 #define init_pass_is_safe_groups()  do {	\
 		unclear = unclear_orig;		\
@@ -162,11 +180,11 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 		mq_init(&dead_extra);		\
 	} while (0)
 
-	move_queue_t unclear;
-	move_queue_t dead_extra;
+	mq_t unclear;
+	mq_t dead_extra;
 	init_pass_is_safe_groups();
 	
-	if (DEBUGL(2) && log && unclear.moves)  mq_print_line("unclear groups: ", &unclear);
+	if (DEBUGL(2) && log && unclear.moves)  mq_print_line(&unclear, "unclear groups: ");
 
 	/* Guess unclear groups ?
 	 * By default Pachi is fairly pedantic at the end of the game and will 
@@ -192,9 +210,9 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	if (guess_unclear_ok && unclear.moves) {
 		for (int i = 0; i < unclear.moves; i++)
 			if (board_at(b, unclear.move[i]) == color)
-				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
+				mq_add(&dead_extra, unclear.move[i]);       /* own groups -> dead */
 		unclear.moves = 0;                                          /* opponent's groups -> alive */
-		if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+		if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 				 dead, &dead_extra, &unclear, true, "(worst-case)"))
 			return true;
 		init_pass_is_safe_groups();  /* revert changes */
@@ -208,8 +226,8 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 			
 			for (int i = 0; i < unclear_orig.moves; i++)
 				if (!(k & (1 << i)))
-					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
-			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+					mq_add(&dead_extra, unclear_orig.move[i]); /* picked groups -> dead */
+			if (pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 					 dead, &dead_extra, &unclear, true, ""))
 				return true;
 			init_pass_is_safe_groups();  /* revert changes */
@@ -218,23 +236,24 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	}
 	
 	/* Strict mode: don't pass until everything is clarified. */
-	return pass_is_safe(u, b, color, pass_all_alive, msg, log,
+	return pass_is_safe(u, b, color, pass_all_alive, ownermap, msg, log,
 			    dead, &dead_extra, &unclear, false, "");
 }
 
 static bool
-pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
-	     move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+	     ownermap_t *ownermap, char **msg, bool log,
+	     mq_t *dead, mq_t *dead_extra, mq_t *unclear,
 	     bool unclear_kludge, char *label)
 {
-	move_queue_t guessed;  guessed = *dead_extra;
+	mq_t guessed;  guessed = *dead_extra;
 	mq_append(dead, dead_extra);
 	
-	bool r = pass_is_safe_(u, b, color, pass_all_alive, msg, dead, unclear, unclear_kludge);
+	bool r = pass_is_safe_(u, b, color, pass_all_alive, ownermap, msg, dead, unclear, unclear_kludge);
 
 	/* smart pass: log guessed unclear groups if successful    (DEBUGL(2)) */
 	if (unclear_kludge && log && r && DEBUGL(2) && !DEBUGL(3)) {
-		mq_print("pass ok assuming dead: ", &guessed);
+		mq_print(&guessed, "pass ok assuming dead: ");
 		fprintf(stderr, "%s\n", label);
 	}
 
@@ -242,7 +261,7 @@ pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char *
 	if (unclear_kludge && log && DEBUGL(3)) { /* log everything */
 		fprintf(stderr, "  pass %s ", (r ? "ok" : "no"));
 		int n = 0;
-		n += mq_print("assuming dead: ", &guessed);
+		n += mq_print(&guessed, "assuming dead: ");
 		fprintf(stderr, "%*s -> %-7s %s %s\n", abs(50-n), "",
 			board_official_score_str(b, dead), (r ? "" : *msg), label);
 	}
@@ -251,8 +270,9 @@ pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char *
 }
 
 static bool
-pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
-	      move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge)
+pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+	      ownermap_t *ownermap, char **msg,
+	      mq_t *dead, mq_t *unclear, bool unclear_kludge)
 {
 	bool check_score = !u->allow_losing_pass;
 
@@ -270,7 +290,7 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 	
 	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
-	floating_t final_score = board_official_score_details(b, dead, &dame, &seki, final_ownermap, &u->ownermap);
+	floating_t final_score = board_official_score_details(b, dead, &dame, &seki, final_ownermap, ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
 
 	floating_t score_est;
@@ -279,12 +299,12 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 	else {
 		/* Check score estimate first, official score is off if position is not final */
 		*msg = "losing on score estimate";
-		score_est = ownermap_score_est_color(b, &u->ownermap, color);
+		score_est = ownermap_score_est_color(b, ownermap, color);
 		if (check_score && score_est < 0)  return false;
 	}
 	
 	/* Don't go to counting if position is not final. */
-	if (!board_position_final_full(b, &u->ownermap, dead, unclear, score_est,
+	if (!board_position_final_full(b, ownermap, dead, unclear, score_est,
 				       final_ownermap, dame, final_score, msg))
 		return false;
 
@@ -419,7 +439,7 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 }
 
 static void
-uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
+uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
 	
@@ -543,10 +563,8 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 
 		int debug_level_save = debug_level;
 		int u_debug_level_save = u->debug_level;
-		int p_debug_level_save = u->playout->debug_level;
 		debug_level = u->debug_after.level;
 		u->debug_level = u->debug_after.level;
-		u->playout->debug_level = u->debug_after.level;
 		uct_halt = false;
 
 		uct_playouts(u, b, color, t, &debug_ti);
@@ -555,7 +573,6 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		uct_halt = true;
 		debug_level = debug_level_save;
 		u->debug_level = u_debug_level_save;
-		u->playout->debug_level = p_debug_level_save;
 
 		fprintf(stderr, "--8<-- UCT debug post-run finished --8<--\n");
 	}
@@ -582,13 +599,14 @@ uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord
 	int      nbest =  u->dcnn_pondering_mcts;
 	coord_t *best_c = u->dcnn_pondering_mcts_c;
 	float    best_r[nbest];
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
-	
+	best_moves_setup(best, best_c, best_r, nbest);
+
 	if (!(u->t && color == stone_other(u->t->root_color)))  return;
-	tree_node_t *best = tree_get_node(u->t->root, next_move);
-	if (!best)  return;
-	uct_get_best_moves_at(u, best, best_c, best_r, nbest, false, 100);
+	tree_node_t *best_node = tree_get_node(u->t->root, next_move);
+	if (!best_node)  return;
+	uct_get_best_moves_at(u, best_node, &best, false, 100);
+	
+	u->dcnn_pondering_mcts_n = best.n;
 }
 
 /* Start pondering at the end of genmove.
@@ -798,41 +816,71 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	uct_pondering_start(u, b, color, 0, flags);
 }
 
+/* Get best sequence for node @best  (find best move if NULL).
+ * Return sequence in @seq.
+ * @max_depth is maximum depth, or -1 to go as far as possible. */
+void
+uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *best,
+		      mq_t *seq, int max_depth, int min_playouts)
+{
+	board_t b2;  board_copy(&b2, board);
+	board_t *b = &b2;
+	mq_init(seq);
+
+	if (!best)
+		best = u->policy->choose(u->policy, u->t->root, b, color, resign);
+
+	if (max_depth == -1)
+		max_depth = INT_MAX;
+
+	for (int depth = 0; depth < max_depth; depth++) {
+		if (!best || best->u.playouts < min_playouts)
+			break;
+
+		mq_add(seq, node_coord(best));
+
+		move_t m = move(node_coord(best), color);
+		int r = board_play(b, &m);  assert(r >= 0);
+		color = stone_other(color);
+
+		best = u->policy->choose(u->policy, best, b, color, resign);
+	}
+}
+
 /* Same as uct_get_best_moves() for node @parent.
  * XXX pass can be a valid move in which case you need best_n to check. 
  *     have another function which exposes best_n ? */
 static void
-uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,
+uct_get_best_moves_at(uct_t *u, tree_node_t *parent, best_moves_t *best,
 		      bool winrates, int min_playouts)
 {
-	tree_node_t* best_n[nbest];
-	for (int i = 0; i < nbest; i++)  {
-		best_c[i] = pass;  best_r[i] = 0;  best_n[i] = NULL;
-	}
+	tree_node_t* best_n[best->size];
+	best->d = (void**)best_n;
 	
 	/* Find best moves */
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		if (n->u.playouts >= min_playouts)
-			best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_n, nbest);
+			best_moves_add_full(best, node_coord(n), n->u.playouts, n);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_n[i]; i++)
-			best_r[i] = tree_node_get_value(u->t, 1, best_n[i]->u.value);
+		for (int i = 0; i < best->n; i++) {
+			tree_node_t *n = best->d[i];
+			best->r[i] = tree_node_get_value(u->t, 1, n->u.value);
+		}
 }
 
 /* Get best moves with at least @min_playouts.
  * If @winrates is true @best_r returns winrates instead of visits.
  * (moves remain in best-visited order) */
 void
-uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts)
+uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts)
 {
-	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates, min_playouts);
+	uct_get_best_moves_at(u, u->t->root, best, winrates, min_playouts);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
 static void
-uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-	       coord_t *best_c, float *best_r, int nbest)
+uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	uct_t *u = (uct_t*)e->data;
 	uct_pondering_stop(u);
@@ -841,9 +889,9 @@ uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
+	uct_get_best_moves(u, best, true, 100);
 
-	if (u->t)	
+	if (u->t)
 		reset_state(u);
 }
 
@@ -1588,7 +1636,6 @@ uct_state_init(engine_t *e, board_t *b)
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
-	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
 #ifdef DISTRIBUTED
 	if (u->slave)			uct_slave_init(u, b);
 #endif

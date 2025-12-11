@@ -62,7 +62,7 @@ test_board: FORCE
 	@if bzcmp regtest.out regtest.ref.bz2  >/dev/null; then \
 	   echo "OK"; else  echo "FAILED"; exit 1;  fi
 
-	@$(PACHI) -d2 -u board_undo.t
+	@$(PACHI) -d2 -u t-unit/board_undo.t
 
 test_moggy: FORCE
 	@echo -n "Testing moggy logic didn't change...   "

@@ -117,7 +117,7 @@ DATADIR=$(PREFIX)/share/pachi-go
 # unless PROFILING=gprof.)
 OPT ?= -O3
 COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
-CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length -Winit-self -Wimplicit-fallthrough
 CXXFLAGS     := -std=c++11
 
 
@@ -140,21 +140,34 @@ CXXFLAGS     := -std=c++11
 
 # PLUGINS=1
 
-# Build extra engines used for development ?
-# EXTRA_ENGINES=1
 
-# Compile extra tests ? Enable this to test board implementation.
-# BOARD_TESTS=1
+############################# Development #############################
 
+# Compile Pachi with extra sanity checks ?
+# Good when debugging / testing code. Pachi will run slightly slower
+# but low-level code benefits from extra checking. Helps find errors
+# in the engine that might otherwise go unnoticed. Make sure to run
+# tests and play games with EXTRA_CHECKS on before a new release. If
+# something breaks with EXTRA_CHECKS on it's a bug.
 
-########################## Address Sanitizer ##########################
+# EXTRA_CHECKS=1
 
 # Enable Address Sanitizer build. Pachi will run much slower but every
 # memory access is checked (think Valgrind on steroids). Both gcc and
 # clang support Address Sanitizer on a number of architectures (linux
-# x86/amd64 linux recommended).
+# x86/amd64 recommended).
 
 # ASAN=1
+
+# Build extra engines used for development / debugging ?
+# You need this to retrain mm patterns.
+
+# EXTRA_ENGINES=1
+
+# Build extra tests ?
+# Enable this to test board implementation.
+
+# BOARD_TESTS=1
 
 
 ############################## Profiling ##############################
@@ -312,6 +325,10 @@ endif
 ifeq ($(BOARD_TESTS), 1)
 	LIBS          += -lcrypto
 	COMMON_FLAGS  += -DBOARD_TESTS
+endif
+
+ifeq ($(EXTRA_CHECKS), 1)
+	COMMON_FLAGS  += -DEXTRA_CHECKS
 endif
 
 ifeq ($(PROFILING), gprof)

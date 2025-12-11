@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+# Usage: mm_games_stats [--nocolor]
+# 
+# Game moves feature stats.
+# Run after running mm_games to check feature hits stats:
+#   pattern/training/mm_games_stats | less -r
+#
+# Highlights features with few matches:
+# Can't be rated accurately if it's a good move feature.
+#
+# For bad move features it's the opposite:
+# shouldn't show up often in game moves, otherwise might
+# indicate a problem.
+
+use List::Util qw(max);
+use strict;
+
+# Term colors
+my $end  =   "\e[0m";
+my $red =    "\e[40;31m";
+my $normal = "\e[40;37m";
+
+if ($ARGV[0] eq "--nocolor") {
+    $end = "";
+    $red = "";
+    $normal = "";
+}
+
+my %number2feature;
+my $number_max = 0;
+
+open(IN, "< mm-pachi.table") || die "couldn't open mm-pachi.table";
+foreach my $s (<IN>) {
+    if ($s =~ m/^([0-9]+) \((.*)\)/) {
+	my ($n, $name) = ($1, $2);
+	$number2feature{$n} = $name;
+	$number_max = max($number_max, $n);
+    }
+}
+close(IN);
+
+
+my %stats;
+my $moves = 0;
+
+open(IN, "< mm-input.dat") || die "couldn't open mm-input.dat";
+# don't slurp in whole file at once, huge !
+while (my $s = <IN>) {
+    # Skip to next game move
+    if ($s !~ m/^#/) {  next;  }
+    $s = <IN>;
+    chomp($s);
+
+    $moves++;
+    my @numbers = split(/ /, $s);
+    
+    foreach my $n (@numbers) {
+	$stats{$n}++;	
+    }
+}
+close(IN);
+
+for (my $n = 0; $n < $number_max; $n++) {
+    my $feature = sprintf("(%s)", $number2feature{$n});
+    my $pc = $stats{$n} * 100 / $moves;
+    my $color = $normal;
+    if ($stats{$n} < 50)  {  $color = $red;  }
+    printf("${color}%-5i  %-30s  %6i / %-6i moves  %4.1f%%${end}\n", $n, $feature, $stats{$n}, $moves, $pc);
+}

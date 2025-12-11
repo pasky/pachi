@@ -38,8 +38,8 @@ fi
 
 echo ""
 echo "All Done. Wrote mm-pachi.table, mm-input.dat"
-echo "Now run: "
-echo "    mm < mm-input.dat"
+echo "Now check feature stats with:"
+echo "    pattern/training/mm_games_stats | less -r"
+echo "and run:"
+echo "    pattern/training/mm/mm < mm-input.dat"
 echo "to generate gammas (will create mm-with-freq.dat)"
-echo "and create patterns_mm.gamma with:"
-echo "    pattern/mm_gammas"

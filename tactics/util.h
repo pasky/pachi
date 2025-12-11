@@ -32,6 +32,10 @@ int diag_quadrant(int quad);
  * doesn't hold for center lines. Instead use:
  *     coord_quadrant(rotate_coord(c, rot))  */
 int rotate_quadrant(int q, int rot);
+/* Check if coord is on or close to quadrant boundary. */
+bool near_ambiguous_quadrant_coord(coord_t c);
+/* Ambiguous last coord quadrant ? */
+#define near_ambiguous_last_quadrant(b) (near_ambiguous_quadrant_coord(last_move(b).coord))
 
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
@@ -73,6 +77,9 @@ static double board_local_value(bool scan_neis, board_t *b, coord_t coord, enum 
 static inline int
 coord_edge_distance(coord_t c)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+#endif
 	int stride = the_board_stride();
 	int x = coord_x(c), y = coord_y(c);
 	int dx = x > stride / 2 ? stride - 1 - x : x;
@@ -83,6 +90,10 @@ coord_edge_distance(coord_t c)
 static inline int
 coord_gridcular_distance(coord_t c1, coord_t c2)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c1));
+	assert(sane_coord(c2));
+#endif	
 	int dx = abs(coord_dx(c1, c2)), dy = abs(coord_dy(c1, c2));
 	return dx + dy + (dx > dy ? dx : dy);
 }
@@ -90,6 +101,10 @@ coord_gridcular_distance(coord_t c1, coord_t c2)
 static inline double
 board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+#endif
 	if (scan_neis) {
 		/* Count surrounding friendly stones and our eyes. */
 		int friends = 0;

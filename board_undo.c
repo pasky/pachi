@@ -43,7 +43,7 @@ undo_save_merge(board_t *b, board_undo_t *u, group_t g, coord_t c)
 	if (!i) u->inserted = c;
 	u->merged[i].group = g;
 	u->merged[i].last = 0;   // can remove
-	u->merged[i].info = board_group_info(b, g);
+	u->merged[i].info = *group_info(b, g);
 }
 
 static inline void
@@ -55,10 +55,10 @@ undo_save_enemy(board_t *b, board_undo_t *u, group_t g)
 	
 	int i = u->nenemies++;
 	u->enemies[i].group = g;
-	u->enemies[i].info = board_group_info(b, g);
+	u->enemies[i].info = *group_info(b, g);
 	u->enemies[i].stones = NULL;
 	
-	if (board_group_info(b, g).libs <= 1) { // Will be captured
+	if (group_libs(b, g) <= 1) { // Will be captured
 		coord_t *stones = u->enemies[i].stones = u->captures_end;
 		int j = 0;
 		foreach_in_group(b, g) {
@@ -121,7 +121,7 @@ board_quick_play(board_t *b, move_t *m, board_undo_t *u)
 	int r = board_play_(b, m);
 #ifdef BOARD_UNDO_CHECKS
 	if (r >= 0)
-		board->quicked++;
+		b->quicked++;
 #endif
 
 	b->u = NULL;
@@ -142,10 +142,14 @@ undo_merge(board_t *b, board_undo_t *u, move_t *m)
 	// Others groups, in reverse order ...
 	for (int i = u->nmerged - 1; i > 0; i--) {
 		group_t old_group = merged[i].group;
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
+		*group_info(b, old_group) = merged[i].info;
 			
-		board_group_info(b, old_group) = merged[i].info;
-			
-		groupnext_at(b, group_base(group)) = groupnext_at(b, merged[i].last);
+		groupnext_at(b, group) = groupnext_at(b, merged[i].last);
 		groupnext_at(b, merged[i].last) = 0;
 
 #if 0
@@ -163,7 +167,7 @@ undo_merge(board_t *b, board_undo_t *u, move_t *m)
 
 	// Restore first group
 	groupnext_at(b, u->inserted) = groupnext_at(b, coord);
-	board_group_info(b, merged[0].group) = merged[0].info;
+	*group_info(b, merged[0].group) = merged[0].info;
 
 #if 0
 	printf("merged_group[0]: ");
@@ -184,8 +188,12 @@ restore_enemies(board_t *b, board_undo_t *u, move_t *m)
 	undo_enemy_t *enemy = u->enemies;
 	for (int i = 0; i < u->nenemies; i++) {
 		group_t old_group = enemy[i].group;
-			
-		board_group_info(b, old_group) = enemy[i].info;
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
+		*group_info(b, old_group) = enemy[i].info;
 			
 		coord_t *stones = enemy[i].stones;
 		if (!stones)  continue;
@@ -201,13 +209,13 @@ restore_enemies(board_t *b, board_undo_t *u, move_t *m)
 
 			// Update liberties of neighboring groups
 			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->merged[0].group || g == u->merged[1].group || g == u->merged[2].group || g == u->merged[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j]);
-				});
+				if (board_at(b, c) != color)
+					continue;
+				group_t g = group_at(b, c);
+				if (g == u->merged[0].group || g == u->merged[1].group || g == u->merged[2].group || g == u->merged[3].group)
+					continue;
+				board_group_rmlib(b, g, stones[j]);
+			});
 		}
 	}
 }
@@ -227,14 +235,14 @@ board_undo_stone(board_t *b, board_undo_t *u, move_t *m)
 	if (u->nmerged)
 		undo_merge(b, u, m);
 	else			// Single stone group undo
-		memset(&board_group_info(b, group_at(b, coord)), 0, sizeof(group_info_t));
+		memset(group_info(b, group_at(b, coord)), 0, sizeof(group_info_t));
 	
 	board_at(b, coord) = S_NONE;
 	group_at(b, coord) = 0;
 	groupnext_at(b, coord) = u->next_at;
 	
 	foreach_neighbor(b, coord, {
-			dec_neighbor_count_at(b, c, color);
+		dec_neighbor_count_at(b, c, color);
 	});
 
 	// Restore enemy groups
@@ -253,9 +261,13 @@ restore_suicide(board_t *b, board_undo_t *u, move_t *m)
 	undo_enemy_t *enemy = u->enemies;
 	for (int i = 0; i < u->nenemies; i++) {
 		group_t old_group = enemy[i].group;
-			
-		board_group_info(b, old_group) = enemy[i].info;
-			
+
+#ifdef EXTRA_CHECKS
+		/* group_at() set later, make group_info() checks happy */
+		group_at(b, old_group) = old_group;
+#endif
+		*group_info(b, old_group) = enemy[i].info;
+
 		coord_t *stones = enemy[i].stones;
 		if (!stones)  continue;
 
@@ -270,14 +282,14 @@ restore_suicide(board_t *b, board_undo_t *u, move_t *m)
 
 			// Update liberties of neighboring groups
 			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->enemies[0].group || g == u->enemies[1].group || 
-					    g == u->enemies[2].group || g == u->enemies[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j]);
-				});
+				if (board_at(b, c) != color)
+					continue;
+				group_t g = group_at(b, c);
+				if (g == u->enemies[0].group || g == u->enemies[1].group || 
+				    g == u->enemies[2].group || g == u->enemies[3].group)
+					continue;
+				board_group_rmlib(b, g, stones[j]);
+			});
 		}
 	}
 }
@@ -311,6 +323,7 @@ void
 board_quick_undo(board_t *b, move_t *m, board_undo_t *u)
 {
 #ifdef BOARD_UNDO_CHECKS
+	assert(quick_board(b));
 	b->quicked--;
 #endif
 	

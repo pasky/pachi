@@ -188,8 +188,13 @@ gtp_is_valid(engine_t *e, const char *cmd)
 	return (gtp_get_handler(cmd) != NULL);
 }
 
+#ifdef BOARD_TESTS
+#define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
+				 board_is_valid_play(b, (m)->color, (m)->coord))
+#else
 #define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
 				 board_is_valid_play_no_suicide(b, (m)->color, (m)->coord))
+#endif
 
 #define gtp_check_valid_move(b, m)	do {				\
 	if (!gtp_valid_move(b, m)) {				\
@@ -224,7 +229,8 @@ cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", gtp->next);
+	chomp(gtp->next);
+	gtp_printf(gtp, "%s\n", gtp->next);
 	return P_OK;
 }
 
@@ -609,7 +615,7 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 
 	/* Check moves are valid first, don't leave half setup board on error. */
 	board_t copy;
@@ -621,7 +627,7 @@ cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 		int r = board_play(&copy, &m);
 		assert(r >= 0);
-		mq_add(&q, m.coord, 0);
+		mq_add(&q, m.coord);
 	} while (*gtp->next);
 
 	/* All good, update main board. */
@@ -648,7 +654,7 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	int stones;
 	gtp_arg_number(stones);
 	
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
 	if (DEBUGL(3) && debug_boardprint)
@@ -673,7 +679,7 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	char *score_str = board_official_score_str(b, &q);
 
@@ -730,7 +736,7 @@ cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 
 	for (int i = 0; i < q.moves; i++) {
@@ -751,7 +757,7 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	int printed = 0;
 	
@@ -778,7 +784,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 	if (!ownermap) {  gtp_error(gtp, "no ownermap");  return -1;  }
 	int printed = 0;
 
-	move_queue_t sekis;  mq_init(&sekis);
+	mq_t sekis;  mq_init(&sekis);
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_SEKI)  continue;
@@ -786,8 +792,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
 			if (!g)  continue;
-			mq_add(&sekis, g, 0);
-			mq_nodup(&sekis);
+			mq_add_nodup(&sekis, g);
 		});
 	} foreach_point_end;
 
@@ -997,6 +1002,25 @@ cmd_pachi_engine(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+#ifdef JOSEKIFIX
+/* Usage: pachi-external_engine_mode q1 q2 q3 q4
+ * Set external joseki engine mode (one number per quadrant = number of moves left). */
+static enum parse_code
+cmd_pachi_external_engine_mode(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	int mode[4];
+	for (int i = 0; i < 4; i++) {
+		gtp_arg_number(mode[i]);
+		if (mode[i] < 0)
+			gtp_error(gtp, "must be positive numbers");
+	}
+
+	for (int i = 0; i < 4; i++)
+		b->external_joseki_engine_moves_left_by_quadrant[i] = mode[i];
+	return P_OK;
+}
+#endif
+
 static enum parse_code
 cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -1076,81 +1100,90 @@ cmd_kgs_time_settings(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 static gtp_command_t gtp_commands[] =
 {								/* Core GTP commands */
-	{ "boardsize",              cmd_boardsize },
-	{ "clear_board",            cmd_clear_board },
-	{ "echo",                   cmd_echo },
-	{ "final_score",            cmd_final_score },
-	{ "final_status_list",      cmd_final_status_list },
-	{ "fixed_handicap",         cmd_fixed_handicap },
-	{ "genmove",                cmd_genmove },
-	{ "known_command",          cmd_known_command },
-	{ "komi",                   cmd_komi },
-	{ "list_commands",          cmd_list_commands },
-	{ "name",                   cmd_name },
-	{ "place_free_handicap",    cmd_fixed_handicap },
-	{ "play",                   cmd_play },
-	{ "protocol_version",       cmd_protocol_version },
-	{ "quit",                   cmd_quit },
-	{ "set_free_handicap",      cmd_set_free_handicap },
-	{ "showboard",              cmd_showboard },
-	{ "time_left",              cmd_time_left },
-	{ "undo",                   cmd_undo },
-	{ "version",                cmd_version },
+	{ "boardsize",			cmd_boardsize },
+	{ "clear_board",		cmd_clear_board },
+	{ "echo",			cmd_echo },
+	{ "final_score",		cmd_final_score },
+	{ "final_status_list",		cmd_final_status_list },
+	{ "fixed_handicap",		cmd_fixed_handicap },
+	{ "genmove",			cmd_genmove },
+	{ "known_command",		cmd_known_command },
+	{ "komi",			cmd_komi },
+	{ "list_commands",		cmd_list_commands },
+	{ "name",			cmd_name },
+	{ "place_free_handicap",	cmd_fixed_handicap },
+	{ "play",			cmd_play },
+	{ "protocol_version",		cmd_protocol_version },
+	{ "quit",			cmd_quit },
+	{ "set_free_handicap",		cmd_set_free_handicap },
+	{ "showboard",			cmd_showboard },
+	{ "time_left",			cmd_time_left },
+	{ "undo",			cmd_undo },
+	{ "version",			cmd_version },
 								/* Aliases */
-	{ "predict",                cmd_pachi_predict },
-	{ "score_est",              cmd_pachi_score_est },
-	{ "time_settings",          cmd_kgs_time_settings },
-	{ "tunit",		    cmd_pachi_tunit },
-								/* GoGui commands */
-	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
-	{ "gogui-best_moves",       cmd_gogui_best_moves },
-	{ "gogui-color_palette",    cmd_gogui_color_palette },
-#ifdef DCNN
-	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
-	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
-	{ "gogui-dcnn_rating",      cmd_gogui_dcnn_rating },
+	{ "predict",			cmd_pachi_predict },
+	{ "score_est",			cmd_pachi_score_est },
+#ifdef JOSEKIFIX
+	{ "external_engine_mode",	cmd_pachi_external_engine_mode },
 #endif
-	{ "gogui-final_score",      cmd_gogui_final_score },
-	{ "gogui-influence",        cmd_gogui_influence },
-	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
-	{ "gogui-joseki_show_pattern", cmd_gogui_joseki_show_pattern },
+	{ "time_settings",		cmd_kgs_time_settings },
+	{ "tunit",			cmd_pachi_tunit },
+								/* GoGui commands */
+	{ "gogui-analyze_commands",	cmd_gogui_analyze_commands },
+	{ "gogui-bad_selfatari",        cmd_gogui_bad_selfatari },
+	{ "gogui-best_moves",		cmd_gogui_best_moves },
+	{ "gogui-color_palette",	cmd_gogui_color_palette },
+#ifdef DCNN
+	{ "gogui-dcnn_best",		cmd_gogui_dcnn_best },
+	{ "gogui-dcnn_colors",		cmd_gogui_dcnn_colors },
+	{ "gogui-dcnn_rating",		cmd_gogui_dcnn_rating },
+#endif
+	{ "gogui-final_score",		cmd_gogui_final_score },
+	{ "gogui-influence",		cmd_gogui_influence },
+	{ "gogui-joseki_moves",		cmd_gogui_joseki_moves },
+	{ "gogui-joseki_show_pattern",	cmd_gogui_joseki_show_pattern },
 #ifdef JOSEKIFIX
 	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
-	{ "gogui-josekifix_set_coord",    cmd_gogui_josekifix_set_coord },
-	{ "gogui-josekifix_show_pattern", cmd_gogui_josekifix_show_pattern },
+	{ "gogui-josekifix_show_pattern",   cmd_gogui_josekifix_show_pattern },
 #endif
-	{ "gogui-livegfx",          cmd_gogui_livegfx },
-	{ "gogui-pattern_best",     cmd_gogui_pattern_best },
-	{ "gogui-pattern_colors",   cmd_gogui_pattern_colors },
-	{ "gogui-pattern_features", cmd_gogui_pattern_features },
-	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
-	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
-	{ "gogui-score_est",        cmd_gogui_score_est },
-	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
-	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
-	{ "gogui-winrates",         cmd_gogui_winrates },
+	{ "gogui-livegfx",		cmd_gogui_livegfx },
+	{ "gogui-pattern_best",		cmd_gogui_pattern_best },
+	{ "gogui-pattern_colors",	cmd_gogui_pattern_colors },
+	{ "gogui-pattern_features",	cmd_gogui_pattern_features },
+	{ "gogui-pattern_gammas",	cmd_gogui_pattern_gammas },
+	{ "gogui-pattern_rating",	cmd_gogui_pattern_rating },
+	{ "gogui-playout_moves",	cmd_gogui_playout_moves },
+	{ "gogui-score_est",		cmd_gogui_score_est },
+	{ "gogui-show_spatial",		cmd_gogui_show_spatial },
+	{ "gogui-spatial_size",		cmd_gogui_spatial_size },
+	{ "gogui-toggle_debugging_commands",  cmd_gogui_toggle_debugging_commands },
+	{ "gogui-version",              cmd_gogui_version },
+	{ "gogui-winrates",		cmd_gogui_winrates },
 								/* KGS commands */
-	{ "kgs-chat",               cmd_kgs_chat },
-	{ "kgs-game_over",          cmd_kgs_game_over },
-	{ "kgs-genmove_cleanup",    cmd_genmove },
-	{ "kgs-rules",              cmd_kgs_rules },
-	{ "kgs-time_settings",      cmd_kgs_time_settings },
+	{ "kgs-chat",			cmd_kgs_chat },
+	{ "kgs-game_over",		cmd_kgs_game_over },
+	{ "kgs-genmove_cleanup",	cmd_genmove },
+	{ "kgs-rules",			cmd_kgs_rules },
+	{ "kgs-time_settings",		cmd_kgs_time_settings },
 								/* Lizzie, Sabaki, etc */
-	{ "lz-analyze",             cmd_lz_analyze },
-	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
+	{ "lz-analyze",			cmd_lz_analyze },
+	{ "lz-genmove_analyze",		cmd_lz_genmove_analyze },
 								/* Pachi */
-	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
-	{ "pachi-engine",	    cmd_pachi_engine },
-	{ "pachi-evaluate",         cmd_pachi_evaluate },
-	{ "pachi-genmoves",         cmd_pachi_genmoves },
-	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
-	{ "pachi-gentbook",         cmd_pachi_gentbook },
-	{ "pachi-getoption",	    cmd_pachi_getoption },	/* Get engine option(s) */
-	{ "pachi-predict",          cmd_pachi_predict },
-	{ "pachi-result",           cmd_pachi_result },
-	{ "pachi-score_est",        cmd_pachi_score_est },
-	{ "pachi-setoption",	    cmd_pachi_setoption },	/* Set engine option */	
-	{ "pachi-tunit",            cmd_pachi_tunit },
+	{ "pachi-dumptbook",		cmd_pachi_dumptbook },
+	{ "pachi-engine",		cmd_pachi_engine },
+	{ "pachi-evaluate",		cmd_pachi_evaluate },
+	{ "pachi-genmoves",		cmd_pachi_genmoves },
+	{ "pachi-genmoves_cleanup",	cmd_pachi_genmoves },
+	{ "pachi-gentbook",		cmd_pachi_gentbook },
+	{ "pachi-getoption",		cmd_pachi_getoption },
+#ifdef JOSEKIFIX
+	{ "pachi-external_engine_mode", cmd_pachi_external_engine_mode },
+#endif
+	{ "pachi-predict",		cmd_pachi_predict },
+	{ "pachi-result",		cmd_pachi_result },
+	{ "pachi-score_est",		cmd_pachi_score_est },
+	{ "pachi-setoption",		cmd_pachi_setoption },
+	{ "pachi-tunit",		cmd_pachi_tunit },
 
 	{ 0, 0 }
 };

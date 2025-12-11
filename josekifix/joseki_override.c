@@ -52,40 +52,8 @@ static void
 set_external_engine_mode_quad(board_t *b, int quadrant, int moves)
 {
 	assert(quadrant >= 0 && quadrant <= 3);
-	b->external_joseki_engine_moves_left_by_quadrant[quadrant] = moves;
-}
-
-/* If last move near middle, turn on adjacent quadrant as well */
-static void
-check_set_external_engine_mode_adjacent_quad(board_t *b, int moves)
-{	
-	int x = coord_x(last_move(b).coord);
-	int y = coord_y(last_move(b).coord);
-	int mid = (board_rsize(b) + 1) / 2;
-	int adx = abs(mid - x);
-	int ady = abs(mid - y);
-	
-	if (adx < ady && adx <= 2) {
-		if (y > mid) {
-			set_external_engine_mode_quad(b, 0, moves);
-			set_external_engine_mode_quad(b, 1, moves);
-		}
-		if (y < mid) {
-			set_external_engine_mode_quad(b, 2, moves);
-			set_external_engine_mode_quad(b, 3, moves);
-		}
-	}
-	
-	if (ady < adx && ady <= 2) {
-		if (x < mid) {
-			set_external_engine_mode_quad(b, 0, moves);
-			set_external_engine_mode_quad(b, 3, moves);
-		}
-		if (x > mid) {
-			set_external_engine_mode_quad(b, 1, moves);
-			set_external_engine_mode_quad(b, 2, moves);
-		}
-	}
+	int *val = &b->external_joseki_engine_moves_left_by_quadrant[quadrant];
+	*val = MAX(*val, moves);  /* Preserve current setting if higher. */
 }
 
 #if 0
@@ -128,15 +96,8 @@ set_wanted_external_engine_mode(external_engine_mode_t *mode, board_t *b, joseki
 static void
 commit_wanted_external_engine_mode(external_engine_mode_t *mode, board_t *b)
 {
-	for (int q = 0; q < 4; q++) {
-		int moves = mode->moves[q];
-		
-		if (moves) {	/* enable external joseki engine mode in this quadrant */
-			set_external_engine_mode_quad(b, q, moves);
-			if (q == last_quadrant(b))
-				check_set_external_engine_mode_adjacent_quad(b, moves);
-		}
-	}
+	for (int q = 0; q < 4; q++)
+		set_external_engine_mode_quad(b, q, mode->moves[q]);
 }
 
 
@@ -355,7 +316,7 @@ static bool
 sane_joseki_override_move(struct board *b, coord_t c, char *name, int n)
 {
 	assert(c != EXTERNAL_ENGINE_MOVE);
-	enum stone color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c)) {
 		/* Override or external engine returned an invalid move.

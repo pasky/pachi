@@ -4,6 +4,8 @@
 
 #ifdef DCNN
 
+#include "engine.h"
+
 #define DCNN_BEST_N 20
 
 /* Choose which dcnn to load */
@@ -28,15 +30,15 @@ void dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *own
 /* Raw dcnn output (doesn't fix blunders) */
 void dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log);
 /* Get best moves */
-void get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest);
-void print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
+void get_dcnn_best_moves(board_t *b, float *r, best_moves_t *best);
+void print_dcnn_best_moves(best_moves_t *best);
 
 /* Convert board coord to dcnn data index */
 static int coord2dcnn_idx(coord_t c);
 
 /* Private use */
 int  dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
-void get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, move_queue_t *q);
+void get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, mq_t *q);
 bool dcnn_first_line_connect_blunder(board_t *b, move_t *m);
 
 extern int darkforest_dcnn;

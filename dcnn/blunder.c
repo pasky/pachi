@@ -75,13 +75,13 @@ dcnn_first_line_connect_blunder(board_t *b, move_t *m)
 		 *   # O X X
 		 *   # X . .
 		 *   # . . .     */
-		if (board_group_info(b, g).libs == 2 && can_capture_2lib_group(b, g, NULL, 0))
+		if (group_libs(b, g) == 2 && can_capture_2lib_group(b, g, NULL))
 			with_move_return(true);
 		
 		/* 3 libs case */
-		if (board_group_info(b, g).libs != 3)  break;
-		for (int i = 0; i < board_group_info(b, g).libs; i++) {
-			coord_t c = board_group_info(b, g).lib[i];
+		if (group_libs(b, g) != 3)  break;
+		for (int i = 0; i < group_libs(b, g); i++) {
+			coord_t c = group_lib(b, g, i);
 			move_t m2 = move(c, stone_other(m->color));
 			if (pattern_match_l1_blunder_punish(b, &m2) != -1)
 				with_move_return(true);
@@ -147,9 +147,9 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 	with_move(b, m->coord, color, {
 		group_t g = group_at(b, m->coord);
 		if (!g)  break;
-		if (board_group_info(b, g).libs != 2)  break;	/* 2 libs */
-		if (group_stone_count(b, g, 4) < 3)    break;	/* creates own group with at least 3 stones */
-		if (can_capture_2lib_group(b, g, NULL, 0))	/* can be captured now */
+		if (group_libs(b, g) != 2)           break;	/* 2 libs */
+		if (group_stone_count(b, g, 4) < 3)  break;	/* creates own group with at least 3 stones */
+		if (can_capture_2lib_group(b, g, NULL))		/* can be captured now */
 			with_move_return(true);
 	});
 	return false;
@@ -209,7 +209,7 @@ candidate_dist_cmp(const void *pa, const void *pb)
 }
 
 static int
-keep_closest_moves(defense_move_t candidates[], int ncandidates, float result[], move_queue_t *defense_moves)
+keep_closest_moves(defense_move_t candidates[], int ncandidates, float result[], mq_t *defense_moves)
 {
 	/* Sort defense_moves by distance to corresponding atari move */
 	qsort(candidates, ncandidates, sizeof(*candidates), candidate_dist_cmp);
@@ -223,7 +223,7 @@ keep_closest_moves(defense_move_t candidates[], int ncandidates, float result[],
 		if (i >= 5 && result[k] < 0.02)		// throw away
 			continue;
 
-		mq_add(defense_moves, c, 0);
+		mq_add(defense_moves, c);
 	}
 	
 	return defense_moves->moves;
@@ -257,23 +257,25 @@ keep_best_combos(defense_move_t candidates[], int ncandidates, int best_combos[]
 
 /* Find all @feature atari moves on the board. */
 static int
-find_atari_moves(move_queue_t *q, int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
+find_atari_moves(mq_t *q, int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
 {
 	int n = 0;
-	
-	foreach_free_point(b) {
+
+	/* Can't foreach_free_point(b), we get called from within with_move() */
+	foreach_point(b) {
+		if (board_at(b, c) != S_NONE)  continue;
 		move_t m = move(c, to_play);
 		if (pattern_match_atari(b, &m, ownermap) == feature) {
 			n++;
-			if (q)  mq_add(q, c, 0);
+			if (q)  mq_add(q, c);
 		}
-	} foreach_free_point_end;
+	} foreach_point_end;
 
 	return n;
 }
 
 static void
-show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
+show_which_move_fixes_which_atari(coord_t c, mq_t *fixed)
 {
 	fprintf(stderr, "dcnn_blunder: %s fixes ataris ", coord2sstr(c));
 	for (int i = 0; i < fixed->moves; i++)
@@ -284,7 +286,7 @@ show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
 static bool
 really_defends_atari(board_t *b, board_t *orig_board, enum stone color, coord_t atari)
 {
-	move_queue_t targets;
+	mq_t targets;
 	board_get_2lib_neighbors(orig_board, atari, color, &targets);
 	
 	/* If multiple target groups should at least defend one,
@@ -292,8 +294,8 @@ really_defends_atari(board_t *b, board_t *orig_board, enum stone color, coord_t 
 	bool found = false;
 	for (int i = 0; i < targets.moves; i++) {
 		group_t g = group_at(b, targets.move[i]);  assert(g);
-		int libs = board_group_info(b, g).libs;  /* May not have 2 libs anymore */
-		bool can_cap = (libs == 2 && can_capture_2lib_group(b, g, NULL, 0));
+		int libs = group_libs(b, g);  /* May not have 2 libs anymore */
+		bool can_cap = (libs == 2 && can_capture_2lib_group(b, g, NULL));
 		if (can_cap && group_stone_count(b, g, 4) >= 3)
 			return false;
 		if (!can_cap)
@@ -308,7 +310,7 @@ find_atari_defense_moves(int feature,
 			 defense_move_t candidates[], int best_combos[])
 {
 	enum stone other_color = stone_other(color);
-	move_queue_t atari_moves;  mq_init(&atari_moves);
+	mq_t atari_moves;  mq_init(&atari_moves);
 	int n = find_atari_moves(&atari_moves, feature, b, other_color, ownermap);
 	if (!n)  return 0;
 
@@ -320,14 +322,14 @@ find_atari_defense_moves(int feature,
 			continue;
 		
 		with_move(b, c, color, {
-			move_queue_t atari_moves2;  mq_init(&atari_moves2);
+			mq_t atari_moves2;  mq_init(&atari_moves2);
 			if (find_atari_moves(&atari_moves2, feature, b, other_color, ownermap) >= n)
 				break;		/* doesn't help */
 
 			/* Found potential atari defense move. Look closer so we can filter later on. */
 			
 			/* Find which atari(s) got changed/fixed */
-			move_queue_t fixed;  mq_init(&fixed);
+			mq_t fixed;  mq_init(&fixed);
 			mq_sub(&atari_moves, &atari_moves2, &fixed);
 
 			/* Check move really defends something. Move may be really stupid
@@ -360,7 +362,7 @@ find_atari_defense_moves(int feature,
 static int
 select_atari_defense_moves(char *name, int feature,
 			   board_t *b, enum stone color, float result[], ownermap_t *ownermap,
-			   move_queue_t *defense_moves, int *dropped)
+			   mq_t *defense_moves, int *dropped)
 {
 	defense_move_t candidates[BOARD_MAX_MOVES];        memset(candidates, 0, sizeof(candidates));
 	int            best_combos[BOARD_MAX_COORDS];      memset(best_combos, 0, sizeof(best_combos));
@@ -382,18 +384,19 @@ select_atari_defense_moves(char *name, int feature,
 }
 
 static void
-boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue_t *defense_moves, int dropped)
+boost_atari_defense_short_log(char *name, board_t *b, float result[], mq_t *defense_moves, int dropped)
 {
 	int moves = defense_moves->moves;
 	int best_n = 12;
 	coord_t best_c[12];
 	float   best_r[12];
-	get_dcnn_best_moves(b, result, best_c, best_r, best_n);
+	best_moves_setup(best, best_c, best_r, 12);
+	get_dcnn_best_moves(b, result, &best);
 	
 	fprintf(stderr, "dcnn blunder: boosted [ ");
-	for (int i = 0; i < best_n; i++) {
+	for (int i = 0; i < best.n; i++) {
 		if (!mq_has(defense_moves, best_c[i]))  continue;
-		const char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
+		const char *str = coord2sstr(best_c[i]);
 		fprintf(stderr, "%s ", str);
 	}
 	if (moves > best_n)  fprintf(stderr, "... ] (%s) (%i moves)", name, moves);
@@ -406,10 +409,10 @@ static int
 boost_atari_defense_moves(char *name, int feature,
 			  board_t *b, enum stone color, float result[], ownermap_t *ownermap, int debugl)
 {
-	move_queue_t defense_moves;	mq_init(&defense_moves);
-	int          dropped;
-	int          moves = select_atari_defense_moves(name, feature, b, color, result, ownermap,
-							&defense_moves, &dropped);
+	mq_t defense_moves;  mq_init(&defense_moves);
+	int  dropped;
+	int  moves = select_atari_defense_moves(name, feature, b, color, result, ownermap,
+						&defense_moves, &dropped);
 	if (!moves)  return 0;
 	
 	/* Now we know how many moves will get boosted */
@@ -512,8 +515,9 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 	if (changes && debugl) {
 		coord_t best_c[DCNN_BEST_N];
 		float   best_r[DCNN_BEST_N];
-		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
-		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
+		best_moves_setup(best, best_c, best_r, DCNN_BEST_N);
+		get_dcnn_best_moves(b, result, &best);
+		print_dcnn_best_moves(&best);
 	}
 	
 	return changes;
@@ -522,7 +526,7 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 /* For testing: Return list of boosted or killed blunders in list @q.
  * @boosted selects what to return. */
 void
-get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, move_queue_t *q)
+get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, mq_t *q)
 {
 	if (boosted) {
 		int dropped;		/* keep in sync with dcnn_fix_blunders() calls */
@@ -540,7 +544,7 @@ get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ow
 		char *name = "";
 		
 		if (dcnn_blunder(b, &m, ownermap, result[k], &redirect, &name)) {
-			if (!boosted)  mq_add(q, c, 0);
+			if (!boosted)  mq_add(q, c);
 			else           mq_remove(q, c);
 		}
 	} foreach_free_point_end;

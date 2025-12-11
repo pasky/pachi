@@ -1,0 +1,45 @@
+#!/bin/bash
+# git_log_feature:
+# Show gamma changes history for a given pattern feature
+
+die()   {  echo "$@"; exit 1;  }
+
+usage() {
+    echo "Usage: git_log_feature <spatial_feature>"
+    echo ""
+    echo "for example:"
+    echo "   $ pattern/tools/git_log_feature 'capture:ataridef' "
+    echo "   $ pattern/tools/git_log_feature 's4:3106' "
+    exit 1
+}
+
+[ -n "$1" ] || usage
+[ -d .git ] || die "this script needs to be run in pachi git repo root"
+
+feature="$1"
+
+( echo "$feature" | grep -q ':' ) || die "invalid feature '$feature'"
+
+# Remove parenthesis
+feature=`echo "$feature" | sed -e 's/(\(.*:.*\))/\1/'`
+
+# Spatial feature ?
+if echo "$feature" | grep -q 's[0-9]*:[0-9]*'; then
+    dir=`dirname $0`
+    exec $dir/git_log_spatial "$feature"
+fi
+
+# For all versions of patterns_mm.gamma
+git log --pretty=format:'%h %ad' --date=short patterns_mm.gamma |
+    while read commit date; do
+	echo -n "$commit $date "
+
+	matches=`git show $commit:patterns_mm.gamma | grep -F "($feature)" | wc -l`
+	if [ $matches = 0 ]; then
+	    echo "no matches"
+	    continue
+	fi
+
+	echo -n "($feature) "
+	git show $commit:patterns_mm.gamma | grep -F "($feature)" | cut -d' ' -f1
+    done

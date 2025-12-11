@@ -171,7 +171,7 @@ override_cmp(joseki_override_t *o1, joseki_override_t *o2)
 /* Load from file */
 
 static void
-ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *override)
+ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *override, char *idx)
 {
 	board_t b2;  board_copy(&b2, board);
 	board_t *b = &b2;
@@ -226,6 +226,51 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *ov
 		die("josekifix: \"%s\": ladder check at %s: wrong color, aborting. (run with -d5 to see previous moves)\n",
 		    override->name, check->coord);
 	}
+
+	/* Display ladder check board setup. */
+	
+	if (DEBUGL(3)) {
+		char *color = (check->own_color ? "own" : "other");
+		char *works = (check->works ? "" : "no");
+
+		fprintf(stderr, "  ladder check setup:  (%sladder_%s%s = %s)\n", works, color, idx, check->coord);
+		board_print(b, stderr);
+	}
+}
+
+static bool
+is_external_engine_override(joseki_override_t *override)
+{
+	if (!strcmp(override->next, "pass"))
+		return true;
+	for (int i = 0; i < 4; i++)
+		if (override->external_engine_mode[i])
+			return true;
+	return false;
+}
+
+/* Warn if external engine override, but quadrant it applies to is ambiguous.
+ * Happens if last move is close to quadrant boundary, and there's no explicit quadrant setting. 
+ * Stuff that add explicit settings like parse_external_engine() should do its own checks. */
+static void
+check_external_engine_override_ambiguous_quadrant(board_t *b, joseki_override_t *override)
+{
+	if (!is_external_engine_override(override))
+		return;
+
+	/* Explicit setting, good */
+	for (int i = 0; i < 4; i++)
+		if (override->external_engine_mode[i])
+			return;
+
+	/* Last move not in between 2 quadrants -> good */
+	assert(last_move(b).coord != pass);
+	if (!near_ambiguous_last_quadrant(b))
+		return;
+
+	/* Warn */
+	board_print(b, stderr);
+	fprintf(stderr, "josekifix: \"%s\": override with ambiguous quadrant(s)\nshould set it explicitly (ex: external_engine = lower_left)\n\n", override->name);
 }
 
 /* Common sanity checks for [override] and [log] sections */
@@ -257,8 +302,8 @@ common_sanity_checks(board_t *b, joseki_override_t *override)
 		    override->name, around_str);
 	}
 		
-	if (override->ladder_check.coord)   ladder_sanity_check(b, &override->ladder_check, override);
-	if (override->ladder_check2.coord)  ladder_sanity_check(b, &override->ladder_check2, override);
+	if (override->ladder_check.coord)   ladder_sanity_check(b, &override->ladder_check, override, "");
+	if (override->ladder_check2.coord)  ladder_sanity_check(b, &override->ladder_check2, override, "2");
 	
 	/* Not checking hashes ... */
 
@@ -300,6 +345,9 @@ override_sanity_checks(board_t *b, joseki_override_t *override)
 			override->name, override->next, coord2sstr(around));
 	}
 
+	/* If external engine override, check quadrant is not ambiguous */
+	check_external_engine_override_ambiguous_quadrant(b, override);
+	
 	// TODO if next move, check it's inside match pattern ...
 }
 
@@ -442,8 +490,7 @@ josekifix_load(void)
 		
 		gtp.quiet = true;  // XXX fixme, refactor
 		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);  /* quiet */
-		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
-		if (c != P_OK && c != P_ENGINE_RESET)
+		if (gtp.error || (c != P_OK && c != P_ENGINE_RESET))
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);
 	}
 	engine_done(&e);
@@ -570,8 +617,15 @@ parse_external_engine(board_t *b, joseki_override_t *override, external_engine_s
 {
 	char *name = (override->name ? override->name : "");
 	
-        /* no value = current quadrant */
+        /* No value = current quadrant */
         if (!value || !value[0]) {
+		/* Explicit setting will bypass check_external_engine_override_ambiguous_quadrant(), check here. */
+		if (near_ambiguous_last_quadrant(b)) {  /* Warn */
+			board_print(b, stderr);
+			fprintf(stderr, "josekifix: \"%s\": override with ambiguous quadrant(s)\nshould set it explicitly (ex: external_engine = lower_left)\n\n",
+				override->name);
+		}
+
 		int q = last_quadrant(b);
                 override->external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
 		setting->quadrants[setting->n++] = q;
@@ -597,7 +651,8 @@ parse_external_engine(board_t *b, joseki_override_t *override, external_engine_s
 }
 
 /* external_engine_moves = n			specify number of moves for external engine mode
- * external_engine_moves = n1 n2 [...]		same for each quadrant if multiple quadrants have been enabled */
+ * external_engine_moves = n1 n2		same for each quadrant if multiple quadrants have been enabled
+ * external_engine_moves = n1 n2 n3 n4          (with no other setting) set all 4 quadrants in canonical order */
 static void
 parse_external_engine_moves(board_t *b, joseki_override_t *override, external_engine_setting_t *setting, char *value)
 {
@@ -638,13 +693,18 @@ parse_external_engine_moves(board_t *b, joseki_override_t *override, external_en
 		return;
 	}
 
-	/* Multiple values given: must match previous 'external_engine_mode' setting */
+	/* Multiple values given: must match previous 'external_engine_mode' setting (or specify all 4) */
+	if (!setting->n && n == 4) {  /* All 4 given and no other setting: use canonical order */
+		for (int i = 0; i < 4; i++)
+			override->external_engine_mode[i] = values[i];
+		return;
+	}
 	if (!setting->n)
 		die("josekifix: \"%s\": 'external_engine_moves' needs a corresponding 'external_engine' setting.\n", name);
 	if (n != setting->n)
 		die("josekifix: \"%s\": 'external_engine_moves' and 'external_engine' must specify same number of quadrants.\n", name);
-	assert(n == setting->n);
 	
+	assert(n == setting->n);
 	for (int i = 0; i < n; i++)
 		override->external_engine_mode[setting->quadrants[i]] = values[i];
 }
@@ -702,12 +762,23 @@ add_override(board_t *b, move_t *m, char *move_str)
 		char *value = vars[i].value;
 
 		/* name = override_name */
-		if      (!strcmp(name, "name"))
+		if      (!strcmp(name, "name")) {
+			if (!value || !value[0]) {
+				board_print(b, stderr);
+				die("josekifix: override without name, aborting. (run with -d5 to see previous moves)\n");
+			}
+			
 			override.name = override_name = value;
+		}
 
 		/* around = coord		match pattern origin.
 		 * around = last		(use last move) */
 		else if (!strcmp(name, "around")) {
+			if (!value || !value[0]) {
+				board_print(b, stderr);
+				die("josekifix: \"%s\": override without around coord, aborting. (run with -d5 to see previous moves)\n",
+				    override_name);
+			}
 			if (strcmp(value, "last") && !valid_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",

@@ -23,7 +23,7 @@ random_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 		board_t b2;
 		board_copy(&b2, b);
 
-		board_play_random(&b2, color, &coord, NULL, NULL);
+		coord = board_play_random(&b2, color, NULL, NULL);
 
 		suicide = (coord != pass && !group_at(&b2, coord));
 		board_done(&b2);

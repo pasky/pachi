@@ -15,6 +15,7 @@
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
 #include "josekifix/override.h"
+#include "tactics/selfatari.h"
 
 #ifdef DCNN
 #include "dcnn/dcnn.h"
@@ -33,6 +34,54 @@ typedef enum {
 	GOGUI_RESCALE_LOG =    (1 << 1),
 } gogui_rescale_t;
 
+#define GOGUI_VERSION(major, minor, patch)	(((major) << 16) | ((minor) << 8) | (patch))
+#define GOGUI_VERSION_MAJOR(version)		(((version) & 0xff0000) >> 16)
+#define GOGUI_VERSION_MINOR(version)		(((version) & 0xff00) >> 8)
+#define GOGUI_VERSION_PATCH(version)		((version) & 0xff)
+
+/* Version of GoGui we're running in (0 if unknown). */
+static int gogui_version = 0;
+
+/* GoGui >= 1.4.12 declares its version with gogui-version command. */
+enum parse_code
+cmd_gogui_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+
+	/* Parse gogui version */
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int major = atoi(arg);
+	while (isdigit(*arg))
+		arg++;
+	if (*arg++ != '.')  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int minor = atoi(arg);
+	while (isdigit(*arg))
+		arg++;
+	if (*arg++ != '.')  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+
+	if (!isdigit(*arg))  {  gtp_error(gtp, "invalid version");  return P_OK;  }
+	int patch = atoi(arg);
+
+	int v = gogui_version = GOGUI_VERSION(major, minor, patch);
+
+	if (DEBUGL(3))  fprintf(stderr, "Running in gogui version %i.%i.%i\n", GOGUI_VERSION_MAJOR(v), GOGUI_VERSION_MINOR(v), GOGUI_VERSION_PATCH(v));
+
+	return P_OK;
+}
+
+/* Show debugging analyze commands ? */
+static int debugging_commands = -1;
+
+/* Toggle show/hide debugging analyze commands */
+enum parse_code
+cmd_gogui_toggle_debugging_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	debugging_commands = !debugging_commands;
+	return P_OK;
+}
 
 enum parse_code
 cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
@@ -40,58 +89,70 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");  /* gtp prefix */
 
 	if (e->best_moves) {
-		printf("gfx/Best Moves/gogui-best_moves\n");
-		printf("gfx/Best Winrates/gogui-winrates\n");
+		printf("gfx/Best Moves/gogui-best_moves/Show engine best moves\n");
+		printf("gfx/Best Winrates/gogui-winrates/Show best moves' winrates\n");
 	}
 	if (e->ownermap) {
-		printf("gfx/Influence/gogui-influence\n");
-		printf("gfx/Score Est/gogui-score_est\n");
+		printf("gfx/Influence/gogui-influence/Show black and white areas of influence\n");
+		printf("gfx/Score Estimate/gogui-score_est/Score estimate\n");
 	}
 	if (e->dead_groups) {
-		printf("gfx/Final Score/gogui-final_score\n");
-		printf("plist/Dead Groups/final_status_list dead\n");
-		//printf("plist/Final Status List Dead/final_status_list dead\n");
+		printf("gfx/Final Score/gogui-final_score/Official score\n");
+		printf("plist/Dead Stones/final_status_list dead/Show dead stones\n");
 		//printf("plist/Final Status List Alive/final_status_list alive\n");
 		//printf("plist/Final Status List Seki/final_status_list seki\n");
 		//printf("plist/Final Status List Black/final_status_list black_territory\n");
 		//printf("plist/Final Status List White/final_status_list white_territory\n");
 	}
 	if (str_prefix("UCT", e->name) && using_joseki(b)) {
-		printf("gfx/Joseki Moves/gogui-joseki_moves\n");
-		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
+		printf("gfx/Joseki Moves/gogui-joseki_moves/Show engine's joseki moves\n");
+		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p/Show joseki spatial pattern at selected coordinate\n");
 	}
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (str_prefix("UCT", e->name) && using_dcnn(b)) {
-		printf("gfx/DCNN Best Moves/gogui-dcnn_best\n");
-		printf("gfx/DCNN Color Map/gogui-dcnn_colors\n");
-		printf("gfx/DCNN Ratings/gogui-dcnn_rating\n");
+		printf("gfx/DCNN Best Moves/gogui-dcnn_best/Show neural network best moves\n");
+		printf("gfx/DCNN Color Map/gogui-dcnn_colors/Show neural network ratings (red=best)\n");
+		printf("gfx/DCNN Ratings/gogui-dcnn_rating/Show neural network ratings\n");
 	}
 #endif
 	if (str_prefix("UCT", e->name) && using_patterns()) {
-		printf("gfx/Pattern Best Moves/gogui-pattern_best\n");
-		printf("gfx/Pattern Color Map/gogui-pattern_colors\n");
-		printf("gfx/Pattern Ratings/gogui-pattern_rating\n");
-		printf("gfx/Pattern Features At/gogui-pattern_features %%p\n");
-		printf("gfx/Pattern Gammas At/gogui-pattern_gammas %%p\n");
-		printf("gfx/Set Spatial Size/gogui-spatial_size %%o\n");
-		printf("gfx/Show Spatial/gogui-show_spatial %%p\n");
+		printf("gfx/Pattern Best Moves/gogui-pattern_best/Show pattern best moves\n");
+		printf("gfx/Pattern Color Map/gogui-pattern_colors/Show pattern ratings (red=best)\n");
+		printf("gfx/Pattern Ratings/gogui-pattern_rating/Show pattern ratings\n");
+		printf("gfx/Pattern Features At/gogui-pattern_features %%p/Show pattern features at selected coordinate\n");
+		printf("gfx/Pattern Gammas At/gogui-pattern_gammas %%p/Show pattern features and gammas at selected coordinate\n");
+		printf("gfx/Set Spatial Size/gogui-spatial_size %%o/Set spatial pattern size for Show Spatial command\n");
+		printf("gfx/Show Spatial/gogui-show_spatial %%p/Show spatial pattern at selected coordinate\n");
 	}
 	if (str_prefix("UCT", e->name)) {
-		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
-		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
-		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
-		printf("gfx/Live gfx = None/gogui-livegfx\n");
+		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
+		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves/Show best moves while engine is thinking\n");
+		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq/Show best sequence while engine is thinking\n");
+		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates/Show best moves' winrates while engine is thinking\n");
+		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
+
+	/* Show debugging commands by default ? */
+	if (debugging_commands == -1)
+		debugging_commands = DEBUGL(3);
+
+	/* Debugging commands:
+	 * Can toggle from analyze window (gogui >= 1.4.12) */
+	bool can_toggle = (gogui_version >= GOGUI_VERSION(1, 4, 12) && gogui_version < GOGUI_VERSION(1, 5, 0));
+	printf("gfx/ /echo\n");
+	if (!debugging_commands) {
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands/Double click to show debugging commands\n");
+	} else {
+		if (can_toggle)  printf("reload/[ Debugging ]/gogui-toggle_debugging_commands/Debugging commands. Double click to hide\n");
+		else             printf("gfx/[ Debugging ]/echo\n");
 #ifdef JOSEKIFIX
-	printf("gfx/          Josekifix Set Coord/gogui-josekifix_set_coord %%p\n");
-	printf("gfx/          Josekifix Show Pattern/gogui-josekifix_show_pattern\n");
-	printf("gfx/          Josekifix Dump Templates/gogui-josekifix_dump_templates\n");
+		printf("gfx/Josekifix Show Pattern/gogui-josekifix_show_pattern %%p/Show josekifix spatial pattern around selected coordinate and last move\n");
+		printf("gfx/Josekifix Dump Templates/gogui-josekifix_dump_templates %%p/Make josekifix override templates for selected coordinate and last move\n");
 #endif
-	
-	/* Debugging */
-	if (DEBUGL(3))
-		printf("gfx/Color Palette/gogui-color_palette\n");
-	
+		printf("gfx/Bad Selfatari/gogui-bad_selfatari/Show selfataris (green=good, red=bad)\n");
+		printf("gfx/Color Palette/gogui-color_palette/Show color palette used by colormap functions\n");
+	}
+
 	return P_OK;
 }
 
@@ -228,23 +289,24 @@ gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 }
 
 void
-gogui_show_winrates(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
+gogui_show_winrates(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
 	/* best move */
-	if (best_c[0] != pass)
-		fprintf(f, "VAR %s %s\n", (color == S_WHITE ? "w" : "b"), coord2sstr(best_c[0]) );
-	
-	for (int i = 0; i < nbest; i++)
-		if (best_c[i] != pass)
-			fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), (int)(roundf(best_r[i] * 100)));
+	if (best->n && !is_pass(best->c[0]))
+		fprintf(f, "VAR %s %s\n", (color == S_WHITE ? "w" : "b"), coord2sstr(best->c[0]) );
+
+	for (int i = 0; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			fprintf(f, "LABEL %s %i\n", coord2sstr(best->c[i]), (int)(roundf(best->r[i] * 100)));
 }
 
 void
-gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n)
-{	
+gogui_show_best_seq(FILE *f, board_t *b, enum stone color, mq_t *seq)
+{
+	/* Can have passes in the sequence, gogui handles it. */
 	fprintf(f, "VAR ");
-	for (int i = 0; i < n && seq[i] != pass; i++) {
-		fprintf(f, "%.1s %3s ", stone2str(color), coord2sstr(seq[i]));
+	for (int i = 0; i < seq->moves; i++) {
+		fprintf(f, "%.1s %3s ", stone2str(color), coord2sstr(seq->move[i]));
 		color = stone_other(color);
 	}
 	fprintf(f, "\n");
@@ -252,60 +314,52 @@ gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n)
 
 /* Display best moves graphically in GoGui. */
 void
-gogui_show_best_moves(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
         /* best move */
-        if (best_c[0] != pass)
-                fprintf(f, "VAR %.1s %s\n", stone2str(color), coord2sstr(best_c[0]));
+        if (best->n && !is_pass(best->c[0]))
+                fprintf(f, "VAR %.1s %s\n", stone2str(color), coord2sstr(best->c[0]));
         
-        for (int i = 1; i < n; i++)
-                if (best_c[i] != pass)
-                        fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), i + 1);
+        for (int i = 1; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			fprintf(f, "LABEL %s %i\n", coord2sstr(best->c[i]), i + 1);
 }
 
 /* Display best moves graphically in GoGui. */
 static void
-gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color,
-			     coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color, best_moves_t *best)
 {
-	float vals[BOARD_MAX_COORDS];
-	for (int i = 0; i < BOARD_MAX_COORDS; i++)
-		vals[i] = 0;
+	float vals[BOARD_MAX_COORDS] = { 0, };
+	
+	for (int i = 0; i < best->n; i++)
+		if (!is_pass(best->c[i]))
+			vals[best->c[i]] = best->r[i];
 
-	for (int i = 0; i < n; i++)
-		if (best_c[i] != pass)
-			vals[best_c[i]] = best_r[i];
-
-	for (int y = 19; y >= 1; y--)
-	for (int x = 1; x <= 19; x++) {		
-		coord_t c = coord_xy(x, y);			
+	foreach_point_for_print(b) {
 		int rr, gg, bb;
 		value2color(vals[c], &rr, &gg, &bb);
-		
+
 		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
-	}
+	} foreach_point_for_print_end;
 }
 
 static void
-rescale_best_moves(coord_t *best_c, float *best_r, int n, int rescale)
+rescale_best_moves(best_moves_t *best, int rescale)
 {
+	int n = best->n;
+	
 	if (rescale & GOGUI_RESCALE_LINEAR) {
-		for (int i = 0; i < n; i++)
-			if (best_c[i] == pass) {  n = i; break;  }
 		for (int i = 0; i < n; i++) {
-			best_r[i] = (float)(n-i)/n;
+			best->r[i] = (float)(n-i)/n;
 			//fprintf(stderr, "linear: %i\n", (int)(best_r[i] * 100));
 		}
 	}       
 
 	if (rescale & GOGUI_RESCALE_LOG) {
-		for (int i = 0; i < n; i++)
-			if (best_c[i] == pass) {  n = i; break;  }
-
 		float max = log(1.0 * 1000);
 		for (int i = 0; i < n; i++) {
-			best_r[i] = log(best_r[i] * 1000) / max;
-			if (best_r[i] < 0)  best_r[i] = 0.;
+			best->r[i] = log(best->r[i] * 1000) / max;
+			if (best->r[i] < 0)  best->r[i] = 0.;
 			//fprintf(stderr, "log: %i\n", (int)(best_r[i] * 100));
 		}
 	}	
@@ -320,30 +374,84 @@ gogui_best_moves(FILE *f, engine_t *e, board_t *b, time_info_t *ti,
 	
 	coord_t best_c[n];
 	float   best_r[n];
-	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, n);	
-	rescale_best_moves(best_c, best_r, n, rescale);
+	best_moves_setup(best, best_c, best_r, n);
+
+	engine_best_moves(e, b, ti_genmove, color, &best);
+	rescale_best_moves(&best, rescale);
 	
-	if      (gfx_type == GOGUI_BEST_WINRATES)  gogui_show_winrates(f, b, color, best_c, best_r, n);
-	else if (gfx_type == GOGUI_BEST_MOVES)     gogui_show_best_moves(f, b, color, best_c, best_r, n);
-	else if (gfx_type == GOGUI_BEST_COLORS)    gogui_show_best_moves_colors(f, b, color, best_c, best_r, n);
+	if      (gfx_type == GOGUI_BEST_WINRATES)  gogui_show_winrates(f, b, color, &best);
+	else if (gfx_type == GOGUI_BEST_MOVES)     gogui_show_best_moves(f, b, color, &best);
+	else if (gfx_type == GOGUI_BEST_COLORS)    gogui_show_best_moves_colors(f, b, color, &best);
 	else    assert(0);
 }
 
 enum parse_code
 cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
+	int size = board_rsize(b);
 	enum stone color = board_to_play(b);
-	float   best_r[GOGUI_MANY] = { 0.0, };
+	float   best_r[GOGUI_MANY];
 	coord_t best_c[GOGUI_MANY];
+	best_moves_setup(best, best_c, best_r, GOGUI_MANY);
+	
 	for (int i = 0; i < GOGUI_MANY; i++)
-		best_c[i] = coord_xy(i%19 +1, 18 - i/19 + 1);
+		best_c[i] = coord_xy(i%size +1, size-1 - i/size + 1);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
-	rescale_best_moves(best_c, best_r, GOGUI_MANY, GOGUI_RESCALE_LINEAR);
-	gogui_show_best_moves_colors(stdout, b, color, best_c, best_r, GOGUI_MANY);
+	rescale_best_moves(&best, GOGUI_RESCALE_LINEAR);
+	gogui_show_best_moves_colors(stdout, b, color, &best);
 	return P_OK;
 }
 
+/* Show all good/bad selfataris for color to play */
+enum parse_code
+cmd_gogui_bad_selfatari(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	enum stone to_play = board_to_play(b);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	
+	mq_t q;  mq_init(&q);
+	foreach_free_point(b) {
+		if (!is_selfatari(b, to_play, c))
+			continue;
+
+		char *color = "#00ff00";  // green
+		if (is_bad_selfatari(b, to_play, c)) {
+			color = "#ff0000";  // red
+			mq_add(&q, c);
+		}
+		printf("COLOR %s %s\n", color, coord2sstr(c));
+	} foreach_free_point_end;
+
+	printf("TEXT %s ", stone2str(to_play));
+	mq_sort(&q);
+	mq_print_file(&q, stdout, "");
+	printf("\n");
+
+	return P_OK;
+}
+
+static engine_t *playout_engine = NULL;
+
+static void
+init_playout_engine(board_t *b)
+{
+	char args[] = "runs=1000";
+	playout_engine = new_engine(E_REPLAY, args, b);
+}
+
+enum parse_code
+cmd_gogui_playout_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	if (!playout_engine)   init_playout_engine(b);
+
+	enum stone color = board_to_play(b);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_best_moves(stdout, playout_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+	return P_OK;
+}
 
 enum parse_code
 cmd_gogui_livegfx(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
@@ -411,7 +519,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;
+	mq_t q;
 	engine_dead_groups(e, b, &q);
 	
 	int dame, seki;
@@ -604,13 +712,6 @@ dump_template_entry(char *prefix, struct board *b, coord_t at)
 	dump_template_entry_full(prefix, b, at);
 }
 
-static bool dump_templates = false;
-static coord_t dump_patterns_coord = pass;
-
-//static bool josekifix_get_dump_templates()         {  return dump_templates;  }
-static void josekifix_set_dump_templates(bool val) {  dump_templates = val;   }
-static void josekifix_set_coord(coord_t c)         {  dump_patterns_coord = c;  }
-
 static void
 josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 			coord_t coord, int rr, int gg, int bb)
@@ -634,17 +735,18 @@ josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 }
 
 static void
-josekifix_gogui_show_patterns(struct board *b)
+josekifix_show_pattern(struct board *b, gtp_t *gtp, coord_t at, bool dump_templates)
 {
-	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
-	if (is_pass(dump_patterns_coord))
-		dump_patterns_coord = str2coord("E15");
+	gtp_printf(gtp, "");
 	
+	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
+	assert(!is_pass(at));
+
 	josekifix_paint_pattern(b, colors, last_move(b).coord, 0x00, 0x8a, 0xff);
-	josekifix_paint_pattern(b, colors, dump_patterns_coord, 0xff, 0xa2, 0x00);
+	josekifix_paint_pattern(b, colors, at, 0xff, 0xa2, 0x00);
 
 	if (dump_templates) {
-		dump_template_entry("TEXT ", b, dump_patterns_coord);
+		dump_template_entry("TEXT ", b, at);
 		dump_template_entry("TEXT ", b, last_move(b).coord);
 	}
 	
@@ -658,29 +760,22 @@ josekifix_gogui_show_patterns(struct board *b)
 }
 
 enum parse_code
-cmd_gogui_josekifix_set_coord(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_gogui_josekifix_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	coord_t coord;
 	gtp_arg_coord(coord);
 	
-	josekifix_set_coord(coord);
-	return cmd_gogui_josekifix_show_pattern(b, e, ti, gtp);
-}
-
-enum parse_code
-cmd_gogui_josekifix_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
-{
-	gtp_printf(gtp, "");
-	josekifix_gogui_show_patterns(b);
+	josekifix_show_pattern(b, gtp, coord, false);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_josekifix_dump_templates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	josekifix_set_dump_templates(true);
-	cmd_gogui_josekifix_show_pattern(b, e, ti, gtp);
-	josekifix_set_dump_templates(false);
+	coord_t coord;
+	gtp_arg_coord(coord);
+
+	josekifix_show_pattern(b, gtp, coord, true);
 	return P_OK;
 }
 

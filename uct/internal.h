@@ -9,6 +9,7 @@
 #include "playout.h"
 #include "stats.h"
 #include "mq.h"
+#include "engine.h"
 #include "pattern/pattern.h"
 
 typedef struct uct_prior uct_prior_t;
@@ -76,6 +77,7 @@ typedef struct uct {
 	int     dcnn_pondering_prior;      /* Prior next move guesses */
 	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
 	coord_t dcnn_pondering_mcts_c[20];
+	int     dcnn_pondering_mcts_n;
 	
 	int fuseki_end;
 	int yose_start;
@@ -107,7 +109,9 @@ typedef struct uct {
 	pattern_config_t pc;
 
 	/* Used within frame of single genmove. */
-	ownermap_t ownermap;
+	ownermap_t initial_ownermap;    /* pre-mcts ownermap (mcowner playouts only) */
+	ownermap_t ownermap;		/* global ownermap (initial ownermap + mcts playouts) */
+
 	int  raw_playouts_per_sec;  /* current raw playouts per second (mcowner) */
 	bool allow_pass;    /* allow pass in uct descent */
 
@@ -127,7 +131,7 @@ typedef struct uct {
 #endif
 
 	/* Saved dead groups, for final_status_list dead */
-	move_queue_t dead_groups;
+	mq_t dead_groups;
 	int pass_moveno;
 	
 	/* Timing, stats */
@@ -135,11 +139,11 @@ typedef struct uct {
 	int expanded_nodes;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
-	board_t *main_board;
 	tree_t *t;
 	bool tree_ready;
 } uct_t;
 
+extern board_t *uct_main_board;
 
 /* Whether search tree carries over for next move under current uct settings.
  * Only case where tree can't be reused is the default case: dcnn without pondering. */
@@ -158,10 +162,12 @@ typedef struct uct {
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, move_queue_t *dead, char **msg, bool log);
+bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, mq_t *dead, char **msg, bool log);
 void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
 void uct_pondering_stop(uct_t *u);
-void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
+void uct_get_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts);
+void uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *best,
+			   mq_t *seq, int max_depth, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
 void uct_tree_size_init(uct_t *u, size_t tree_size);
 

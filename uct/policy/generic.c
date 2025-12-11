@@ -13,6 +13,8 @@
 #include "uct/policy.h"
 #include "uct/policy/generic.h"
 
+#define sane_node_coord(b, n)  (is_pass(node_coord(n)) || board_at(b, node_coord(n)) == S_NONE)
+
 tree_node_t *
 uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude)
 {
@@ -20,9 +22,16 @@ uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone c
 	if (!nbest) return NULL;
 	tree_node_t *nbest2 = nbest->sibling;
 
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+	assert(sane_node_coord(b, nbest));
+#endif	
 	/* This function is called while the tree is updated by other threads.
 	 * We rely on node->children being set only after the node has been fully expanded. */
 	for (tree_node_t *ni = nbest2; ni; ni = ni->sibling) {
+#ifdef EXTRA_CHECKS
+		assert(sane_node_coord(b, ni));
+#endif
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
 		if (node_coord(ni) == exclude || ni->hints & TREE_HINT_INVALID)
@@ -40,7 +49,7 @@ uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone c
 	 * (endgame situation that can't be clarified ...)
 	 * Call expensive uct_pass_is_safe() only if pass is indeed the best move. */
 	char *msg;
-	move_queue_t dead;
+	mq_t dead;
 	if (is_pass(node_coord(nbest)) &&
 	    !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive, &dead, &msg, false) &&
 	    nbest2 && !board_is_one_point_eye(b, node_coord(nbest2), color))

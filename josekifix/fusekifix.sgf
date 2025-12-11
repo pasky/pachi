@@ -15,7 +15,7 @@ See josekifix.sgf for details.
 (;B[pd]
 (;W[]
 (;B[pp]
-;W[]
+(;W[]
 ;B[pj]
 ;W[nc]
 (;B[lc]
@@ -47,24 +47,18 @@ pachipachi past   Jul  7 22:24:51  2020 ]))
 (;W[lb]
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
-around = O18
-
+around = O19
 
 don't hane, deadly
 
-match low so don't care about T17 area])
+case with w S17 matched in next variation])
 (;W[rc]
 ;B[rd]
 ;W[lb]
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
-around = O18])
-(;W[]
-;B[rd]
-;W[lb]
-;B[kc]C[[override\]
-name = "sanrensei breakout fix"
-around = O18]))
+around = O19
+]))
 (;B[nd]
 ;W[]C[[override\]
 name = "sanrensei corner tight seal"
@@ -111,7 +105,31 @@ around = O14
 
 simple, don't get in trouble right away.
 
-Ex: arkgo pachipachi  2022-11-04]))
+Ex: arkgo pachipachi  2022-11-04])
+(;W[ne]
+;B[ng]
+;W[]C[[override\]
+name = "sanrensei jump boshi"
+around = O15
+
+
+Ex: SwissBot1 crm  2025-09-14 19:32])
+(;W[jc]
+;B[]C[[override\]
+name = "sanrensei double pincer"
+around = O17
+external_engine = upper_right
+
+
+Ex: yz01 pachipachi  2025-10-04])
+(;W[]
+;B[nd]
+;W[od]
+;B[]C[[override\]
+name = "sanrensei pincer tenuki fight"
+around = P19
+
+Ex: Kamyk pachipachi  2025-10-15 08:51]))
 (;B[kd]
 ;W[qc]C[[override\]
 name = "sanrensei 2-spc high pincer"
@@ -121,6 +139,22 @@ don't double kakari, deadly fight.
 
 Ex: pachipachi kenkong 2025-02-11 08:21
 ]))
+(;W[dp]
+;B[fq]
+;W[cn]
+;B[jp]
+;W[qn]
+;B[pn]
+;W[pm]
+;B[on]
+;W[]C[[override\]
+name = "hoshi kobayashi fuseki"
+around = Q4
+around2 = J3
+external_engine_moves = 20
+
+
+Ex: pachipachi samzhang  2025-10-12 12:48]))
 (;B[pq]
 (;W[]
 (;B[qk]
@@ -155,17 +189,7 @@ R4 best, then P3 hane, Q5 atari + defend to keep it simple]
 ]
 ;W[op]
 ;B[qq]C[[override\]
-])
-(;W[mp]
-;B[kp]
-;W[pp]
-;B[qp]
-;W[]C[[override\]
-name = "chinese pincer crosscut"
-around = Q4
-
-
-pachipachi dsazx 2023-04-29]))
+]))
 (;B[pk]
 (;W[pp]
 ;B[qp]C[[override\]
@@ -179,7 +203,7 @@ around = Q4]
 ])
 (;W[po]
 ;B[np]
-;W[qq]
+(;W[qq]
 ;B[qr]
 ;W[qp]
 ;B[rr]
@@ -236,6 +260,18 @@ normal sequence
 ;B[op]
 ;W[lq]
 ;B[pp]))
+(;W[no]
+;B[mo]
+;W[qq]
+;B[qr]
+;W[pr]
+;B[]C[[override\]
+name = "chinese crosscut"
+around = Q3
+
+matches low chinese as well
+
+sbng pachipachi  2025-03-23 08:46]))
 (;W[qn]
 ;B[qp]
 ;W[on]
@@ -260,14 +296,115 @@ around = Q3
 
 R5 mistake, defend first.
 
-Ex: fater pachipachi  2025-01-04 15:36])))
+Ex: fater pachipachi  2025-01-04 15:36])
+(;W[mp]
+(;B[jp]
+;W[]C[[override\]
+name = "chinese approach pincer"
+around = O4
+external_engine = lower_right
+
+matches low chinese also
+
+Ex: SwissBot6 sunnyboy  2025-10-01 04:31])
+(;B[kp]
+;W[]C[[override\]
+name = "chinese approach tight pincer"
+around = P4
+external_engine = lower_right
+
+matches low chinese also
+
+])
+(;B[po]
+;W[jp]
+;B[]
+;W[pm]
+;B[ol]
+;W[on]C[[override\]
+name = "high chinese approach keep corner separate"
+around = O6
+
+P7 best but hard fight
+
+Ex: pachipachi sbng  2025-10-23 14:54]))))
 (;W[dp]
 ;B[fq]
 ;W[cn]
 (;B[jp]
 (;W[qn]
-;B[po]
+(;B[po]
 ;W[rp]
+(;B[ql]
+(;W[]C[[log\]
+name = "kobayashi low pincer"
+around = R4
+])
+(;W[pn]
+(;B[qo]
+;W[ro]
+(;B[qq]
+;W[pl]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+P6 bad
+
+spring pachipachi  2025-03-13]
+;B[pk]
+;W[ol]
+;B[rm]
+;W[rn]
+;B[qj]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+spring pachipachi 2023-08-20
+])
+(;B[rm]
+;W[]C[[override\]
+name = "kobayashi low pincer trick play"
+around = R4
+
+pachipachi Beutlin 2023-04-25]))
+(;B[on]
+;W[om]
+;B[pm]
+;W[]C[[override\]
+name = "kobayashi low pincer cut"
+around = R4
+
+Ex: pachipachi Kamyk  2025-10-15 07:41])))
+(;B[pl]
+(;W[]C[[log\]
+name = "kobayashi high pincer"
+around = R4])
+(;W[pn]
+;B[on]
+;W[om]
+;B[pm]
+(;W[]C[[override\]
+name = "kobayashi high pincer cut"
+around = R4])
+(;W[oo]
+;B[nn]
+;W[pp]
+;B[op]
+;W[qo]
+;B[no]
+;W[oq]
+;B[po]
+;W[pr]
+;B[qp]
+;W[qq]
+;B[pp]
+;W[np]C[[override\]
+name = "kobayashi high pincer"
+around = R4
+
+don't forget atari before defending
+
+pachipachi Beutlin 2023-04-24])))
 (;B[ro]
 ;W[qo]
 ;B[qp]
@@ -307,127 +444,53 @@ name = "kobayashi tobi double hane"
 around = R5
 
 
-pachipachi tomsama 2023-04-23]))
+pachipachi tomsama 2023-04-23])))
 (;B[ql]
+;W[]C[[override\]
+name = "kobayashi immediate low pincer"
+around = R4
+
+pachipachi Beutlin 2023-04-24])
+(;B[pl]
+;W[]C[[override\]
+name = "kobayashi immediate high pincer"
+around = R4
+
+prevent low kobayashi crosscut trick play (see b K3 variation)]))
+(;W[pn]
+;B[qo]
+;W[pj]
+;B[qn]
+(;W[lq]
+;B[]C[[override\]
+name = "kobayashi high approach invasion"
+around = N4])
+(;W[oq]
+;B[]C[[override\]
+name = "kobayashi high approach tsuke"
+around = R4
+
+Ex: TOSHI1011 pachipachi  2018-02-21])))
+(;B[ip]
 ;W[pn]
 ;B[qo]
-;W[ro]
-;B[qq]
-;W[pl]
-;B[pk]
-;W[ol]
-;B[rm]
-;W[rn]
-;B[qj]C[[override\]
-name = "kobayashi pincer tsuke"
-around = Q7
-
-spring pachipachi 2023-08-20
-]))
-(;W[pn]
-;B[qo]
 ;W[pj]
 ;B[qn]
-;W[lq]
-;B[kq]
-;W[oq]
-;B[lp]C[[override\]
-name = "high kobayashi 2"
-around = P5
-
-]
-;W[mp]
-;B[lo]C[[override\]
-around = "last"
-]
-;W[pm]
-;B[qm]C[[override\]
-around = P5
-]
-;W[pl]
-;B[rk]C[[override\]
-around = Q6
-]))
-(;B[ip]
-(;W[pn]
-;B[qo]
-;W[pj]
-;B[qn]
-(;W[oq]
+;W[kq]
 ;B[mq]C[[override\]
-name = "high kobayashi"
-around = O4
-
-
-Ex: TOSHI1011 pachipachi  2018-02-21 ]
-;W[nq]
-;B[pr]C[[override\]
-]
-;W[pm]
-;B[qm]C[[override\]
-around = "last"
-])
-(;W[kq]
-;B[mq]C[[override\]
-name = "high kobayashi"
+name = "tight kobayashi high approach invasion"
 around = "last"
 
-]))
-(;W[qn]
-(;B[po]
-;W[rp]
-(;B[ql]
-(;W[]C[[log\]
-name = "kobayashi low pincer"
-around = R4
 ])
-(;W[pn]
-;B[qo]
-;W[ro]
-;B[rm]
-;W[]C[[override\]
-name = "kobayashi low pincer trick play"
-around = R4
-
-pachipachi Beutlin 2023-04-25]))
-(;B[pl]
-(;W[]C[[log\]
-name = "kobayashi high pincer"
-around = R4])
-(;W[pn]
-;B[on]
-;W[om]
-;B[pm]
-;W[oo]
-;B[nn]
-;W[pp]
-;B[op]
-;W[qo]
-;B[no]
-;W[oq]
-;B[po]
-;W[pr]
-;B[qp]
-;W[qq]
-;B[pp]
-;W[np]C[[override\]
-name = "kobayashi high pincer"
-around = R4
-
-don't forget atari before defending
-
-pachipachi Beutlin 2023-04-24])))
-(;B[ql]
-;W[]C[[override\]
-name = "kobayashi immediate pincer"
-around = R4
-
-pachipachi Beutlin 2023-04-24])))
 (;B[jq]
 ;W[qn]
 ;B[pl]
+;W[qq]C[can't play crosscut at R3 if b has K3.
+fixed in main branch (kobayashi immediate high pincer)
+]
+;B[qp]
 (;W[]C[[override\]
-name = "kobayashi crosscut trick"
+name = "low kobayashi crosscut trick play"
 around = R5
 around2 = M3
 
@@ -435,9 +498,7 @@ around2 = M3
 can't play crosscut at R3 if b has K3
 
 pachipachi kgsfan2021  2023-02-10])
-(;W[qq]
-;B[qp]
-;W[pp]
+(;W[pp]
 ;B[po]
 ;W[op]
 ;B[qr]
@@ -457,7 +518,18 @@ pachipachi kgsfan2021  2023-02-10])
 ;B[kr]C[
 
 tricked.
-because of K3 b can escape...])))))
+because of K3 b can escape...]))))
+(;B[qp]
+;W[dp]
+;B[fq]
+;W[cn]
+;B[kq]
+;W[pp]C[[override\]
+name = "mini chinese"
+around = O4
+around2 = K3
+external_engine = lower_right
+]))
 (;W[ec]
 ;B[cd]
 ;W[df]
@@ -492,6 +564,7 @@ YZ1509 special opening.]))
 ;B[]C[[override\]
 name = "magoa h4 play"
 around = "K4"
+external_engine = lower_left lower_right
 
 magoa pachipachi 2023-06-19
 ])
@@ -499,5 +572,4 @@ magoa pachipachi 2023-06-19
 ;B[]C[[override\]
 name = "magoa h4 play"
 around = "K4"
-
-])))
+external_engine = lower_left lower_right])))

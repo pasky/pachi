@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -12,15 +12,6 @@
 #include "ownermap.h"
 #include "playout.h"
 
-/* Whether to set global debug level to the same as the playout
- * has, in case it is different. This can make sure e.g. tactical
- * reading produces proper level of debug prints during simulations.
- * But it is safe to enable this only in single-threaded instances! */
-//#define DEBUGL_BY_PLAYOUT
-
-#define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
-
-
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
@@ -28,10 +19,22 @@ playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool r
 	coord_t coord = m->coord;
 	if (coord == pass) return false;
 
-	if (!board_permit(b, m, NULL) ||
-	    (p->permit && !p->permit(p, b, m, alt, rnd)))
-		return false;
-	return true;
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(m->color));
+	assert(sane_coord(coord));
+#endif
+
+	bool permit =  (board_permit(b, m, NULL) &&
+			(!p->permit || p->permit(p, b, m, alt, rnd)));
+
+	if (DEBUGL(5)) {
+		if (!permit)
+			fprintf(stderr, "Playout permit(%s): rejected\n", coord2sstr(coord));
+		if (permit && m->coord != coord)
+			fprintf(stderr, "Playout permit(%s): redirect -> %s\n", coord2sstr(coord), coord2sstr(m->coord));
+	}
+
+	return permit;
 }
 
 /* Return coord if move is ok, an alternative move or pass if not.
@@ -58,6 +61,8 @@ static bool
 random_permit_handler(board_t *b, move_t *m, void *data)
 {
 	playout_policy_t *policy = (playout_policy_t*)data;
+
+	//if (DEBUGL(5)) fprintf(stderr, "Trying %s\n", coord2sstr(m->coord));
 	return playout_permit_move(policy, b, m, true, true);
 }
 
@@ -69,31 +74,26 @@ playout_play_move(playout_setup_t *setup,
 {
 	coord_t coord = pass;
 	
-	if (is_pass(coord)) {
-		coord = policy->choose(policy, setup, b, color);
-		coord = playout_check_move(policy, b, coord, color);
-		// fprintf(stderr, "policy: %s\n", coord2sstr(coord));
-	}
+	coord = policy->choose(policy, setup, b, color);
+	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(coord));
+	coord = playout_check_move(policy, b, coord, color);
 
-	if (is_pass(coord)) {
-	play_random:
-		/* Defer to uniformly random move choice. */
-		/* This must never happen if the policy is tracking
-		 * internal board state, obviously. */
-		assert(!policy->setboard || policy->setboard_randomok);
-		board_play_random(b, color, &coord, random_permit_handler, policy);
-
-	} else {
+	if (!is_pass(coord)) {
 		move_t m = move(coord, color);
-		if (board_play(b, &m) < 0) {
-			if (PLDEBUGL(4)) {
-				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n", coord_x(coord), coord_y(coord));
-				board_print(b, stderr);
-			}
-			goto play_random;
+		int r = board_play(b, &m);
+		if (unlikely(r < 0)) {
+			board_print(b, stderr);
+			die("Picked playout move %s %s is ILLEGAL:\n", stone2str(color), coord2sstr(coord));
 		}
+		return coord;
 	}
 
+	/* Defer to uniformly random move choice if policy failed to produce a move.
+	 * This must never happen if the policy is tracking internal board state, obviously. */
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
+	assert(!policy->setboard || policy->setboard_randomok);
+	coord = board_play_random(b, color, random_permit_handler, policy);
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move: %s\n", coord2sstr(coord));
 	return coord;
 }
 
@@ -138,23 +138,23 @@ fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_
 		coord_t corner = coord_xy(xs[i], ys[i]);
 		group_t g = group_at(b, corner);
 		if (!g || board_at(b, corner) != color ||
-		    group_stone_count(b, g, 4) != 3 || board_group_info(b, g).libs != 2)
+		    group_stone_count(b, g, 4) != 3 || group_libs(b, g) != 2)
 			continue;
 
 		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
 		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
 			continue;
 
 		/* check really surrounding */
-		if (!check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[0], surrounding) ||
-		    !check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[1], surrounding))
+		if (!check_bent_four_surrounding(b, other_color, group_lib(b, g, 0), surrounding) ||
+		    !check_bent_four_surrounding(b, other_color, group_lib(b, g, 1), surrounding))
 			continue;
 
 		/* find suitable lib to fill  (first line and other coord == 2 or 3)  */
 		coord_t fill;
 		for (int j = 0; j < 2; j++) {
-			fill = board_group_info(b, g).lib[j];
+			fill = group_lib(b, g, j);
 			int x = coord_x(fill),  y = coord_y(fill);
 			
 			if (x == xs[i] && (y == ys[i] + dy[i]  ||  y == ys[i] + 2 * dy[i])) {
@@ -175,7 +175,7 @@ fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_
 		
 		move_t m = move(fill, color);
 		if (board_permit(b, &m, NULL)) {
-			*bent4_lib = board_group_other_lib(b, g, fill);
+			*bent4_lib = group_other_lib(b, g, fill);
 			return fill;
 		}
 	}
@@ -217,12 +217,12 @@ fill_bent_three(board_t *b, enum stone color)
 		group_t g1 = group_at(b, c1);
 		group_t g2 = group_at(b, c2);
 		if (!group_is_onestone(b, g1) || !group_is_onestone(b, g2) ||
-		    board_group_info(b, g1).libs != 2 || board_group_info(b, g2).libs != 2)
+		    group_libs(b, g1) != 2 || group_libs(b, g2) != 2)
 			continue;
 
 		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
 		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
 			continue;
 
 		/* Check really surrounding */
@@ -241,10 +241,7 @@ fill_bent_three(board_t *b, enum stone color)
 }
 
 #define random_game_loop_stuff  \
-		if (PLDEBUGL(7)) { \
-			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord)); \
-			if (PLDEBUGL(8)) board_print(b, stderr); \
-		} \
+		if (DEBUGL(5)) board_print(b, stderr); \
 \
 		if (unlikely(is_pass(coord)))  passes++; \
 		else                           passes = 0; \
@@ -279,10 +276,6 @@ playout_play_game(playout_setup_t *setup,
 
 	if (policy->setboard)
 		policy->setboard(policy, b);
-#ifdef DEBUGL_BY_PLAYOUT
-	int debug_level_orig = debug_level;
-	debug_level = policy->debug_level;
-#endif
 
 	enum stone color = starting_color;
 	int passes = is_pass(last_move(b).coord) && b->moves > 0;
@@ -351,10 +344,6 @@ playout_play_game(playout_setup_t *setup,
 	}
 
 	if (ownermap)  ownermap_fill(ownermap, b);
-
-#ifdef DEBUGL_BY_PLAYOUT
-	debug_level = debug_level_orig;
-#endif
 
 	return result;
 }

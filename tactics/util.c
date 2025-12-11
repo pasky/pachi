@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "tactics/util.h"
@@ -12,6 +12,9 @@
 bool
 board_stone_radar(board_t *b, coord_t coord, int distance)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+#endif
 	int cx = coord_x(coord), cy = coord_y(coord);
 	int bounds[4] = { cx - distance, cy - distance,
 			  cx + distance, cy + distance  };
@@ -36,6 +39,10 @@ board_stone_radar(board_t *b, coord_t coord, int distance)
 float
 coord_distance(coord_t c1, coord_t c2)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c1));
+	assert(sane_coord(c2));
+#endif	
 	int dx = coord_dx(c1, c2),  dy = coord_dy(c1, c2);
 	return sqrtf(dx * dx + dy * dy);
 }
@@ -43,6 +50,9 @@ coord_distance(coord_t c1, coord_t c2)
 void
 cfg_distances(board_t *b, coord_t start, int *distances, int maxdist)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(start));
+#endif
 	/* Queue for d+1 spots; no two spots of the same group
 	 * should appear in the queue. */
 #define qinc(x) (x = ((x + 1) >= board_max_coords(b) ? ((x) + 1 - board_max_coords(b)) : (x) + 1))
@@ -145,6 +155,9 @@ coord_quadrant(coord_t c)
 	if (is_pass(c))
 		return 0;
 	
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+#endif
 	/* Multiply everything by 2 so works for even-sized boards too */
 	int x = coord_x(c) * 2;			// x
 	int y = coord_y(c) * 2;			// y
@@ -162,8 +175,9 @@ coord_quadrant(coord_t c)
 int
 diag_quadrant(int quad)
 {
+#ifdef EXTRA_CHECKS
 	assert(quad >= 0 && quad <= 3);
-	
+#endif	
 	static int diag[] = { 2, 3, 0, 1 };
 	return diag[quad];
 }
@@ -171,6 +185,9 @@ diag_quadrant(int quad)
 int
 rotate_quadrant(int q, int rot)
 {
+#ifdef EXTRA_CHECKS
+	assert(q >= 0 && q <= 3);
+#endif	
 	static int rotx[4] = { 1, 0, 3, 2 };
 	static int roty[4] = { 3, 2, 1, 0 };
 	static int rotr[4] = { 3, 0, 1, 2 };
@@ -181,6 +198,19 @@ rotate_quadrant(int q, int rot)
 	return q;
 }
 
+bool
+near_ambiguous_quadrant_coord(coord_t c)
+{
+#ifdef EXTRA_CHECKS
+	assert(!is_pass(c));
+	assert(sane_coord(c));
+#endif
+	int x = coord_x(c);
+	int y = coord_y(c);
+	int mid = (the_board_rsize() + 1) / 2;
+	return (abs(x - mid) <= 1 || abs(y - mid) <= 1);
+}
+
 
 /***********************************************************************************************/
 /* fuseki */
@@ -189,6 +219,9 @@ rotate_quadrant(int q, int rot)
 int
 fuseki_high_stones(board_t *b, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+#endif
 	int high_own = 0;
 	
 	foreach_point(b) {
@@ -202,6 +235,10 @@ fuseki_high_stones(board_t *b, enum stone color)
 int
 fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int quad)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(quad >= 0 && quad < 4);
+#endif
 	int high_own = 0;
 	
 	foreach_point(b) {
@@ -220,6 +257,9 @@ fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int quad)
 static int
 fuseki_stone_heights_sum(board_t *b, enum stone color, int n)	
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+#endif
 	move_history_t *hist = b->move_history;
 	int heights = 0;
 
@@ -238,6 +278,9 @@ fuseki_stone_heights_sum(board_t *b, enum stone color, int n)
 int
 fuseki_stone_heights_diff(board_t *b, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+#endif
 	int n = b->move_history->moves & ~0x1;  /* ignore last move if necessary */
 	int heights_own   = fuseki_stone_heights_sum(b, color, n);
 	int heights_other = fuseki_stone_heights_sum(b, stone_other(color), n);

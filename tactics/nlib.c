@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -14,13 +14,17 @@
 
 
 void
-group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag)
+group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, mq_t *q)
 {
 	enum stone color = to_play;
-	assert(color != S_OFFBOARD && color != S_NONE
-	       && color == board_at(b, group_base(group)));
 
-	if (DEBUGL(5))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(board_at(b, group) == color);
+#endif
+
+	if (DEBUGL(6))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
 
 #if 0
 	/* XXX: The code below is specific for 3-liberty groups. Its impact
@@ -30,9 +34,9 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_que
 	/* First, look at our liberties. */
 	int continuous = 0, enemy = 0, spacy = 0, eyes = 0;
 	for (int i = 0; i < 3; i++) {
-		coord_t c = board_group_info(b, group).lib[i];
+		coord_t c = group_lib(b, group, i);
 		eyes += board_is_one_point_eye(b, c, to_play);
-		continuous += coord_is_adjecent(c, board_group_info(b, group).lib[(i + 1) % 3], b);
+		continuous += coord_is_adjecent(c, group_lib(b, group, (i + 1) % 3), b);
 		enemy += neighbor_count_at(b, c, stone_other(color));
 		spacy += immediate_liberty_count(b, c) > 1;
 	}
@@ -49,11 +53,10 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_que
 		assert(!eyes);
 		int i;
 		for (i = 0; i < 3; i++)
-			if (immediate_liberty_count(b, board_group_info(b, group).lib[i]) == 2)
+			if (immediate_liberty_count(b, group_lib(b, group, i)) == 2)
 				break;
 		/* Play at middle point. */
-		mq_add(q, board_group_info(b, group).lib[i], tag);
-		mq_nodup(q);
+		mq_add_nodup(q, group_lib(b, group, i));
 		return;
 	}
 #endif
@@ -79,9 +82,9 @@ group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_que
 			if (board_at(b, c) != stone_other(color))
 				continue;
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs != 2)
+			if (group_libs(b, g2) != 2)
 				continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, true /* XXX */);
+			can_atari_group(b, g2, stone_other(color), to_play, q, true /* XXX */);
 		});
 	} foreach_in_group_end;
 }

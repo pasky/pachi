@@ -39,7 +39,7 @@ for f in $dir/*/*.gtp; do
     echo ""					       | log_full    
 
     echo -n "$f: " | log
-    if  ../pachi $pachi_options < $f      2>&1  >/dev/null |
+    if  (cd .. ; ./pachi $pachi_options) < $f     2>&1  >/dev/null |
 	    lgrep -v "^IN:" | log_full ; then
 	echo "OK" | log;	passed=$[$passed + 1]
     else

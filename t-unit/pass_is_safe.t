@@ -358,3 +358,21 @@ O O O X X X X O . O X X X O O X . . .
 # dead, which should not be allowed.
 rules japanese
 pass_is_safe w 0
+
+
+% Must pass, pass only move
+boardsize 9
+komi 0.5
+rules japanese
+. . O O O)X . . .
+O O O O O X X X .
+. . O X O X . X X
+O O X X X . X O O
+. O O X X X X O .
+O . O X O O O O O
+O O O O O X O O O
+X X X X X X X O X
+. X . X X X X X X
+
+pass_is_safe b 1
+genmove b pass

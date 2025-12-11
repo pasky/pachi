@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "move.h"
+#include "engine.h"
 #include "pattern/pattern.h"
 
 /* Find pattern probability by dividing it into individual features
@@ -39,8 +40,8 @@ void pattern_rate_moves_vanilla(board_t *b, enum stone color, floating_t *probs,
  * For gogui only (super inefficient). */
 bool pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct);
 
-void print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
-void get_pattern_best_moves(board_t *b, floating_t *probs, coord_t *best_c, float *best_r, int nbest);
+void print_pattern_best_moves(best_moves_t *best);
+void get_pattern_best_moves(board_t *b, floating_t *probs, best_moves_t *best);
 
 /* Print pattern features' gamma details in @buf */
 void dump_gammas(strbuf_t *buf, pattern_t *p);

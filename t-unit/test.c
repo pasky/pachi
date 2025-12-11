@@ -223,9 +223,9 @@ set_ko(board_t *b, char *arg)
 
 	/* Sanity checks */
 	group_t g = group_at(b, last.coord);
-	assert(board_group_info(b, g).libs == 1);
+	assert(group_libs(b, g) == 1);
 	assert(group_stone_count(b, g, 2) == 1);
-	coord_t lib = board_group_info(b, g).lib[0];
+	coord_t lib = group_lib(b, g, 0);
 	assert(board_is_eyelike(b, lib, last.color));
 
 	b->ko.coord = lib;
@@ -309,6 +309,57 @@ test_really_bad_selfatari(board_t *b, char *arg)
 }
 
 static bool
+test_3lib_selfatari(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "3lib_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+
+	assert(board_at(b, c) == S_NONE);
+
+	/* Sanity check: 3lib group nearby */
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) != color)  continue;
+		group_t g = group_at(b, c);
+		if (group_libs(b, g) == 3)
+			goto good;
+	});
+	die("no 3lib group near %s %s, bad test ?\n", stone2str(color), coord2sstr(c));
+
+ good:;
+	int rres = is_3lib_selfatari(b, color, c);
+
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+static bool
+test_snapback(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "snapback %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = is_snapback(b, color, c, NULL);
+
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+static bool
 test_false_eye_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
@@ -363,7 +414,7 @@ test_ladder(board_t *b, char *arg)
 	
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
-	assert(board_group_info(b, group).libs == 1);
+	assert(group_libs(b, group) == 1);
 	int rres = is_ladder(b, group, true);
 	
 	PRINT_RES();
@@ -385,7 +436,7 @@ test_ladder_any(board_t *b, char *arg)
 
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
-	assert(board_group_info(b, group).libs == 1);
+	assert(group_libs(b, group) == 1);
 	int rres = is_ladder_any(b, group, true);
 	
 	PRINT_RES();
@@ -587,7 +638,9 @@ test_pass_is_safe(board_t *b, char *arg)
 	PRINT_TEST(b, "pass_is_safe %s ?\n", stone2str(color));
 	
 	char *msg;
-	move_queue_t dead;
+	mq_t dead;
+	uct_mcowner_playouts(u, b, color);
+	memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
 	int rres = uct_pass_is_safe(u, b, color, false, &dead, &msg, DEBUGL(2));
 
 	if (DEBUGL(2) && rres)  {
@@ -617,7 +670,7 @@ test_final_score(board_t *b, char *arg)
 	args_end();
 
 	engine_t *e = new_engine(E_UCT, "", b);
-	move_queue_t dead;
+	mq_t dead;
 	engine_dead_groups(e, b, &dead);
 		
 	float rres = board_official_score(b, &dead);
@@ -632,41 +685,228 @@ test_final_score(board_t *b, char *arg)
 	return (rres == eres);
 }
 
+#define PLAYOUT_NBEST 20
+
+enum moggy_move_test {
+	MMT_NORMAL,
+	MMT_ABOVE,
+	MMT_BELOW,
+	MMT_MAX
+};
+
+typedef struct {
+	enum moggy_move_test type;
+	bool not;
+	mq_t q;
+	int pc;
+} moggy_move_test_t;
+
+static void
+print_moggy_move_test(moggy_move_test_t *test, int rank)
+{
+	if (rank != -1)
+		fprintf(stderr, "%i=", rank + 1);
+	if (test->not)
+		fprintf(stderr, "!");
+
+	mq_t *q = &test->q;
+	if (q->moves >= 2) {
+		fprintf(stderr, "(%s", coord2sstr(q->move[0]));
+		for (int j = 1; j < q->moves; j++)
+			fprintf(stderr, "|%s", coord2sstr(q->move[j]));
+		fprintf(stderr, ")");
+	} else {
+		assert(q->moves == 1);
+		fprintf(stderr, "%s", coord2sstr(q->move[0]));
+	}
+
+	if (test->type == MMT_ABOVE)
+		fprintf(stderr, ">=%i", test->pc);
+	if (test->type == MMT_BELOW)
+		fprintf(stderr, "<=%i", test->pc);
+	fprintf(stderr, " ");
+}
+
+static void
+moggy_moves_print_tests(moggy_move_test_t *global, int nglobal, moggy_move_test_t *ranked, int max)
+{
+	fprintf(stderr, "moggy moves ");
+	for (int i = 0; i < nglobal; i++)
+		print_moggy_move_test(&global[i], -1);
+
+	for (int i = 0; i < max; i++)
+		if (ranked[i].q.moves)
+			print_moggy_move_test(&ranked[i], i);
+	fprintf(stderr, "  ");
+}
+
+static bool
+moggy_move_test(moggy_move_test_t *test, coord_t c, float r)
+{
+	bool res = mq_has(&test->q, c);
+
+	if (test->type == MMT_ABOVE)
+		res = (res && r * 100 >= test->pc);
+	if (test->type == MMT_BELOW)
+		res = (res && r * 100 <= test->pc);
+	if (test->not)
+		res = !res;
+	return res;
+}
+
+static void
+moggy_moves_show_moves(coord_t *best_c, float *best_r, int nbest, moggy_move_test_t *ranked, int max)
+{
+	fprintf(stderr, "playout moves:\n");
+	for (int i = 0; i < nbest && best_c[i]; i++) {
+		fprintf(stderr, "  %3s %5.1f%%        ", coord2sstr(best_c[i]), best_r[i] * 100);
+		/* Show ranked tests side by side */
+		if (i < max && ranked[i].q.moves) {
+			bool passed = moggy_move_test(&ranked[i], best_c[i], best_r[i]);
+			print_moggy_move_test(&ranked[i], -1);
+			fprintf(stderr, "%s", (passed ? "OK" : "FAILED"));
+		}
+		fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "\n");
+}
+
+static bool
+moggy_moves_check_result(coord_t *best_c, float *best_r,
+			 moggy_move_test_t *global, int nglobal,
+			 moggy_move_test_t *ranked, int max)
+{
+	/* Check results: global tests */
+	for (int n = 0; n < nglobal; n++)
+		if (!global[n].not) {  /* one match = good */
+			bool passed = false;
+			for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++)
+				if (moggy_move_test(&global[n], best_c[i], best_r[i]))
+					passed = true;
+			if (!passed)  return false;
+		} else  /* must match all moves */
+			for (int i = 0; i < PLAYOUT_NBEST && best_c[i]; i++)
+				if (!moggy_move_test(&global[n], best_c[i], best_r[i]))
+					return false;
+
+	/* Check results: ranked tests */
+	assert(max <= PLAYOUT_NBEST);
+	for (int i = 0; i < max; i++) {
+		if (!ranked[i].q.moves)
+			continue;
+		if (!best_c[i] ||	/* If we're missing moves to test that's a fail. */
+		    !moggy_move_test(&ranked[i], best_c[i], best_r[i]))
+			return false;
+	}
+
+	return true;
+}
+
 /* Sample moves played by moggy in a given position.
  * Board last move matters quite a lot and must be set.
  * 
- * Syntax:  moggy moves
- */
+ * Syntax:  moggy moves coord [...]			expect coord among played moves
+ *          moggy moves !coord [...]			forbidden move
+ *          moggy moves coord>60 [...]			expect coord, played >= 60%
+ *          moggy moves coord<20 [...]			expect coord, played <= 20%
+ *          moggy moves 1=coord [...]			expect best move #1 = coord
+ *          moggy moves 1=!coord [...]			expect best move #1 != coord
+ *          moggy moves 1=coord>60 [...]		expect best move #1 = coord, played at least 60%
+ *          moggy moves 1=(coord1|coord2) [...]		expect best move #1 = coord1 or coord2
+ *          moggy moves 1=coord1 2=coord2 [...]		expect best move #1 = coord1, #2 = coord2
+ *          moggy moves					show playout best moves   */
 static bool
 test_moggy_moves(board_t *b, char *arg)
 {
-	int runs = 1000;
+	next_arg_opt(arg);
 
+	/* Tests that apply to all best moves */
+	moggy_move_test_t global[10];  memset(global, 0, sizeof(global));
+	int nglobal = 0;
+	/* Tests that apply only to some best move rank(s) */
+	moggy_move_test_t ranked[10];  memset(ranked, 0, sizeof(ranked));
+	
+	while (*arg) {
+		assert(nglobal < 10);
+		moggy_move_test_t *test = &global[nglobal++];
+		
+		if (isdigit(*arg)) {  /* Best move rank given */
+			int i = atoi(arg) - 1;
+			assert(i < 10 && i >= 0);
+			test = &ranked[i];
+			nglobal--;
+			while (isdigit(*arg))
+				arg++;
+			assert(*arg == '=');  arg++;
+		}
+
+		if (*arg == '!') {
+			test->not = true;
+			arg++;
+		}
+
+		mq_t *q = &test->q;
+		if (isalpha(*arg)) {  /* Single expected coord */
+			coord_t c = str2coord(arg);
+			arg += strlen(coord2sstr(c));
+			assert(board_at(b, c) == S_NONE);
+			mq_add(q, c);
+		} else if (*arg == '(') {  /* Set of expected coords */
+			arg++;
+			while (*arg && *arg != ')') {
+				if (!isalpha(*arg))  die("Invalid coord: '%s'\n", arg);
+				coord_t c = str2coord(arg);
+				assert(board_at(b, c) == S_NONE);
+				mq_add(q, c);
+				while (isalnum(*arg))
+					arg++;
+				assert(*arg == '|' || *arg == ')');
+				if (*arg == '|')
+					arg++;
+			}
+			assert(*arg == ')');  arg++;
+		} else die("Invalid arg: '%s'\n", arg);
+
+		if (*arg == '>' || *arg == '<') {
+			test->type = (*arg == '>' ? MMT_ABOVE : MMT_BELOW);
+			arg++;
+			if (*arg == '=')  arg++;
+			assert(isdigit(*arg));
+			test->pc = atoi(arg);
+			while (isdigit(*arg))
+				arg++;
+		}
+		
+		assert(!*arg);
+		next_arg_opt(arg);
+	}
 	args_end();
+	
 	if (!tunit_over_gtp) assert(last_move_set);
+
+	enum stone color = board_to_play(b);
 	board_print_test(b);
 
-	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
-	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
-	enum stone color = board_to_play(b);
-	
-	if (DEBUGL(2))
-		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
-			stone2str(color), runs);
+	/* Get playout best moves */
+	time_info_t ti = ti_none;
+	engine_t e;  engine_init(&e, E_REPLAY, "", b);
+	coord_t best_c[PLAYOUT_NBEST];
+	float   best_r[PLAYOUT_NBEST];
+	best_moves_setup(best, best_c, best_r, PLAYOUT_NBEST);
+	engine_best_moves(&e, b, &ti, color, &best);
 
-        int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
-	int *played = played_ + 1;		// allow storing pass
-	int most_played = 0;
-	replay_sample_moves(&e, b, color, played, &most_played);
+	/* Show playout moves */
+	if (DEBUGL(2))  moggy_moves_show_moves(best_c, best_r, PLAYOUT_NBEST, ranked, 10);
 
-	/* Show moves stats */	
-	for (int k = most_played; k > 0; k--)
-		for (coord_t c = pass; c < board_max_coords(b); c++)
-			if (played[c] == k)
-				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c), (float)k * 100 / runs);
-	
+	/* Print test */
+	if (DEBUGL(1))  moggy_moves_print_tests(global, nglobal, ranked, 10);
+
+	bool ret = moggy_moves_check_result(best_c, best_r, global, nglobal, ranked, 10);
+	bool rres = ret, eres = true;
+	PRINT_RES();
+
 	engine_done(&e);
-	return true;   // Not much of a unit test right now =)
+	return ret;
 }
 
 static int
@@ -721,6 +961,7 @@ test_moggy_status(board_t *b, char *arg)
 	
 	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
+		assert(n < 10);
 		coords[n] = str2coord(arg);
 		next_arg(arg);
 
@@ -784,6 +1025,81 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+/* Run playout showing board, candidate moves and playout logic behind
+ * each move. Useful to visualize / debug / investigate what's going on
+ * in playouts in a real game. Other tools give either candidate moves
+ * (t-unit moggy moves) or playout logic (pachi -d6), here we get both.
+ * playout.c and moggy.c must be compiled with debug messages enabled
+ * (#define DEBUG) for this to work.
+ * Not a full playout_play_game() replica at this stage (bent-four logic
+ * missing for example) but should be pretty close. */
+static bool
+moggy_debug_game(board_t *board, char *arg)
+{
+	int prev_debug_level = debug_level;
+	playout_policy_t *policy = playout_moggy_init(NULL, board);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	
+	board_t b2;
+	board_t *b = &b2;
+	board_copy(b, board);
+
+	engine_t e;  engine_init(&e, E_REPLAY, "", b);
+	time_info_t ti = ti_none;
+	
+	board_print_test(b);
+	fprintf(stderr, "moggy debug_game ...\n\n");
+	
+	/* playout_play_game() logic ... */
+	
+	b->playout_board = true;   // don't need board hash, history ...
+
+	enum stone color = board_to_play(b);
+	int gamelen = setup.gamelen - b->moves;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
+
+	if (policy->setboard)
+		policy->setboard(policy, b);
+
+	/* Play until both sides pass, or we hit threshold. */
+	while (gamelen-- > 0 && passes < 2) {
+		/* Show best candidates */
+		int nbest = 10;
+		coord_t best_c[nbest];
+		float   best_r[nbest];
+		best_moves_setup(best, best_c, best_r, nbest);
+		engine_best_moves(&e, b, &ti, color, &best);
+		moggy_moves_show_moves(best_c, best_r, nbest, NULL, 0);
+
+		/* Show chosen move and playout thinking logic */
+		fprintf(stderr, "picked move:\n");
+		debug_level = 6;
+		coord_t coord = playout_play_move(&setup, b, color, policy);
+		debug_level = prev_debug_level;
+		fprintf(stderr, "\n");
+
+		board_print(b, stderr);
+		
+		if (unlikely(is_pass(coord)))  passes++;
+		else                           passes = 0;
+
+		if (setup.mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup.mercymin)
+			break;
+
+		color = stone_other(color);
+	}
+
+	/* XXX playout_play_game() bent-four logic missing here */
+
+	assert(b->rules == RULES_CHINESE);
+	float score = board_fast_score(b);  /* From w perspective */
+	fprintf(stderr, "Score: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
+
+	board_done(b);
+
+	return true;
+}
+
 /* Test uct genmove on given position, make sure we get/don't get wanted/unwanted moves.
  * Although should be fine as t-unit test in most cases, to reproduce game conditions
  * exactly better use t-unit over gtp ('tunit genmove ...' cmd), t-unit board diagrams
@@ -802,16 +1118,16 @@ test_genmove(board_t *b, char *arg)
 	next_arg(arg);
 
 	char* args[30];  int n;
-	move_queue_t wanted;    mq_init(&wanted);
-	move_queue_t unwanted;  mq_init(&unwanted);
+	mq_t wanted;    mq_init(&wanted);
+	mq_t unwanted;  mq_init(&unwanted);
 	for (n = 0; *arg; n++) {
 		args[n] = arg;
-		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		mq_t *q = (*arg == '!' ? &unwanted : &wanted);
 		if (*arg == '!')  arg++;
-		if (!strcmp(arg, "pass"))   {  mq_add(q, pass, 0);    next_arg_opt(arg);  continue;  }
-		if (!strcmp(arg, "resign")) {  mq_add(q, resign, 0);  next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "pass"))   {  mq_add(q, pass);    next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "resign")) {  mq_add(q, resign);  next_arg_opt(arg);  continue;  }
 		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
-		mq_add(q, str2coord(arg), 0);
+		mq_add(q, str2coord(arg));
 		next_arg_opt(arg);
 	}
 	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
@@ -824,12 +1140,12 @@ test_genmove(board_t *b, char *arg)
 		fprintf(stderr, "%s ", args[i]);
 	fprintf(stderr, "...\n\n");
 
-	/* Use main engine. Creating new engine messes up context which is important here. */
-	engine_t *e = pachi_main_engine();
-
-	/* Sanity checks */
-	board_t *tmp = board_new(19, NULL);
-	board_delete(&tmp);
+	engine_t *e;
+	if (tunit_over_gtp) {
+		/* Use main engine. Creating new engine messes up context which is important here. */
+		e = pachi_main_engine();
+	} else
+		e = new_engine(E_UCT, "", b);
 
 	static time_info_t ti = { 0, };
 	if (!time_parse(&ti, "=5000:10000"))  die("shouldn't happen");
@@ -853,7 +1169,10 @@ test_genmove(board_t *b, char *arg)
 
 	fprintf(stderr, "\n");
 	PRINT_RES_VAL("%s", coord2sstr(c));
-	
+
+	if (!tunit_over_gtp)
+		engine_done(e);
+
 	return rres;
 }
 
@@ -895,15 +1214,15 @@ test_dcnn_blunder(board_t *b, char *arg)
 	next_arg(arg);
 
 	char* args[30];  int n;
-	move_queue_t wanted;    mq_init(&wanted);
-	move_queue_t unwanted;  mq_init(&unwanted);
+	mq_t wanted;    mq_init(&wanted);
+	mq_t unwanted;  mq_init(&unwanted);
 	for (n = 0; *arg; n++) {
 		args[n] = arg;
-		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		mq_t *q = (*arg == '!' ? &unwanted : &wanted);
 		if (*arg == '!')  arg++;
 		if (!strcmp(arg, "pass") || !strcmp(arg, "resign"))  die("Can't have pass or resign here.\n");
 		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
-		mq_add(q, str2coord(arg), 0);
+		mq_add(q, str2coord(arg));
 		next_arg_opt(arg);
 	}
 	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
@@ -931,7 +1250,7 @@ test_dcnn_blunder(board_t *b, char *arg)
 #endif
 
 	/* Get blunders */
-	move_queue_t blunders;  mq_init(&blunders);
+	mq_t blunders;  mq_init(&blunders);
 	get_dcnn_blunders(boosted, b, color, result, &ownermap, &blunders);
 	//fprintf(stderr, "found %i\n", blunders.moves);
 
@@ -973,8 +1292,8 @@ test_first_line_blunder(board_t *b, char *arg)
 		group_t g = group_at(b, c);
 		assert(g);
 		assert(group_stone_count(b, g, 4) >= 3);
-		assert(board_group_info(b, g).libs == 3 ||
-		       board_group_info(b, g).libs == 2);
+		assert(group_libs(b, g) == 3 ||
+		       group_libs(b, g) == 2);
 	});
 	
 	move_t m = move(c, color);
@@ -1001,6 +1320,8 @@ typedef struct {
 static t_unit_cmd commands[] = {
 	{ "bad_selfatari",          test_bad_selfatari,         },
 	{ "really_bad_selfatari",   test_really_bad_selfatari,  },
+	{ "3lib_selfatari",         test_3lib_selfatari,        },
+	{ "snapback",		    test_snapback,		},
 	{ "ladder",                 test_ladder,                },
 	{ "ladder_any",             test_ladder_any,            },
 	{ "wouldbe_ladder",         test_wouldbe_ladder,        },
@@ -1011,6 +1332,7 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
+	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "breaking_3_stone_seki",  test_breaking_3_stone_seki,},
 	{ "pass_is_safe",           test_pass_is_safe,          },

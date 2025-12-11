@@ -9,9 +9,6 @@
 #include "random.h"
 
 
-#define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
-
-
 coord_t
 playout_light_choose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {

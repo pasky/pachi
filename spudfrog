@@ -51,17 +51,20 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
                         boardsize=""
 [ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
 
-                      fifo=""
-[ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
-
                               float=""
 [ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
 
                           distributed=""
 [ "$DISTRIBUTED" = 1 ] && distributed="  ${cyan}[distributed]${end}"
 
+                           checks=""
+[ "$EXTRA_CHECKS" = 1 ] && checks="  ${cyan}[extra checks]${end}"
 
-status="$build$static$dcnn$opt$boardsize$fifo$float$distributed"
+                   asan=""
+[ "$ASAN" = 1 ] && asan="  ${cyan}[asan]${end}"
+
+
+status="$build$static$dcnn$opt$boardsize$float$distributed$checks$asan"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
 n=`max $[45-${#raw}] 0`;  n1=$[$n/2];  n2=$[$n-$n1]

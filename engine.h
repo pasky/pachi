@@ -5,6 +5,14 @@
 #include "ownermap.h"
 
 typedef struct {
+	int      n;		/* stored moves */
+	int	 size;		/* max number of moves (c[] and r[] size) */
+	coord_t *c;		/* move coords array */
+	float   *r;		/* move value array */
+	void*   *d;		/* move extra data (optional) */
+} best_moves_t;
+
+typedef struct {
 	char *name;
 	char *val;
 } option_t;
@@ -64,14 +72,13 @@ typedef char *(*engine_chat_t)(engine_t *e, board_t *b, bool in_game, char *from
 typedef coord_t (*engine_genmove_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive);
 typedef char *(*engine_genmoves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 				   char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
-typedef void  (*engine_best_moves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
-				     coord_t *best_c, float *best_r, int nbest);
+typedef void  (*engine_best_moves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best);
 typedef void (*engine_analyze_t)(engine_t *e, board_t *b, enum stone color, int start);
 typedef void (*engine_evaluate_t)(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color);
-typedef void (*engine_dead_groups_t)(engine_t *e, board_t *b, move_queue_t *mq);
+typedef void (*engine_dead_groups_t)(engine_t *e, board_t *b, mq_t *mq);
 typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
 typedef char *(*engine_result_t)(engine_t *e, board_t *b);
-typedef void (*engine_collect_stats_t)(engine_t *e, board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games);
+typedef void (*engine_collect_stats_t)(engine_t *e, board_t *b, move_t *m, best_moves_t *best, int moves, int games);
 typedef void (*engine_print_stats_t)(engine_t *e, strbuf_t *buf, int moves, int games);
 typedef void (*engine_stop_t)(engine_t *e);
 typedef void (*engine_done_t)(engine_t *e);
@@ -157,11 +164,10 @@ void engine_reset(engine_t *e, board_t *b);
 
 /* Convenience functions for engine actions: */
 void engine_board_print(engine_t *e, board_t *b, FILE *f);
-void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-		       coord_t *best_c, float *best_r, int nbest);
+void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
 /* Ask engine for dead stones */
-void engine_dead_groups(engine_t *e, board_t *b, move_queue_t *mq);
+void engine_dead_groups(engine_t *e, board_t *b, mq_t *mq);
 
 /* Set/change engine option(s). May reset engine if needed.
  * New options are saved, so persist across engine resets.
@@ -173,10 +179,19 @@ bool engine_setoption(engine_t *e, board_t *b, option_t *option, char **err, boo
 
 /* Engines best moves common code */
 
-/* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
-void best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest);
-void best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest);
-int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
+void best_moves_init(best_moves_t *best, coord_t c[], float r[], int size);
+/* Add move c with probability r */
+void best_moves_add(best_moves_t *best, coord_t c, float r);
+int  best_moves_print(best_moves_t *best, char *str);
+
+/* Shortcut for declaration + init */
+#define best_moves_setup(best, best_c, best_r, nbest) \
+	best_moves_t best; \
+	best_moves_init(&(best), (best_c), (best_r), (nbest));
+
+/* best_move functions with extra move data */
+void best_moves_init_full(best_moves_t *best, coord_t c[], float r[], void* d[], int size);
+void best_moves_add_full(best_moves_t *best, coord_t c, float r, void *d);
 
 
 /* Engine options */

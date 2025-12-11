@@ -114,21 +114,22 @@ worker_thread(void *ctx_)
 	fast_srandom(ctx->seed);
 	int restarted = search_restarted(u);
 
-	/* Fill ownermap for mcowner pattern feature. */
-	if (using_patterns()) {
-		double time_start = time_now();
-		uct_mcowner_playouts(u, b, color);
-		
-		if (!ctx->tid && !restarted) {
-			u->raw_playouts_per_sec = u->ownermap.playouts / (time_now() - time_start);
-			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
-			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
-			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
-		}
+	/* Compute initial ownermap */
+	double time_start = time_now();
+	uct_mcowner_playouts(u, b, color);
+
+	if (!ctx->tid && !restarted) {
+		u->raw_playouts_per_sec = u->ownermap.playouts / (time_now() - time_start);
+		if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
+		if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
+		if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
 	}
 
 	/* Stuff that depends on ownermap. */
-	if (!ctx->tid && using_patterns()) {
+	if (!ctx->tid) {
+		/* Save initial ownermap. */
+		memcpy(&u->initial_ownermap, &u->ownermap, sizeof(u->ownermap));
+		
 		int dames = ownermap_dames(b, &u->ownermap);
 		float score = ownermap_score_est(b, &u->ownermap);
 		
@@ -148,11 +149,15 @@ worker_thread(void *ctx_)
 		bool already_have = n->is_expanded;
 		enum stone node_color = stone_other(color);
 		assert(node_color == t->root_color);
-		
+
+		/* Make EXTRA_CHECKS happy:
+		 * copy main board so it doesn't get with_move()'d.
+		 * (ok here actually, other threads are waiting). */
+		board_t b2;  board_copy(&b2, b);
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, b, color, u, 1);
+			tree_expand_node(t, n, &b2, color, u, 1);
 		if (genmove_pondering(u) && using_dcnn(b))
-			uct_expand_next_best_moves(u, t, b, color);
+			uct_expand_next_best_moves(u, t, &b2, color);
 		
 		if (DEBUGL(2) && already_have && !restarted) {  /* Show previously computed priors */
 			print_joseki_moves(joseki_dict, b, color);
@@ -345,26 +350,26 @@ static void
 uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 {
 	assert(using_dcnn(b));
-	move_queue_t q;  mq_init(&q);
+	mq_t q;  mq_init(&q);
 	
 	{  /* Prior best moves (dcnn policy mostly) */
 		int nbest = u->dcnn_pondering_prior;
 		float best_r[nbest];
 		coord_t best_c[nbest];
-		get_node_prior_best_moves(t->root, best_c, best_r, nbest);
-		assert(t->root->hints & TREE_HINT_DCNN);
+		best_moves_setup(best, best_c, best_r, nbest);
 		
-		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++)
-			mq_add(&q, best_c[i], 0);
+		get_node_prior_best_moves(t->root, &best);
+		assert(t->root->hints & TREE_HINT_DCNN);
+
+		for (int i = 0; i < best.n; i++)
+			mq_add(&q, best_c[i]);
 	}
 	
 	{  /* Opponent best moves from genmove search */
-		int       nbest = u->dcnn_pondering_mcts;
 		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
-			mq_add(&q, best_c[i], 0);
-			mq_nodup(&q);
-		}
+		int n = u->dcnn_pondering_mcts_n;
+		for (int i = 0; i < n; i++)
+			mq_add_nodup(&q, best_c[i]);
 	}
 	
 	if (DEBUGL(2)) {  /* Show guesses. */
@@ -639,10 +644,9 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 
 /* Determine whether we should terminate the search later than expected. */
 static bool
-uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
-		time_info_t *ti, time_stop_t *stop,
-		tree_node_t *best, tree_node_t *best2,
-		tree_node_t *bestr, tree_node_t *winner, int i)
+uct_search_keep_looking(uct_t *u, board_t *b, enum stone color,
+			tree_t *t, time_info_t *ti, time_stop_t *stop,
+			tree_node_t *best, tree_node_t *best2, int i)
 {
 	if (!best) {
 		if (UDEBUGL(2))
@@ -677,6 +681,13 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 		/* Check best, best_best value difference. If the best move
 		 * and its best child do not give similar enough results,
 		 * keep simulating. */
+
+		/* Find best's best child. */
+		board_t b2;  board_copy(&b2, b);
+		move_t m = move(node_coord(best), color);
+		int r = board_play(&b2, &m);  assert(r >= 0);
+		tree_node_t *bestr = u->policy->choose(u->policy, best, &b2, stone_other(color), resign);
+
 		if (bestr && bestr->u.playouts
 		    && fabs((double)best->u.value - bestr->u.value) > u->bestr_ratio) {
 			if (UDEBUGL(3))
@@ -686,6 +697,10 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 			return true;
 		}
 	}
+
+	tree_node_t *winner = NULL;
+	if (u->policy->winner && u->policy->evaluate)
+		winner = u->policy->winner(u->policy, t, t->root);
 
 	if (winner && winner != best) {
 		/* Keep simulating if best explored
@@ -708,7 +723,8 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 		      tree_t *t, time_info_t *ti,
 		      uct_search_state_t *s, int i)
 {
-	uct_thread_ctx_t *ctx = s->ctx;
+	if (!u->tree_ready)
+		return false;
 
 	/* Never consider stopping if we played too few simulations.
 	 * Maybe we risk losing on time when playing in super-extreme
@@ -721,39 +737,32 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 
 	tree_node_t *best = NULL;
 	tree_node_t *best2 = NULL; // Second-best move.
-	tree_node_t *bestr = NULL; // best's best child.
-	tree_node_t *winner = NULL;
 
-	best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, node_coord(best));
+	best = u->policy->choose(u->policy, t->root, b, color, resign);
+	if (best) best2 = u->policy->choose(u->policy, t->root, b, color, node_coord(best));
 
 	/* Possibly stop search early if it's no use to try on. */
 	int played = played_all(u) + i - s->base_playouts;
-	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played, s->fullmem))
+	if (best && uct_search_stop_early(u, t, b, ti, &s->stop, best, best2, played, s->fullmem))
 		return true;
 
 	/* Check against time settings. */
 	bool desired_done;
 	if (ti->dim == TD_WALLTIME) {
 		double elapsed = time_now() - ti->timer_start;
-		if (elapsed > s->stop.worst.time) return true;
+		if (elapsed > s->stop.worst.time)  return true;
 		desired_done = elapsed > s->stop.desired.time;
-
-	} else { assert(ti->dim == TD_GAMES);
-		if (i > s->stop.worst.playouts) return true;
+	} else {
+		assert(ti->dim == TD_GAMES);
+		if (i > s->stop.worst.playouts)  return true;
 		desired_done = i > s->stop.desired.playouts;
 	}
 
 	/* We want to stop simulating, but are willing to keep trying
 	 * if we aren't completely sure about the winner yet. */
-	if (desired_done) {
-		if (u->policy->winner && u->policy->evaluate)
-			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-		if (best)
-			bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
-		if (!uct_search_keep_looking(u, ctx->t, b, ti, &s->stop, best, best2, bestr, winner, i))
+	if (desired_done &&
+	    !uct_search_keep_looking(u, b, color, t, ti, &s->stop, best, best2, i))
 			return true;
-	}
 
 	/* TODO: Early break if best->variance goes under threshold
 	 * and we already have enough playouts (possibly thanks to tbook
@@ -767,7 +776,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 static bool
 uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
 {
-	move_queue_t dead;
+	mq_t dead;
 	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, &dead, msg, true);
 
 	if (res) {
@@ -792,7 +801,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	if (board_playing_ko_threat(b))  return false;
 
 	/* Find dames left */
-	move_queue_t dead, unclear;
+	mq_t dead, unclear;
 	uct_mcowner_playouts(u, b, color);
 	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;

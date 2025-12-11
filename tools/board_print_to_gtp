@@ -2,6 +2,8 @@
 # Convert ascii board diagrams from board_print() to gtp.
 # Usage: ./board_print_to_gtp > foo.gtp
 #        copy paste the diagram, ^D
+# For the first board move ordering is unspecified (except for last move).
+# If given successive boards, successive moves' order is preserved.
 # Doesn't set handicap, tweak output as needed.
 
 use utf8;
@@ -36,22 +38,47 @@ sub parse_board_line
     return ($y, $stones, $post);
 }
 
-my $ab = "";
-my $aw = "";
+
+my @moves_b;
+my @moves_w;
+my $move_number = 0;
 my $komi = 7.5, $handicap = 0;
 my $last_move = "";
 my $to_play = "b";
-my $lines = 0;
-foreach my $s (<STDIN>)
+sub parse_board
 {
-    # Get komi and handicap from board header, if present
-    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
-    {  $komi = $1;  $handicap = $2; next;  }
+    my ($s) = @_;
+    $move_number = 0;
+    $last_move = "";
+    @moves_b = ();
+    @moves_w = ();
+    
+    # Parse board header if present
+    if ($s =~ m/^Move: *([0-9]+) *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
+    {
+	($move_number, $komi, $handicap) = ($1, $2, $3);
+	$s = <STDIN>;
+	if ($s =~ m/^ +A B C D/)     {  $s = <STDIN>;  }
+	if ($s =~ m/^ +[+]--------/) {  $s = <STDIN>;  }
+    }
+    
+    # Board first line ?
+    my @t = parse_board_line($s);
+    if (!@t) {  return 0;  }
 
-    if (my @t = parse_board_line($s)) {
+    for (my $lines = 0; $lines < $size; $lines++) {
+	if ($lines) {  # Parse next line
+	    my $s = <STDIN>;
+	    @t = parse_board_line($s);
+	    if (!@t) {  die "Error: Expecting $size lines, found only $lines.";  }
+	}
+	
 	my ($y, $stones, $post) = @t;
-	$lines++;
 
+	# Check line number matches
+	my $y_expect = $size - $lines;
+	if ($y != $y_expect) {  die "Error: expecting line $y_expect, got $y instead.";  }
+	
 	my @stones = split("", $stones);
 	my @post   = split("", $post);
 	for (my $i = 0; $i < @stones; $i++)
@@ -61,24 +88,55 @@ foreach my $s (<STDIN>)
 	    my $coord = coord2gtp($i+1, $y);
 	    
 	    # Save and skip last move.
-	    if ($combo eq "X)")    {  $last_move = sprintf("play b %s\n", $coord);  $to_play = "w"; next;  }
-	    if ($combo eq "O)")    {  $last_move = sprintf("play w %s\n", $coord);  $to_play = "b"; next;  }
+	    if ($combo eq "X)")    {  $last_move = sprintf("b %s", $coord);  $to_play = "w"; next;  }
+	    if ($combo eq "O)")    {  $last_move = sprintf("w %s", $coord);  $to_play = "b"; next;  }
+	    
+	    if ($stones[$i] eq "X") {  push(@moves_b, sprintf("b %s", $coord));  }
+	    if ($stones[$i] eq "O") {  push(@moves_w, sprintf("w %s", $coord));  }
+	}
+    }
+    
+    return 1;
+}
 
-	    if ($stones[$i] eq "X") {  $ab .= sprintf("play b %s\n", $coord);  }
-	    if ($stones[$i] eq "O") {  $aw .= sprintf("play w %s\n", $coord);  }
+my $boards = 0;
+my $prev_move_number = 0;
+my $prev_last_move = "";
+while (my $s = <STDIN>) {
+    if ($move_number)      {  $prev_move_number = $move_number;  }
+    if ($last_move ne "")  {  $prev_last_move = $last_move;  }
+    
+    if (parse_board($s)) {
+	# print "----- new board: $move_number $komi $handicap  last move: $last_move -----\n";	
+	$boards++;
+
+	# Same move number as previous board ? Ignore
+	if ($move_number && $move_number == $prev_move_number) {  next;  }
+	
+	# First board or new board: print all moves (last move last)
+	if ($boards == 1 || $move_number != $prev_move_number + 1) {
+	    print "boardsize $size\n";
+	    print "clear_board\n";
+	    print "komi $komi\n";
+	    if ($handicap) {  warn "WARNING: i don't handle handicap, tweak output as needed ...\n"; }
+	    foreach my $m (@moves_b) {
+		print "play $m\n";
+	    }
+	    foreach my $m (@moves_w) {
+		print "play $m\n";
+	    }
+	    if ($last_move)  {  print "play $last_move\n";  }
+	    next;
+	}
+
+	# Successive board: just print last move
+	if ($move_number && $move_number == $prev_move_number + 1) {
+	    if (!$last_move)                   {  die "Successive board with no last move.";  }
+	    if ($last_move eq $prev_last_move) {  die "Successive boards with identical last move !"; }
+	    print "play $last_move\n";
 	}
     }
 }
 
 # Sanity checks
-if (!$lines)          {  die "Error: no board diagram found !\n";  }
-if ($lines != $size)  {  die "Error: Expecting $size lines, found $lines instead ...\n";  }
-
-print "boardsize $size\n";
-print "clear_board\n";
-print "komi $komi\n";
-if ($handicap) {  warn "WARNING: i don't handle handicap, tweak output as needed ...\n"; }
-print "$ab";
-print "$aw";
-if ($last_move)  {  print $last_move;  }
-print "genmove $to_play\n";
+if (!$boards)         {  die "Error: no board diagram found !\n";  }

@@ -1,0 +1,83 @@
+#!/bin/bash
+# git_log_spatial:
+# Show gamma changes history for a given spatial
+
+die()   {  echo "$@"; exit 1;  }
+
+usage() {
+    echo "Usage: git_log_spatial <spatial_feature>"
+    echo "       git_log_spatial <spatial_points>"
+    echo ""
+    echo "for example:"
+    echo "   $ pattern/tools/git_log_spatial 's4:3106' "
+    echo "   $ pattern/tools/git_log_spatial '..OXX..XX#OO.' "
+    exit 1
+}
+
+[ -n "$1" ] || usage
+[ -d .git ] || die "this script needs to be run in pachi git repo root"
+
+spatial_points="$1"
+
+# Spatial feature given ? Get spatial points from dictionary
+if echo "$1" | grep -q ':'; then
+    d=`echo "$1" | sed -e 's/s\(.*\):.*/\1/' `
+    number=`echo "$1" | sed -e 's/s.*:\(.*\)/\1/' `
+
+    # v1.1 format: payloads start at 0 for each dist
+    start=`git show HEAD:patterns_mm.spat | grep -v '^#' | perl -nle "if (m/ $d /){ last; } print;" | wc -l`
+    id=$[$start + $number + 1]
+    
+    matches=`grep "^$id $d " < patterns_mm.spat | wc -l`
+    [ $matches = 0 ]  && die "couldn't find feature ($1)"
+    [ $matches != 1 ] && die "more than one match for feature ($1) ?!"
+    
+    spatial_points=`grep "^$id $d" < patterns_mm.spat | cut -d' ' -f3`
+fi
+
+echo "spatial points: '$spatial_points'"
+
+if ! echo $spatial_points | grep -q '^[.OX#]\+$'; then
+    die "invalid spatial, should have only '.OX#' characters"
+fi
+
+pattern=`echo "$spatial_points" | sed -e 's/\./[.]/g'`		# quote dots
+pattern=" $pattern( |$)"
+
+# For all versions of patterns_mm.gamma
+git log --pretty=format:'%h %ad' --date=short patterns_mm.gamma |
+    while read commit date; do
+	echo -n "$commit $date "
+	
+	matches=`git show $commit:patterns_mm.spat | grep -P "$pattern" | wc -l`
+	if [ $matches = 0 ]; then
+	    echo "no matches"
+	    continue
+	fi
+
+	# Find spatial dictionary entry.
+	# tail -1: oldest version had duplicates !
+	entry=`git show $commit:patterns_mm.spat | grep -P "$pattern" | tail -1 | cut -d' ' -f1-2`
+
+	# Spatial id and dist
+	id=`echo "$entry" | cut -d' ' -f1`
+	d=` echo "$entry" | cut -d' ' -f2`
+	
+	format=`git show $commit:patterns_mm.spat | head -1 | grep 'Pachi spatial patterns dictionary' |
+                    sed -e 's/.* v\([^ ]*\) .*/\1/' `
+
+	# v1.1 / v1.0 spatial dictionary format ?
+	#   v1.1: payloads start at 0 for each dist
+	#   v1.0: uses id as feature payload number
+	if [ "$format" = "1.1" ]; then
+	    start=`git show $commit:patterns_mm.spat | grep -v '^#' | perl -nle "if (m/ $d /){ last; } print;" | wc -l`
+	    number=$[$id - $start - 1]
+	else if [ "$format" = "1.0" ]; then
+	    number=$id
+        else
+	    die "unknown format '$format'"
+	fi; fi
+	
+	echo -n "(s$d:$number) "
+	git show $commit:patterns_mm.gamma | grep "(s$d:$number)" | cut -d' ' -f1
+    done

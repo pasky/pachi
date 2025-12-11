@@ -46,6 +46,7 @@ time_parse(time_info_t *ti, char *s)
 	switch (s[0]) {
 		case '=':
 			ti->can_stop_early = false;
+			/* fallthrough */
 		case '~':
 			ti->dim = TD_GAMES;
 			ti->games = strtol(++s, &end, 10);

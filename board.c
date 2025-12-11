@@ -112,6 +112,7 @@ board_statics_init(board_t *board)
 	memset(bs, 0, sizeof(*bs));
 	bs->rsize = size;
 	bs->stride = stride;
+	bs->rsize2 = size * size;
 	bs->max_coords = stride * stride;
 
 	bs->bits2 = 1;
@@ -363,13 +364,13 @@ board_hprint(board_t *board, FILE *f, board_print_handler handler, void *data)
 static void
 cprint_group(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
-	sbprintf(buf, "%d ", group_base(group_at(board, c)));
+	sbprintf(buf, "%d ", group_at(board, c));
 }
 
 void
 board_print(board_t *board, FILE *f)
 {
-	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL, NULL);
+	board_print_custom(board, f, (DEBUGL(10) ? cprint_group : NULL), NULL);
 }
 
 static char*
@@ -384,26 +385,44 @@ print_target_move_handler(board_t *b, coord_t c, void *data)
 }
 
 void
-board_print_target_move(board_t *b, FILE *f, coord_t target_move)
+board_print_target_move(board_t *b, FILE *f, coord_t target)
 {
-	assert(!is_pass(target_move));
-	assert(board_at(b, target_move) == S_NONE);
-	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target_move);
+	assert(sane_coord(target));
+	assert(board_at(b, target) == S_NONE);
+	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target);
 }
 
+static char*
+print_group_handler(board_t *b, coord_t c, void *data)
+{
+	static char buf[32];
+	group_t group = (group_t)(intptr_t)data;
+	group_t g = group_at(b, c);
+
+	if (g == group)  sprintf(buf, "\e[40;33;1m%c\e[0m", stone2char(board_at(b, c)));
+	else		 sprintf(buf, "%c", stone2char(board_at(b, c)));
+	return buf;
+}
+
+void
+board_print_group(board_t *board, FILE *f, group_t group)
+{
+	assert(sane_group(board, group));
+	board_hprint(board, f, print_group_handler, (void*)(intptr_t)group);
+}
 
 static void
-board_handicap_stone(board_t *board, int x, int y, move_queue_t *q)
+board_handicap_stone(board_t *board, int x, int y, mq_t *q)
 {
 	move_t m = move(coord_xy(x, y), S_BLACK);
 
 	int r = board_play(board, &m);  assert(r >= 0);
 
-	if (q)  mq_add(q, m.coord, 0);
+	if (q)  mq_add(q, m.coord);
 }
 
 void
-board_handicap(board_t *board, int stones, move_queue_t *q)
+board_handicap(board_t *board, int stones, mq_t *q)
 {
 	assert(stones >= 0 && stones <= 9);
 	int margin = 3 + (board_rsize(board) >= 13);
@@ -443,37 +462,48 @@ board_permit(board_t *b, move_t *m, void *data)
 }
 
 static inline bool
-board_try_random_move(board_t *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
+board_try_random_move(board_t *b, int f, move_t *m, ppr_permit permit, void *permit_data)
 {
-	*coord = b->f[f];
-	move_t m = { *coord, color };
-	if (DEBUGL(6))
-		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord), coord_y(*coord), coord2sstr(*coord), board_is_valid_move(b, &m));
-	permit = (permit ? permit : board_permit);
-	if (!permit(b, &m, permit_data))
+	coord_t c = m->coord = b->f[f];
+	if (DEBUGL(10))
+		fprintf(stderr, "trying random move %d: %s %d\n", f, coord2sstr(c), board_is_valid_move(b, m));
+	if (!permit(b, m, permit_data))
 		return false;
-	if (m.coord == *coord)
-		return likely(board_play_f(b, &m, f) >= 0);
-	*coord = m.coord; // permit modified the coordinate
-	return likely(board_play(b, &m) >= 0);
+	if (likely(m->coord == c))
+		return likely(board_play_f(b, m, f) >= 0);
+	// permit modified the coordinate
+	return likely(board_play(b, m) >= 0);
 }
 
-void
-board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
+coord_t
+board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
 {
+#ifdef EXTRA_CHECKS
+	assert(!quick_board(b));
+#endif
+	permit = (permit ? permit : board_permit);
+
+	/* XXX picking of playout endgame moves is pretty biased and inefficient:
+	 * - near the end most free positions are not playable (one point eyes). if there
+	 *   are 40 free positions only 2 of which are playable, picking a random starting
+	 *   point and skipping moves until we find a playable one will give probabilities
+	 *   very different from 50% depending on where the 2 moves lie.
+	 * - we end up checking the same unplayable moves again and again.
+	 * ideal would be to maintain a list of playable moves and pick from that. */
 	if (likely(b->flen)) {
 		int base = fast_random(b->flen), f;
+		move_t m = move(pass, color);
 		for (f = base; f < b->flen; f++)
-			if (board_try_random_move(b, color, coord, f, permit, permit_data))
-				return;
+			if (board_try_random_move(b, f, &m, permit, permit_data))
+				return m.coord;
 		for (f = 0; f < base; f++)
-			if (board_try_random_move(b, color, coord, f, permit, permit_data))
-				return;
+			if (board_try_random_move(b, f, &m, permit, permit_data))
+				return m.coord;
 	}
 
-	*coord = pass;
-	move_t m = { pass, color };
+	move_t m = move(pass, color);
 	board_play(b, &m);
+	return pass;
 }
 
 
@@ -484,11 +514,16 @@ board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permi
 bool
 board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(eye_color));
+	assert(sane_coord(coord));
+	assert(board_at(board, coord) == S_NONE);
+#endif
 	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
-	foreach_diag_neighbor(board, coord) {
+	foreach_diag_neighbor(board, coord, {
 		color_diag_libs[board_at(board, c)]++;
-	} foreach_diag_neighbor_end;
+	});
 	
 	/* For false eye, we need two enemy stones diagonally in the
 	 * middle of the board, or just one enemy stone at the edge
@@ -500,6 +535,11 @@ board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 bool
 board_is_one_point_eye(board_t *b, coord_t c, enum stone eye_color)
 {
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(eye_color));
+	assert(sane_coord(c));
+	assert(board_at(b, c) == S_NONE);
+#endif
 	return (board_is_eyelike(b, c, eye_color) &&
 		!board_is_false_eyelike(b, c, eye_color));
 }
@@ -507,6 +547,10 @@ board_is_one_point_eye(board_t *b, coord_t c, enum stone eye_color)
 enum stone
 board_eye_color(board_t *b, coord_t c)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(board_at(b, c) == S_NONE);
+#endif
 	if (board_is_eyelike(b, c, S_WHITE))  return S_WHITE;
 	if (board_is_eyelike(b, c, S_BLACK))  return S_BLACK;
 	return S_NONE;
@@ -627,7 +671,7 @@ final_ownermap_printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 }
 
 void
-board_print_official_ownermap(board_t *b, move_queue_t *dead)
+board_print_official_ownermap(board_t *b, mq_t *dead)
 {
 	int dame, seki;
 	int ownermap[board_max_coords(b)];
@@ -641,7 +685,7 @@ board_print_official_ownermap(board_t *b, move_queue_t *dead)
  * (only distinguishes between dames/sekis if @po is not NULL) 
  * final ownermap values:  FO_DAME  S_BLACK  S_WHITE  S_OFFBOARD */
 floating_t
-board_official_score_details(board_t *b, move_queue_t *dead,
+board_official_score_details(board_t *b, mq_t *dead,
 			     int *dame, int *seki, int *ownermap, ownermap_t *po)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
@@ -695,7 +739,7 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 }
 
 floating_t
-board_official_score(board_t *b, move_queue_t *dead)
+board_official_score(board_t *b, mq_t *dead)
 {
 	int dame, seki;
 	int ownermap[board_max_coords(b)];
@@ -704,7 +748,7 @@ board_official_score(board_t *b, move_queue_t *dead)
 
 /* Returns static buffer */
 char *
-board_official_score_str(board_t *b, move_queue_t *dead)
+board_official_score_str(board_t *b, mq_t *dead)
 {
 	static char buf[32];
 	floating_t score = board_official_score(b, dead);
@@ -716,8 +760,9 @@ board_official_score_str(board_t *b, move_queue_t *dead)
 }
 
 floating_t
-board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
+board_official_score_color(board_t *b, mq_t *dead, enum stone color)
 {
+	assert(is_player_color(color));
 	floating_t score = board_official_score(b, dead);
 	return (color == S_WHITE ? score : -score);
 }
@@ -783,7 +828,7 @@ static void
 board_commit_move(board_t *b, move_t *m)
 {
 	if (!playout_board(b)) {
-#ifdef DCNN_DARKFOREST
+#if defined(DCNN) && defined(DCNN_DARKFOREST)
 		if (darkforest_dcnn && !is_pass(m->coord))
 			b->moveno[m->coord] = b->moves;
 #endif
@@ -806,7 +851,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 {
 	if (!playout_board(board)) {
 		board->hash ^= hash_at(coord, color);
-		if (DEBUGL(8))
+		if (DEBUGL(10))
 			fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
 	}
 
@@ -818,8 +863,8 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 	if (new_color == S_NONE)
 		board->pat3[coord] = pattern3_hash(board, coord);
 	else
-		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
-	foreach_8neighbor(board, coord) {
+		in_atari = (group_libs(board, group_at(board, coord)) == 1);
+	foreach_8neighbor(board, coord, {
 		/* Internally, the loop uses fn__i=[0..7]. We can use
 		 * it directly to address bits within the bitmap of the
 		 * neighbors since the bitmap order is reverse to the
@@ -832,7 +877,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 			board->pat3[c] &= ~(1 << (16 + ataribits[fn__i]));
 			board->pat3[c] |= in_atari << (16 + ataribits[fn__i]);
 		}
-	} foreach_8neighbor_end;
+	});
 #endif
 }
 
@@ -842,11 +887,11 @@ board_hash_commit(board_t *b)
 {
 	if (playout_board(b))  return;
 
-	if (DEBUGL(8)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
+	if (DEBUGL(10)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
 
 	for (int i = 0; i < BOARD_HASH_HISTORY; i++) {
 		if (b->hash_history[i] == b->hash) {
-			if (DEBUGL(5))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
+			if (DEBUGL(10))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
 			b->superko_violation = true;
 			return;
 		}
@@ -869,11 +914,11 @@ static inline void
 board_pat3_fix(board_t *b, group_t group_from, group_t group_to)
 {
 #ifdef BOARD_PAT3
-	group_info_t *gi_from = &board_group_info(b, group_from);
-	group_info_t *gi_to = &board_group_info(b, group_to);
+	group_info_t *gi_from = group_info(b, group_from);
+	group_info_t *gi_to = group_info(b, group_to);
 	
 	if (gi_to->libs == 1) {
-		coord_t lib = board_group_info(b, group_to).lib[0];
+		coord_t lib = gi_to->lib[0];
 		if (gi_from->libs == 1) {
 			/* We removed group_from from capturable groups,
 			 * therefore switching the atari flag off.
@@ -929,7 +974,7 @@ board_capturable_rm(board_t *board, group_t group, coord_t lib)
 			board->c[i] = board->c[--board->clen];
 			return;
 		}
-	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group_base(group)));
+	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group));
 	assert(0);
 #endif
 }
@@ -942,7 +987,7 @@ int
 board_play(board_t *b, move_t *m)
 {
 #ifdef BOARD_UNDO_CHECKS
-        assert(!b->quicked);
+        assert(!quick_board(b));
 #endif
 
 	return board_play_(b, m);

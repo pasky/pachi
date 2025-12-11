@@ -130,8 +130,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 		board_t b2;
 		board_copy(&b2, b);
 
-		coord_t coord;
-		board_play_random(&b2, color, &coord, NULL, NULL);
+		coord_t coord = board_play_random(&b2, color, NULL, NULL);
 		if (!is_pass(coord) && !group_at(&b2, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
 			 * so we can't consider this. (Note that we
@@ -286,7 +285,6 @@ montecarlo_state_init(engine_t *e, board_t *b)
 
 	if (!mc->playout)
 		mc->playout = playout_light_init(NULL, b);
-	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
 	mc->loss_threshold = 5000; /* Stop reading if no loss encountered in first 5000 games. */

@@ -339,7 +339,8 @@ external_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone col
 		fprintf(stderr, "external engine genmove failed !\n");
 		return pass;
 	}
-    
+
+	chomp(reply->str);
 	coord_t c = str2coord(reply->str);
 	if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (%.1fs)\n", coord2sstr(c), time_now() - time_start);
 	

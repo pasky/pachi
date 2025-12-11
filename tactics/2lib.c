@@ -4,7 +4,7 @@
 
 #define QUICK_BOARD_CODE
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -22,6 +22,11 @@
 static bool
 miai_2lib(board_t *b, group_t group, enum stone color)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
 	bool can_connect = false, can_pull_out = false;
 	/* We have miai if we can either connect on both libs,
 	 * or connect on one lib and escape on another. (Just
@@ -30,26 +35,26 @@ miai_2lib(board_t *b, group_t group, enum stone color)
 	 * X X X O
 	 * X . . O
 	 * O O X O - left dot would be pull-out, right dot connect */
-	foreach_neighbor(b, board_group_info(b, group).lib[0], {
+	foreach_neighbor(b, group_lib(b, group, 0), {
 		enum stone cc = board_at(b, c);
-		if (cc == S_NONE && cc != board_at(b, board_group_info(b, group).lib[1]))
+		if (cc == S_NONE && cc != board_at(b, group_lib(b, group, 1)))
 			can_pull_out = true;
 		else if (cc != color)
 			continue;
 
 		group_t cg = group_at(b, c);
-		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+		if (cg && cg != group && group_libs(b, cg) > 1)
 			can_connect = true;
 	});
 	
-	foreach_neighbor(b, board_group_info(b, group).lib[1], {
+	foreach_neighbor(b, group_lib(b, group, 1), {
 		enum stone cc = board_at(b, c);
-		if (c == board_group_info(b, group).lib[0])  continue;
+		if (c == group_lib(b, group, 0))  continue;
 		if (cc == S_NONE && can_connect)     return true;
 		else if (cc != color)		     continue;
 
 		group_t cg = group_at(b, c);
-		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+		if (cg && cg != group && group_libs(b, cg) > 1)
 			return (can_connect || can_pull_out);
 	});
 	return false;
@@ -60,6 +65,14 @@ defense_is_hopeless(board_t *b, group_t group, enum stone owner,
 		    enum stone to_play, coord_t lib, coord_t otherlib,
 		    bool use)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(owner));
+	assert(is_player_color(to_play));
+	assert(group_libs(b, group) == 2);
+	assert(board_at(b, lib) == S_NONE);
+	assert(board_at(b, otherlib) == S_NONE);
+#endif
 	/* If we are the defender not connecting out, do not
 	 * escape with moves that do not gain liberties anyway
 	 * - either the new extension has just single extra
@@ -82,14 +95,20 @@ defense_is_hopeless(board_t *b, group_t group, enum stone owner,
 
 void
 can_atari_group(board_t *b, group_t group, enum stone owner,
-		enum stone to_play, move_queue_t *q,
-		int tag, bool use_def_no_hopeless)
+		enum stone to_play, mq_t *q, bool use_def_no_hopeless)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(owner));
+	assert(is_player_color(to_play));
+	assert(group_libs(b, group) == 2);
+	assert(board_at(b, group_lib(b, group, 0)) == S_NONE);
+	assert(board_at(b, group_lib(b, group, 1)) == S_NONE);
+#endif
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, group).lib[i];
-		assert(board_at(b, lib) == S_NONE);
+		coord_t lib = group_lib(b, group, i);
 		if (!board_is_valid_play(b, to_play, lib))  continue;
 
 		if (DEBUGL(6))  fprintf(stderr, "- checking liberty %s of %s %s, filled by %s\n",
@@ -112,7 +131,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 
 		/* Prevent hopeless escape attempts. */
 		if (defense_is_hopeless(b, group, owner, to_play, lib,
-					board_group_info(b, group).lib[1 - i],
+					group_lib(b, group, 1 - i),
 					use_def_no_hopeless))
 			continue;
 
@@ -175,7 +194,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
 			if (!preference[0]) {
-				if (q->move[q->moves - 1] == board_group_info(b, group).lib[0])
+				if (q->move[q->moves - 1] == group_lib(b, group, 0))
 					q->moves--;
 				/* ...else{ may happen, since we call
 				 * mq_nodup() and the move might have
@@ -187,8 +206,7 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		}
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib, tag);
-		mq_nodup(q);
+		mq_add_nodup(q, lib);
 	}
 
 	if (DEBUGL(7)) {
@@ -196,24 +214,29 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 		snprintf(label, 256, "final %s %s liberties to play by %s = ",
 			stone2str(owner), coord2sstr(group),
 			stone2str(to_play));
-		mq_print_line(label, q);
+		mq_print_line(q, label);
 	}
 }
 
 void
-group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
-	enum stone color = board_at(b, group_base(group));
-	assert(color != S_OFFBOARD && color != S_NONE);
+	enum stone color = board_at(b, group);
 
-	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib check of color %d\n",
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
+	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib check of color %d\n",
 				coord2sstr(group), color);
 
 	/* Do not try to atari groups that cannot be harmed. */
 	if (use_miaisafe && miai_2lib(b, group, color))
 		return;
 
-	can_atari_group(b, group, color, to_play, q, tag, use_def_no_hopeless);
+	can_atari_group(b, group, color, to_play, q, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -223,29 +246,31 @@ group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q,
 			if (board_at(b, c) != stone_other(color))  continue;
 			
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs == 1 &&
-			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
+			if (group_libs(b, g2) == 1 &&
+			    board_is_valid_play(b, to_play, group_lib(b, g2, 0))) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], tag);
-				mq_nodup(q);
+				mq_add_nodup(q, group_lib(b, g2, 0));
 				continue;
 			}
-			if (board_group_info(b, g2).libs != 2)  continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, use_def_no_hopeless);
+			if (group_libs(b, g2) != 2)  continue;
+			can_atari_group(b, g2, stone_other(color), to_play, q, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
 
 
 bool
-can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
+can_capture_2lib_group(board_t *b, group_t g, mq_t *q)
 {
-	assert(board_group_info(b, g).libs == 2);
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+	assert(group_libs(b, g) == 2);
+#endif
 	for (int i = 0; i < 2; i++) {
-		coord_t lib = board_group_info(b, g).lib[i];
+		coord_t lib = group_lib(b, g, i);
 		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib));
 		if (wouldbe_ladder_any(b, g, lib)) {
-			if (q)  mq_add(q, lib, tag);
+			if (q)  mq_add(q, lib);
 			return true;
 		}
 	}	
@@ -253,16 +278,22 @@ can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
 }
 
 void
-group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mq_t *q, bool use_miaisafe, bool use_def_no_hopeless)
 {
-	enum stone color = board_at(b, group_base(group));
-	assert(color != S_OFFBOARD && color != S_NONE);
+	enum stone color = board_at(b, group);
 	
-	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, group));
+	assert(is_player_color(to_play));
+	assert(is_player_color(color));
+	assert(group_libs(b, group) == 2);
+#endif
+
+	if (DEBUGL(6))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
 				coord2sstr(group), color);
 
 	if (to_play != color) {  /* Attacker */		
-		can_capture_2lib_group(b, group, q, tag);
+		can_capture_2lib_group(b, group, q);
 		return;
 	}
 
@@ -272,15 +303,14 @@ group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_que
 			if (board_at(b, c) != stone_other(color))  continue;
 			
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs == 1 &&
-			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
+			if (group_libs(b, g2) == 1 &&
+			    board_is_valid_play(b, to_play, group_lib(b, g2, 0))) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], tag);
-				mq_nodup(q);
+				mq_add_nodup(q, group_lib(b, g2, 0));
 				continue;
 			}
-			if (board_group_info(b, g2).libs != 2)  continue;
-			can_capture_2lib_group(b, g2, q, tag);
+			if (group_libs(b, g2) != 2)  continue;
+			can_capture_2lib_group(b, g2, q);
 		});
 	} foreach_in_group_end;
 }
