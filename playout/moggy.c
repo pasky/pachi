@@ -933,7 +933,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 eyefill_skip:
 	/* Check special sekis moggy would break. */
 	if (check_special_sekis(b, m)) {
-		if (breaking_3_stone_seki(b, m->coord, m->color))
+		if (breaking_nakade_seki(b, m->coord, m->color))
 			return false;
 		if (check_endgame_sekis(b, m, random_move) &&
 		    breaking_false_eye_seki(b, m->coord, m->color))

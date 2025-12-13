@@ -11,6 +11,7 @@
 #include "tactics/1lib.h"
 #include "tactics/dragon.h"
 #include "tactics/selfatari.h"
+#include "tactics/nakade.h"
 #include "tactics/seki.h"
 
 
@@ -124,40 +125,27 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
  *   O . X . O |       O . X O . |      Assumes selfatari checks passed, so we have some outside liberties.
  *   O . X X X |       O . X X X |
  *   . O O O O |       . O O O O |      */
-bool
-breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
+static bool
+breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, group_t g3)
 {
 #ifdef EXTRA_CHECKS
 	assert(sane_coord(coord));
 	assert(is_player_color(color));
 	assert(board_at(b, coord) == S_NONE);
+	assert(sane_group(b, own));
+	assert(sane_group(b, g3));
+	assert(group_libs(b, g3) == 2);
+	assert(group_stone_count(b, g3, 4) == 3);
 #endif
 	enum stone other_color = stone_other(color);
 	
-	/* Opponent's 3-stone group with 2 libs nearby ? */
-	group_t g3 = 0;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != other_color)
-			continue;
-		group_t g = group_at(b, c);
-		if (group_libs(b, g) != 2 ||
-		    group_stone_count(b, g, 4) != 3)
-			return false;
-		if (g3)  /* Multiple groups or bad bent-3 */
-			return false;
-		g3 = g;
-	});
-	if (!g3)
-		return false;
-
-	/* Check neighbours of the 2 liberties first (also checks shape :) */
-	// XXX is this enough to check all the bad shapes ?
+	/* Check neighbours of the 2 liberties first (also checks some shapes :) */
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = group_lib(b, g3, i);
 		if (immediate_liberty_count(b, lib) >= 1)
 			return false;  /* Bad shape or can escape */
 		if (neighbor_count_at(b, lib, other_color) >= 2)
-			return false;  /* Dead bent-3 or can connect out */
+			return false;  /* Bent-3 + lib (can make dead shape) or can connect out */
 	}
 
 	/*  Anything with liberty next to 3 stones' center is no seki:
@@ -170,22 +158,12 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 		coord_t lib = group_lib(b, g3, i);
 		foreach_neighbor(b, lib, {   /* Find adjacent stone */
 			if (board_at(b, c) == other_color &&
-			    neighbor_count_at(b, c, other_color) != 1)
+			    neighbor_count_at(b, c, other_color) == 2)
 				return false;
-			break;        /* Dead bent-3 already taken care of */
 		});
 	}
 
-	/* Find our group */
-	group_t own = 0;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != color)
-			continue;
-		// FIXME multiple own groups around ?
-		own = group_at(b, c);
-	});
-	if (!own)
-		return false;
+	// XXX is this enough to check all the bad shapes ?
 
 	/* Check 3-stone group is completely surrounded.
 	 * Can't escape and can't connect out, only countercaptures left to check. */
@@ -207,4 +185,301 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 		return false;
 
 	return true;
+}
+
+/*   . . O O O |
+ *   . O O X X |
+ *   O . . X . |       We're black.
+ *   O X X X O |
+ *   O X * O O |       Are we about to break 4-stones seki by playing at @coord ?
+ *   O X X X O |       Assumes selfatari checks passed, so we have some outside liberties.
+ *   O . . X X |
+ *   . O O O O |       */
+static bool
+breaking_4_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, group_t g4)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+	assert(sane_group(b, own));
+	assert(sane_group(b, g4));
+	assert(group_libs(b, g4) == 2);
+	assert(group_stone_count(b, g4, 5) == 4);
+#endif
+	enum stone other_color = stone_other(color);
+
+	/* Check neighbours of the 2 liberties first (also checks some shapes :) */
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = group_lib(b, g4, i);
+		if (immediate_liberty_count(b, lib) >= 1)
+			return false;  /* Bad shape or can escape */
+		if (neighbor_count_at(b, lib, other_color) >= 2)
+			return false;  /* Bend + lib (can make dead shape), or can connect out */
+	}
+
+	/*  Anything with liberty next to 4 stones' center is no seki:
+	 *   . O O O .    . O O O .    . O O O .
+	 *   O O X O O 	  O O X . O    O O X O O
+	 *   O X X . O 	  O X X . O    O X X . O
+	 *   O O X O O 	  O O X O O    O . X O O
+	 *   . O . O . 	  . O O O .    O O O . .   */
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = group_lib(b, g4, i);
+		foreach_neighbor(b, lib, {   /* Find adjacent stone */
+			if (board_at(b, c) == other_color &&
+			    neighbor_count_at(b, c, other_color) == 3)
+				return false;
+		});
+	}
+
+	/* Check nakade shape is dead... */
+	mq_t area;  mq_init(&area);
+	for (coord_t c = g4; c; c = groupnext_at(b, c))
+		mq_add(&area, c);
+	assert(area.moves == 4);
+	if (!nakade_area_dead_shape(b, &area))
+		return false;
+	
+	/* But alive with extra move.
+	 * (would have to check both moves without previous checks) */
+	mq_add(&area, coord);
+	if (nakade_area_dead_shape(b, &area))
+		return false;
+
+	/* Check 4-stone group is completely surrounded.
+	 * Can't escape and can't connect out, only countercaptures left to check. */
+	if (can_countercapture(b, g4, NULL))
+		return false;
+
+	/* Group alive after capturing these stones ? */
+	bool safe = false;
+	coord_t lib1 = group_lib(b, g4, 0);
+	coord_t lib2 = group_lib(b, g4, 1);
+	with_move(b, lib1, color, {
+		with_move(b, lib2, color, {
+			group_t g = group_at(b, own);
+			assert(g);  assert(!group_at(b, g4));
+			safe = dragon_is_safe(b, g, color);
+		});
+	});
+	if (safe)
+		return false;
+
+	return true;
+}
+
+/*   . . O O O |
+ *   . O O X X |
+ *   O . X X . |       We're black.
+ *   O X X O O |
+ *   O X * O O |       Are we about to break 5-stones seki by playing at @coord ?
+ *   O X X X O |       Assumes selfatari checks passed, so we have some outside liberties.
+ *   O . . X X |
+ *   . O O O O |       */
+static bool
+breaking_5_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, group_t g5)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+	assert(sane_group(b, own));
+	assert(sane_group(b, g5));
+	assert(group_libs(b, g5) == 2);
+	assert(group_stone_count(b, g5, 6) == 5);
+#endif
+	enum stone other_color = stone_other(color);
+
+	/* Check neighbours of the 2 liberties first.
+	 * Not as simple as 3-stones / 4-stones case:
+	 * Adjacent liberties and liberty in empty triangle are fine here. */
+	bool adjecent_libs = coord_is_adjecent(group_lib(b, g5, 0), group_lib(b, g5, 1));
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = group_lib(b, g5, i);
+		int immediate_libs = immediate_liberty_count(b, lib);
+		if (immediate_libs > 1 ||
+		    (immediate_libs == 1 && !adjecent_libs))		/* Can escape */
+			return false;
+
+		int neighbors = neighbor_count_at(b, lib, other_color);
+		if (neighbors > 2)					/* Bad shape or can connect out */
+			return false;
+		if (neighbors == 2)
+			foreach_neighbor(b, lib, {
+				if (board_at(b, c) == other_color &&
+				    group_at(b, c) != g5)		/* Can connect out */
+					return false;
+			});
+	}
+
+	/* Check nakade shape is dead */
+	mq_t area;  mq_init(&area);
+	for (coord_t c = g5; c; c = groupnext_at(b, c))
+		mq_add(&area, c);
+	assert(area.moves == 5);
+	if (!nakade_area_dead_shape(b, &area))
+		return false;
+
+	/* But alive with both extra moves. */
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = group_lib(b, g5, i);
+		mq_add(&area, lib);
+		if (nakade_area_dead_shape(b, &area))
+			return false;
+		area.moves--;  // faster mq_remove(&area, lib);
+	}
+
+	/* Check 5-stone group is completely surrounded.
+	 * Can't escape and can't connect out, only countercaptures left to check. */
+	if (can_countercapture(b, g5, NULL))
+		return false;
+
+	/* Group alive after capturing these stones ? */
+	bool safe = false;
+	coord_t lib1 = group_lib(b, g5, 0);
+	coord_t lib2 = group_lib(b, g5, 1);
+	with_move(b, lib1, color, {
+		with_move(b, lib2, color, {
+			group_t g = group_at(b, own);
+			assert(g);  assert(!group_at(b, g5));
+			safe = dragon_is_safe(b, g, color);
+		});
+	});
+	if (safe)
+		return false;
+
+	return true;
+}
+
+/*   . . O O O |
+ *   O O O . . |
+ *   O X X X X |       We're black.
+ *   O X O O . |
+ *   O X O O O |       Are we about to break 6-stones seki by playing at @coord ?
+ *   O X X O . |       Assumes selfatari checks passed, so we have some outside liberties.
+ *   O . X X X |
+ *   . O O O O |       */
+static bool
+breaking_6_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, group_t g6)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+	assert(sane_group(b, own));
+	assert(sane_group(b, g6));
+	assert(group_libs(b, g6) == 2);
+	assert(group_stone_count(b, g6, 7) == 6);
+#endif
+	enum stone other_color = stone_other(color);
+
+	/* Check neighbours of the 2 liberties first.
+	 * Not as simple as 3-stones / 4-stones case:
+	 * Adjacent liberties and liberty in empty triangle are fine here. */
+	bool adjecent_libs = coord_is_adjecent(group_lib(b, g6, 0), group_lib(b, g6, 1));
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = group_lib(b, g6, i);
+		int immediate_libs = immediate_liberty_count(b, lib);
+		if (immediate_libs > 1 ||
+		    (immediate_libs == 1 && !adjecent_libs))		/* Can escape */
+			return false;
+
+		int neighbors = neighbor_count_at(b, lib, other_color);
+		if (neighbors > 2)					/* Bad shape or can connect out */
+			return false;
+		if (neighbors == 2)
+			foreach_neighbor(b, lib, {
+				if (board_at(b, c) == other_color &&
+				    group_at(b, c) != g6)		/* Can connect out */
+					return false;
+			});
+	}
+
+	/* Check nakade shape is dead */
+	mq_t area;  mq_init(&area);
+	for (coord_t c = g6; c; c = groupnext_at(b, c))
+		mq_add(&area, c);
+	assert(area.moves == 6);
+	if (!nakade_area_dead_shape(b, &area))
+		return false;
+
+	/* Check 6-stone group is completely surrounded.
+	 * Can't escape and can't connect out, only countercaptures left to check. */
+	if (can_countercapture(b, g6, NULL))
+		return false;
+
+	/* Group alive after capturing these stones ? */
+	bool safe = false;
+	coord_t lib1 = group_lib(b, g6, 0);
+	coord_t lib2 = group_lib(b, g6, 1);
+	with_move(b, lib1, color, {
+		with_move(b, lib2, color, {
+			group_t g = group_at(b, own);
+			assert(g);  assert(!group_at(b, g6));
+			safe = dragon_is_safe(b, g, color);
+		});
+	});
+	if (safe)
+		return false;
+
+	return true;
+}
+
+/*   . O O O O |
+ *   O . X X X |      We're black.
+ *   O . X * O |
+ *   O . X X O |      Are we about to break a nakade seki by playing at @coord ?
+ *   O . X . O |      Assumes selfatari checks passed, so we have some outside liberties.
+ *   O . X X X |
+ *   . O O O O |      */
+bool
+breaking_nakade_seki(board_t *b, coord_t coord, enum stone color)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(coord));
+	assert(is_player_color(color));
+	assert(board_at(b, coord) == S_NONE);
+#endif
+	enum stone other_color = stone_other(color);
+
+	if (!neighbor_count_at(b, coord, color) ||
+	    !neighbor_count_at(b, coord, other_color) ||
+	    immediate_liberty_count(b, coord) > 1)
+		return false;
+
+	/* Checks groups nearby:
+	 * There must be only one opponent group (2 libs, 3/4/5 stones)
+	 * and at least one own group. */
+	group_t group = 0, own = 0;
+	int stones = 0;
+	foreach_neighbor(b, coord, {
+		group_t g = group_at(b, c);
+		if (!g)  continue;
+
+		/* Own group(s) */
+		if (board_at(b, c) == color) {  own = g;  continue;  }
+
+		/* Opponent group */
+		if (group) {
+			if (group != g)		return false;  /* Multiple groups */
+							       /* Found same group twice (group == g) */
+			if (stones <= 4)	return false;  /* Bad shape: empty triangle liberty, 3/4 stone group */
+		}
+		if (group_libs(b, g) != 2)	return false;
+		stones = group_stone_count(b, g, 7);
+		// Faster without ?
+		if (stones < 3 || stones > 6)	return false;
+
+		group = g;
+	});
+	
+	switch (stones) {
+		case 3:  return breaking_3_stone_seki(b, coord, color, own, group);
+		case 4:  return breaking_4_stone_seki(b, coord, color, own, group);
+		case 5:  return breaking_5_stone_seki(b, coord, color, own, group);
+		case 6:  return breaking_6_stone_seki(b, coord, color, own, group);
+	}
+
+	return false;
 }

@@ -1,0 +1,33 @@
+pachipachi guxxan  2025-12-13 16:19:31 
+
+
+Move:  243  Komi: 6.5  Handicap: 0  Captures B: 17 W: 7  [0 0 0 0]  
+      A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+
+ 19 | . . X . O . O X X X X . X . O . . . . |
+ 18 | . X . X X O O X X O X . O X X O O . . |
+ 17 | X . X O O O . O O O X . . O X X O . . |
+ 16 | O X X X X X O . O X X X X . . X O . . |
+ 15 | O O O O O O O X O O O O X X X . . . . |
+ 14 | O X X X X X X X X O . X X O X O O O . |
+ 13 | X X . . . X . X O O O O X O O X X O . |
+ 12 | . . . X X O O X X X O O O O . X O . O |
+ 11 | X . . X O . O X O X X O X O . X O O . |
+ 10 | . X . X O . O O O X X X X O . X O X X |
+  9 | X . X X X O . O X X O X O O . X X X . |
+  8 | X X . . X X X O . X O X . O X . O O O |
+  7 | . . . . . . O . O O O O O O X X X O X |
+  6 | . O . . . . . . . . O . X O X O X X X)|
+  5 | . . . X X X . X . X O X . X O O X O X |
+  4 | . . O O O . . . . X X X . X X O X O . |
+  3 | . . . . . . O . . . . . O . . O O O . |
+  2 | . . . . . . . . . . . . . O . . . . . |
+  1 | . . . . . . . . . . . . . . . . . . . |
+    +---------------------------------------+
+
+last chance for white:
+if b gets P9, b group lives (4 stones seki) and whole white dragon will die.
+
+fixed for Pachi > 12.88
+(until then we only handled 3 stones sekis)
+

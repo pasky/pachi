@@ -380,7 +380,7 @@ test_false_eye_seki(board_t *b, char *arg)
 }
 
 static bool
-test_breaking_3_stone_seki(board_t *b, char *arg)
+test_breaking_nakade_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -390,10 +390,10 @@ test_breaking_3_stone_seki(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "breaking_3_stone_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "breaking_nakade_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
-	int rres = breaking_3_stone_seki(b, c, color);
+	int rres = breaking_nakade_seki(b, c, color);  // XXX
 
 	PRINT_RES();
 	return   (rres == eres);
@@ -1334,7 +1334,7 @@ static t_unit_cmd commands[] = {
 	{ "moggy status",           test_moggy_status,          },
 	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
-	{ "breaking_3_stone_seki",  test_breaking_3_stone_seki,},
+	{ "breaking_nakade_seki",   test_breaking_nakade_seki,  },
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
 	{ "genmove",		    test_genmove                },
