@@ -9,6 +9,7 @@
 #include "board_undo.h"
 #include "debug.h"
 #include "tactics/dragon.h"
+#include "tactics/nakade.h"
 
 static char*
 print_handler(board_t *board, coord_t c, void *data)
@@ -304,18 +305,23 @@ stones_all_connected_handler(board_t *b,  enum stone color, coord_t c, void *dat
 }
 
 static bool
-stones_all_connected(board_t *b, enum stone color, coord_t *stones, int n)
+stones_all_connected(board_t *b, enum stone color, mq_t *stones)
 {
 	// TODO optimize: check if all same group first ...
 	int connected[BOARD_MAX_COORDS] = {0, };
 	
-	foreach_in_connected_groups(b, color, stones[0], stones_all_connected_handler, connected);
+	foreach_in_connected_groups(b, color, stones->move[0], stones_all_connected_handler, connected);
 
-	for (int i = 0; i < n; i++)
-		if (!connected[stones[i]])
+	for (int i = 0; i < stones->moves; i++)
+		if (!connected[stones->move[i]])
 			return false;
 	return true;
 }
+
+/* min area size for living group (corner)
+ * could increase to 10 (side) and 12 (middle)
+ * and/or check prisoners */
+#define NAKADE_MAX 8
 
 /* Try to detect big eye area, ie:
  *  - completely enclosed area, not too big,
@@ -323,68 +329,39 @@ stones_all_connected(board_t *b, enum stone color, coord_t *stones, int n)
  *  - size >= 2  (so no false eye issues)
  * Returns size of the area, or 0 if doesn't match.  */
 int
-big_eye_area(board_t *b, enum stone color, coord_t around, int *visited)
+big_eye_area(board_t *b, enum stone color, coord_t around, mq_t *area)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_coord(around));
 	assert(board_at(b, around) == S_NONE);
-	assert(!visited[around]);
 #endif
-	int NAKADE_MAX = 8;  // min area size for living group (corner)
-	                     // could increase to 10 (side) and 12 (middle)
-	                     // and/or check prisoners
-	coord_t area[NAKADE_MAX];
-	int area_n = 0;
-	int STONES_MAX = 50;
-	int stones[STONES_MAX];
-	int stones_n = 0;
-	area[area_n++] = around;
+	mq_init(area);
+	mq_t border;  mq_init(&border);
 
-	for (int i = 0; i < area_n; i++) {
-		foreach_neighbor(b, area[i], {
+	mq_add(area, around);
+
+	for (int i = 0; i < area->moves; i++) {
+		foreach_neighbor(b, area->move[i], {
 			if (board_at(b, c) == S_OFFBOARD)
 				continue;
 			
 			if (board_at(b, c) == color) {	// Found border, save it and continue
-				bool dup = false;
-				for (int j = 0; j < stones_n; j++)
-					if (c == stones[j]) {
-						dup = true;
-						break;
-					}
-				if (dup) continue;
-				
-				assert(stones_n < STONES_MAX);
-				stones[stones_n++] = c;
+				mq_add_nodup(&border, c);
 				continue;
 			}
-				
+
 			// Empty spot or prisoner, add it to area
-			bool dup = false;
-			for (int j = 0; j < area_n; j++)
-				if (c == area[j]) {
-					dup = true;
-					break;
-				}
-			if (dup) continue;
-			
-			if (area_n >= NAKADE_MAX) 					
+			mq_add_nodup(area, c);
+			if (area->moves > NAKADE_MAX)
 				return 0;
-			
-			area[area_n++] = c;
 		});
 	}
 
-	if (area_n < 3 || !stones_all_connected(b, color, stones, stones_n))
+	if (area->moves < 3 || !stones_all_connected(b, color, &border))
 		return 0;
 	
-	// Ok good, mark area visited
-	// TODO if (area_n < 7) ...
-	for (int i = 0; i < area_n; i++) 
-		visited[area[i]] = 1;	
-
-	return area_n;
+	return area->moves;
 }
 
 
@@ -497,7 +474,7 @@ is_real_two_point_eye(board_t *b, coord_t to, enum stone color, coord_t *pother)
 
 typedef struct {
 	int *visited;
-	int *eyes;
+	int  eyes;
 } safe_data_t;
 
 static int
@@ -514,7 +491,7 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 
 	if (is_real_one_point_eye(b, lib, color))  {
 		// fprintf(stderr, "real eye: %s\n", coord2sstr(lib, b));
-		if (++(*d->eyes) >= 2)
+		if (++(d->eyes) >= 2)
 			return -1;
 		return 0;
 	}
@@ -523,16 +500,27 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 	if (is_real_two_point_eye(b, lib, color, &other))  {
 		// fprintf(stderr, "two-point eye: %s\n", coord2sstr(lib, b));
 		d->visited[other] = 1;
-		if (++(*d->eyes) >= 2)
+		if (++(d->eyes) >= 2)
 			return -1;
 		return 0;
 	}
-		
-	/* TODO check shape ... */
-	int area_size = big_eye_area(b, color, lib, d->visited);
+
+	mq_t area;
+	int area_size = big_eye_area(b, color, lib, &area);
 	if (area_size) {
-		*d->eyes += (area_size > 7 ? 2 : 1);
-		if (*d->eyes >= 2)
+		/* Mark area visited */
+		for (int i = 0; i < area.moves; i++)
+			d->visited[area.move[i]] = 1;
+
+		/* Check nakade area shape
+		 *    O O O O    XXX we look at empty eyespace (prisoners removed)
+		 *    O X . O        so would count this as one eye...
+		 *    O O X O
+		 *    . O O O    */
+		int single_eye = nakade_area_dead_shape(b, &area);
+		
+		d->eyes += (single_eye ? 1 : 2);
+		if (d->eyes >= 2)
 			return -1;
 		return 0;
 	}
@@ -541,26 +529,18 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 }
 
 bool
-dragon_is_safe_full(board_t *b, group_t g, enum stone color, int *visited, int *eyes)
+dragon_is_safe(board_t *b, group_t g, enum stone color)
 {
 #ifdef EXTRA_CHECKS
 	assert(sane_group(b, g));
 	assert(is_player_color(color));
 	assert(board_at(b, g) == color);
 #endif
-	safe_data_t d = { visited, eyes };
-	foreach_lib_in_connected_groups(b, color, g, count_eyes, &d);
-	return (*eyes >= 2);
-}
-
-bool
-dragon_is_safe(board_t *b, group_t g, enum stone color)
-{
 	int visited[BOARD_MAX_COORDS] = {0, };
-	int eyes = 0;
-	return dragon_is_safe_full(b, g, color, visited, &eyes);
+	safe_data_t d = { visited, 0 };
+	foreach_lib_in_connected_groups(b, color, g, count_eyes, &d);
+	return (d.eyes >= 2);
 }
-
 
 static inline bool
 have_group_in(group_t g, group_t *groups, int ngroups)

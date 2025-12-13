@@ -32,6 +32,17 @@ X O X . .
 !two_eyes b1 1		# FIXME
 
 
+% Connecting suicide = extra eye
+boardsize 5
+. . . . .
+. . . . .
+O O . . .
+X O O . .
+. X O . .
+
+!two_eyes b2 1		# FIXME
+
+
 % Diag connection
 boardsize 7
 . . . . . . .

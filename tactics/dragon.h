@@ -28,13 +28,12 @@ void board_print_dragons(board_t *board, FILE *f);
  * Useful for writing custom board_print_dragons()-like functions. */
 char *pick_dragon_color(int i, bool bold, bool white_ok);
 
-/* Try to find out if dragon has 2 eyes. Pretty conservative:
- * big eye areas are counted as one eye, must be completely enclosed and
- * have all surrounded stones connected. Doesn't need to be perfect though. */
+/* Find if dragon has 2 eyes.
+ * Limitations:
+ * - big eye areas must be completely enclosed and have all surrounded stones connected.
+ * - doesn't take prisoners' shape into account (won't count extra eye if prisoners
+ *   can't be connected because of suicide). */
 bool dragon_is_safe(board_t *b, group_t g, enum stone color);
-
-/* Like group_is_safe() but passing already visited stones / eyes. */
-bool dragon_is_safe_full(board_t *b, group_t g, enum stone color, int *visited, int *eyes);
 
 /* Does one opposite color group neighbor of @g have 2 eyes ? */
 bool neighbor_is_safe(board_t *b, group_t g);
@@ -44,7 +43,7 @@ bool neighbor_is_safe(board_t *b, group_t g);
  *  - surrounding stones all connected to each other
  *  - size >= 2  (so no false eye issues)
  * Returns size of the area, or 0 if doesn't match.  */
-int big_eye_area(board_t *b, enum stone color, coord_t around, int *visited);
+int big_eye_area(board_t *b, enum stone color, coord_t around, mq_t *area);
 
 /* Point we control: 
  * Opponent can't play there or we can capture if he does. */
