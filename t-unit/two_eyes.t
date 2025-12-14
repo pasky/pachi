@@ -43,6 +43,19 @@ X O O . .
 !two_eyes b2 1		# FIXME
 
 
+% Big eye and false eye
+boardsize 7
+. X X X X X .
+X X O O O O O
+X . O O). . O
+X . O O . . O
+X . . O . O .
+X X X O O O O
+. . X X X X .
+
+two_eyes c4 1
+
+
 % Diag connection
 boardsize 7
 . . . . . . .

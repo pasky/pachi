@@ -10,6 +10,8 @@
 #include "debug.h"
 #include "tactics/dragon.h"
 #include "tactics/nakade.h"
+#include "tactics/ladder.h"
+#include "tactics/selfatari.h"
 
 static char*
 print_handler(board_t *board, coord_t c, void *data)
@@ -367,8 +369,7 @@ big_eye_area(board_t *b, enum stone color, coord_t around, mq_t *area)
 
 /* Point we control: 
  * Opponent can't play there or we can capture if he does.
- * TODO - could make tiger mouth check smarter (check selfatari) 
- *      - handle more exotic cases (ladders ?) */
+ * TODO - handle more exotic cases (ladders ?) */
 bool
 is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 {
@@ -377,25 +378,26 @@ is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 	assert(is_player_color(color));
 	assert(no_stone_at(to));
 #endif
+	enum stone other_color = stone_other(color);
+
 	/* Eye-like ? */
-	if (!board_is_valid_play_no_suicide(b, stone_other(color), to))
+	if (!board_is_valid_play_no_suicide(b, other_color, to))
 		return true;
 
-	/* Tiger mouth ?
-	 * Check no opponent stone nearby and we can't be captured.
-	 * also works for side connection */
-	if (immediate_liberty_count(b, to) == 1) {
-		int good = 0;
-		foreach_neighbor(b, to, {
-			if (enemy_stone_at(c))
-				return false;
-			if ((own_stone_at(c) && group_libs(b, group_at(b, c)) > 1) ||
-			    board_at(b, c) == S_OFFBOARD)
-				good++;
-		});
-		return (good == 3);
-	}
-	
+	/* Tiger mouth / selfatari ? */
+	if (is_selfatari(b, other_color, to))
+		return true;
+
+	/* Can capture ? */
+	with_move(b, to, other_color, {
+		group_t g = group_at(b, to);
+		if (!g || group_libs(b, g) != 2)
+			break;
+		for (int i = 0; i < 2; i++)
+			if (wouldbe_ladder_any(b, g, group_lib(b, g, i)))
+				with_move_return(true);
+	});
+
 	return false;
 }
 
