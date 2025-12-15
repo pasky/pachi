@@ -440,6 +440,25 @@ capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari
 	return false;
 }
 
+/* Nakade area after playing selfatari + capture */
+static void
+selfatari_nakade_area(board_t *b, selfatari_state_t *s, enum stone color, coord_t to, mq_t *area)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+#endif
+	mq_init(area);
+	for (int i = 0; i < s->groupcts[color]; i++) {
+		group_t g = s->groupids[color][i];
+		foreach_in_group(b, g) {
+			mq_add(area, c);
+		} foreach_in_group_end;
+	}
+
+	mq_add(area, to);  /* Selfatari move */
+}
+
 /* Only cares about dead shape. */
 static bool
 nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to)
@@ -447,18 +466,17 @@ nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coo
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_coord(to));
-#endif	
-	/* Breaking seki ? */
-	bool breaking_seki = breaking_local_seki(b, s, to);
-	
-	int dead_shape;
-	/* Play self-atari */
-	with_move_strict(b, to, color, {
-		enum stone other_color  = stone_other(color);
-		group_t g = group_at(b, to);
+#endif
+	mq_t area;  selfatari_nakade_area(b, s, color, to, &area);
+	if (!nakade_area_dead_shape(b, &area))
+		return false;
 
-		/* If breaking seki check we are really atariing *everything* around us from the inside */
-		if (breaking_seki) {
+	/* If breaking seki check we are really atariing *everything* around us from the inside */
+	if (breaking_local_seki(b, s, to))
+		with_move_strict(b, to, color, {  /* Play self-atari */
+			enum stone other_color  = stone_other(color);
+			group_t g = group_at(b, to);
+
 			foreach_in_group(b, g) {
 				foreach_neighbor(b, c, {
 					if (board_at(b, c) != other_color) continue;
@@ -467,23 +485,14 @@ nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coo
 						with_move_return(false);  /* Surrounding group not in atari */
 					});
 			} foreach_in_group_end;
-		}
-		
-		/* Play capture */
-		with_move_strict(b, group_lib(b, g, 0), stone_other(color), {
-				assert(!group_at(b, to));
-				dead_shape = nakade_dead_shape(b, to, stone_other(color));
 		});
-	});
-	return dead_shape;	
+	return true;
 }
 
 static bool
 useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 				bool atariing_group, int stones)
 {
-	int cap_would_make_eye = false;
-
 	if (stones == 1)
 		return false;
 
@@ -500,49 +509,24 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 	 *
 	 * If atariing surrounding group we only care about dead shape. */
 	
-	if (!atariing_group)
-		cap_would_make_eye = capture_would_make_extra_eye(b, color, to, s);
 	/* TODO: If there's so much eye space that even with filling + capture
 	 *       opponent still makes an extra eye it's a silly move. */
-     
+
 	/* Can oponent make living shape if we don't play ?
 	 * (don't bother killing stuff that's already dead...) */
-	if (!atariing_group && !cap_would_make_eye && s->groupcts[color] == 1) 
-        {
-	    int would_live = false;
-	    int prev_neighbor = neighbor_count_at(b, to, color);
+	if (!atariing_group && s->groupcts[color] == 1 &&	/* Single group */
+	    !capture_would_make_extra_eye(b, color, to, s)) {
+		/* Adding stone to single group, check its shape. */
+		mq_t area;  mq_init(&area);
+		group_t g = s->groupids[color][0];
+		foreach_in_group(b, g) {
+			mq_add(&area, c);
+		} foreach_in_group_end;
 
-	    /* Play opponent color where we want to play */
-	    with_move(b, to, stone_other(color), {
-
-		/* Had 2 libs ? One more move to capture then */
-		if (prev_neighbor == neighbor_count_at(b, to, color)) {
-			group_t standing = -1;	    
-			foreach_neighbor(b, to, {
-				group_t g = group_at(b, c);		    
-				if (board_at(b, c) == color) {
-					assert(group_libs(b, g) == 1);  /* Should be in atari */
-					standing = g;
-				}
-			});
-			assert(standing != -1);
-			
-			with_move_strict(b, group_lib(b, standing, 0), stone_other(color), {
-				/* Empty now since it's been captured */
-				coord_t empty = s->groupids[color][0];
-				would_live = !nakade_dead_shape(b, empty, stone_other(color));
-			});
-		}
-		else {  /* Empty now since it's been captured */			
-			coord_t empty = s->groupids[color][0];
-			would_live = !nakade_dead_shape(b, empty, stone_other(color));
-		}
-	    });
-
-	    if (!would_live)	/* And !cap_would_make_eye here */
-		    return false;   /* Bad nakade */
+		if (nakade_area_dead_shape(b, &area))
+			return false;
 	}
-	
+
 	return nakade_making_dead_shape(b, s, color, to);
 }
 
