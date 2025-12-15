@@ -29,7 +29,7 @@ X . X . .
 X O X . .
 . X X . .
 
-!two_eyes b1 1		# FIXME
+two_eyes b1 1
 
 
 % Connecting suicide = extra eye
@@ -150,18 +150,29 @@ X X . . .
 two_eyes b1 1
 
 
-% False eye
+% Side false eye
 boardsize 5
-X O O . .
-. X O . .
-X X . O .
-. X . O .
-. X . . .
+. . . . .
+X O O O O
+. X O . O
+X X O . O
+. X O O .
 
 two_eyes b1 0
 
 
-% Ok
+% 2 eyes (eye corner = tiger mouth)
+boardsize 5
+. . . . .
+X . X . .
+. X . . .
+X X . . .
+. X . . .
+
+two_eyes b1 1
+
+
+% 2 eyes (eye corner = eye)
 boardsize 5
 X . X . .
 . X . . .
@@ -172,7 +183,7 @@ X X . . .
 two_eyes b1 1
 
 
-% Ok too
+% 2 eyes (eye corner = selfatari)
 boardsize 5
 X . . . .
 . X . . .
@@ -183,7 +194,7 @@ X X . . .
 two_eyes b1 1
 
 
-% Not ok
+% Can become false eye
 boardsize 5
 X . O . .
 . X . O .
@@ -219,7 +230,7 @@ two_eyes c2 0
 two_eyes c1 0		# 2pt eye not real yet
 
 
-% Open
+% Open big eye
 boardsize 5
 X X . X .
 . X X X .
@@ -241,7 +252,3 @@ boardsize 7
 . . O O O O .
 
 two_eyes d2 1
-
-
-
-

@@ -403,36 +403,36 @@ is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 
 
 static bool
-real_eye_endpoint(board_t *board, coord_t to, enum stone color)
+real_eye_endpoint(board_t *b, coord_t to, enum stone color)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_coord(to));
 #endif
-	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
-	
-	foreach_diag_neighbor(board, to, {
-		color_diag_libs[(enum stone) board_at(board, c)]++;
+	enum stone other_color = stone_other(color);
+	int color_diag_libs[S_MAX] = { 0, };
+
+	foreach_diag_neighbor(b, to, {
+		if (board_at(b, c) == other_color &&
+		    group_libs(b, group_at(b, c)) == 1 &&
+		    is_ladder_any(b, group_at(b, c), true)) {  /* Prisoner */
+			color_diag_libs[color]++;
+			continue;
+		}
+
+		if (board_at(b, c) == S_NONE &&
+		    is_controlled_eye_point(b, c, color)) {   /* No need to recurse, thank goodness */
+			color_diag_libs[color]++;
+			continue;
+		}
+
+		color_diag_libs[(enum stone) board_at(b, c)]++;
 	});
+
 	/* We need to control 3 corners of the eye in the middle of the board,
 	 * 2 on the side, and 1 in the corner. */
-	if (color_diag_libs[S_OFFBOARD]) {
+	if (color_diag_libs[S_OFFBOARD])
 		color_diag_libs[color] += color_diag_libs[S_OFFBOARD] - 1;
-		color_diag_libs[stone_other(color)]++;
-	}
-
-	/* Corners could be eye-like too ... */
-	foreach_diag_neighbor(board, to, {
-		if (color_diag_libs[color] >= 3)		return true;
-		if (color_diag_libs[stone_other(color)] >= 2)	return false;
-		
-		if (board_at(board, c) != S_NONE)
-			continue;
-		if (is_controlled_eye_point(board, c, color))   /* No need to recurse, thank goodness */
-			color_diag_libs[color]++;
-		else
-			color_diag_libs[stone_other(color)]++;
-	});
 
 	return (color_diag_libs[color] >= 3);
 }
