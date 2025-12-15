@@ -252,3 +252,31 @@ boardsize 7
 . . O O O O .
 
 two_eyes d2 1
+
+
+% Test no pseudo-liberties issues
+boardsize 19
+. X O X X X X X X X X X X X X X . X .
+X X O . . . . . . . . . . . . X X X X
+. X O . . . . . . . . . . . . . O O O
+X X . O . . . . . . . . . . . O . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . O . . . . . . . . . . . O . X X
+O O O . . . . . . . . . . . . . O X .
+X X X X . . . . . . . . . . . . O X X
+. X . X X X X X X X X X X X X X O X .
+
+two_eyes k19 1
+two_eyes k1  1
+two_eyes a10 1
+two_eyes t10 1

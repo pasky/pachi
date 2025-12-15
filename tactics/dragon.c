@@ -102,6 +102,30 @@ board_print_dragons(board_t *board, FILE *f)
 #define own_stone_atxy(x, y)    (board_atxy(b, (x), (y)) == color)
 #define enemy_stone_atxy(x, y)  (board_atxy(b, (x), (y)) == stone_other(color))
 
+/* Find real liberties, not just pseudo-liberties. */
+static void
+get_group_liberties(board_t *b, group_t g, mq_t *q)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_group(b, g));
+#endif
+	/* Use pseudo-liberties if possible */
+	if (group_libs(b, g) <= GROUP_REFILL_LIBS) {
+		q->moves = group_libs(b, g);
+		memcpy(q->move, b->gi[g].lib, sizeof(coord_t) * q->moves);
+		return;
+	}
+
+	/* Otherwise go and find all liberties */
+	mq_init(q);
+	foreach_in_group(b, g) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != S_NONE || mq_has(q, c))
+				continue;
+			mq_add(q, c);
+		});
+	} foreach_in_group_end;
+}
 
 /* Check if g and g2 are virtually connected through lib.
  * c2 is a stone of g2 next to lib */
@@ -173,9 +197,10 @@ foreach_in_connected_groups_(board_t *b, enum stone color, group_t g,
 			return -1;
 	} foreach_in_group_end;	
 
-	// Look for virtually connected groups
-	for (int i = 0; i < group_libs(b, g); i++) {
-		coord_t lib = group_lib(b, g, i);
+	/* Look for virtually connected groups. */
+	mq_t q;  get_group_liberties(b, g, &q);
+	for (int i = 0; i < q.moves; i++) {
+		coord_t lib = q.move[i];
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
 			if (board_at(b, c) != color)
@@ -225,9 +250,10 @@ foreach_connected_group_(board_t *b, enum stone color, group_t g,
 	if (f(b, color, g, data) == -1)
 		return -1;
 
-	// Look for virtually connected groups
-	for (int i = 0; i < group_libs(b, g); i++) {
-		coord_t lib = group_lib(b, g, i);
+	/* Look for virtually connected groups. */
+	mq_t q;  get_group_liberties(b, g, &q);
+	for (int i = 0; i < q.moves; i++) {
+		coord_t lib = q.move[i];
 		// TODO could mark liberties visited, more efficient ?
 		foreach_neighbor(b, lib, {
 			if (board_at(b, c) != color)
@@ -272,8 +298,9 @@ foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 	assert(board_at(b, g) == color);
 #endif
 	foreach_lib_data_t *d = (foreach_lib_data_t*)data;
-	for (int i = 0; i < group_libs(b, g); i++) {
-		coord_t lib = group_lib(b, g, i);
+	mq_t q;  get_group_liberties(b, g, &q);
+	for (int i = 0; i < q.moves; i++) {
+		coord_t lib = q.move[i];
 		if (d->visited[lib])
 			continue;
 		d->visited[lib] = 1;
@@ -294,7 +321,9 @@ foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
 	assert(board_at(b, to) == color);
 #endif
 	int visited[BOARD_MAX_COORDS] = {0, };
-	foreach_lib_data_t d = { visited, f, data };	
+	foreach_lib_data_t d = { visited, f, data };
+	/* Use foreach_connected_group() instead of foreach_in_connected_group():
+	 * may avoid iterating through group stones if pseudo-liberties are valid. */
 	foreach_connected_group(b, color, to, foreach_lib_handler, &d);
 }
 
@@ -785,5 +814,4 @@ dragon_is_surrounded(board_t *b, coord_t to)
 	foreach_lib_in_connected_groups(b, color, to, surrounded_check, &d);
 	return d.surrounded;
 }
-
 
