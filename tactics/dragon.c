@@ -181,16 +181,16 @@ typedef int (*coord_handler_t)(board_t *b, enum stone color, coord_t c, void *da
 
 static int
 foreach_in_connected_groups_(board_t *b, enum stone color, group_t g, 
-			     coord_handler_t f, void *data, int *visited)
+			     coord_handler_t f, void *data, mq_t *visited)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_group(b, g));
 	assert(board_at(b, g) == color);
 #endif
-	if (visited[g])
+	if (mq_has(visited, g))
 		return 0;
-	visited[g] = 1;
+	mq_add(visited, g);
 
 	foreach_in_group(b, g) {
 		if (f(b, color, c, data) == -1)
@@ -206,7 +206,7 @@ foreach_in_connected_groups_(board_t *b, enum stone color, group_t g,
 			if (board_at(b, c) != color)
 				continue;
 			group_t g2 = group_at(b, c);
-			if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
+			if (mq_has(visited, g2) || !virtual_connection_at(b, color, lib, c, g, g2))
 				continue;
 			if (foreach_in_connected_groups_(b, color, g2, f, data, visited) == -1)
 				return -1;
@@ -225,9 +225,9 @@ foreach_in_connected_groups(board_t *b, enum stone color, coord_t to,
 	assert(sane_coord(to));
 	assert(board_at(b, to) == color);
 #endif
-	int visited[BOARD_MAX_COORDS] = {0, };
+	mq_t visited;  mq_init(&visited);
 	group_t g = group_at(b, to);
-	foreach_in_connected_groups_(b, color, g, f, data, visited);
+	foreach_in_connected_groups_(b, color, g, f, data, &visited);
 }
 
 
@@ -236,17 +236,17 @@ typedef int (*group_handler_t)(board_t *b, enum stone color, group_t g, void *da
 
 static int
 foreach_connected_group_(board_t *b, enum stone color, group_t g, 
-			 group_handler_t f, void *data, int *visited)
+			 group_handler_t f, void *data, mq_t *visited)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_group(b, g));
 	assert(board_at(b, g) == color);
 #endif
-	if (visited[g])
+	if (mq_has(visited, g))
 		return 0;
+	mq_add(visited, g);
 
-	visited[g] = 1;
 	if (f(b, color, g, data) == -1)
 		return -1;
 
@@ -259,7 +259,7 @@ foreach_connected_group_(board_t *b, enum stone color, group_t g,
 			if (board_at(b, c) != color)
 				continue;
 			group_t g2 = group_at(b, c);
-			if (visited[g2] || !virtual_connection_at(b, color, lib, c, g, g2))
+			if (mq_has(visited, g2) || !virtual_connection_at(b, color, lib, c, g, g2))
 				continue;
 			if (foreach_connected_group_(b, color, g2, f, data, visited) == -1)
 				return -1;
@@ -278,13 +278,13 @@ foreach_connected_group(board_t *b, enum stone color, coord_t to,
 	assert(sane_coord(to));
 	assert(board_at(b, to) == color);
 #endif
-	int visited[BOARD_MAX_COORDS] = {0, };
+	mq_t visited;  mq_init(&visited);
 	group_t g = group_at(b, to);
-	foreach_connected_group_(b, color, g, f, data, visited);
+	foreach_connected_group_(b, color, g, f, data, &visited);
 }
 
 typedef struct {
-	int *visited;
+	mq_t *visited;
 	coord_handler_t f;
 	void *data;
 } foreach_lib_data_t;
@@ -301,16 +301,17 @@ foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 	mq_t q;  get_group_liberties(b, g, &q);
 	for (int i = 0; i < q.moves; i++) {
 		coord_t lib = q.move[i];
-		if (d->visited[lib])
+		if (mq_has(d->visited, lib))
 			continue;
-		d->visited[lib] = 1;
+		mq_add(d->visited, lib);
 		if (d->f(b, color, lib, d->data) == -1)
 			return -1;
 	}
 	return 0;			
 }
 
-/* Call f() for each liberty of dragon at @to. */
+/* Call f() for each liberty of dragon at @to.
+ * f() should return -1 to stop processing. */
 static void
 foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
 				coord_handler_t f, void *data)
@@ -320,33 +321,41 @@ foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
 	assert(sane_coord(to));
 	assert(board_at(b, to) == color);
 #endif
-	int visited[BOARD_MAX_COORDS] = {0, };
-	foreach_lib_data_t d = { visited, f, data };
 	/* Use foreach_connected_group() instead of foreach_in_connected_group():
 	 * may avoid iterating through group stones if pseudo-liberties are valid. */
+	mq_t visited;  mq_init(&visited);
+	foreach_lib_data_t d = { &visited, f, data };
 	foreach_connected_group(b, color, to, foreach_lib_handler, &d);
 }
 
 
 static int
-stones_all_connected_handler(board_t *b,  enum stone color, coord_t c, void *data)
+stones_connected_handler(board_t *b,  enum stone color, coord_t c, void *data)
 {
-	int *connected = (int*)data;
-	connected[c] = 1;  return 0;
+	mq_t *remaining = (mq_t *)data;
+	mq_remove(remaining, c);
+	if (!remaining->moves)
+		return -1;
+	return 0;
 }
 
 static bool
 stones_all_connected(board_t *b, enum stone color, mq_t *stones)
 {
-	// TODO optimize: check if all same group first ...
-	int connected[BOARD_MAX_COORDS] = {0, };
-	
-	foreach_in_connected_groups(b, color, stones->move[0], stones_all_connected_handler, connected);
+	if (!stones->moves)
+		return true;
 
-	for (int i = 0; i < stones->moves; i++)
-		if (!connected[stones->move[i]])
-			return false;
+	/* All from same group ? */
+	group_t g = group_at(b, stones->move[0]);
+	for (int i = 1; i < stones->moves; i++)
+		if (group_at(b, stones->move[i]) != g)
+			goto different_groups;
 	return true;
+
+ different_groups:;
+	mq_t remaining;  mq_copy(&remaining, stones);
+	foreach_in_connected_groups(b, color, stones->move[0], stones_connected_handler, &remaining);
+	return !remaining.moves;
 }
 
 /* min area size for living group (corner)
@@ -504,8 +513,8 @@ is_real_two_point_eye(board_t *b, coord_t to, enum stone color, coord_t *pother)
 }
 
 typedef struct {
-	int *visited;
-	int  eyes;
+	mq_t *visited;
+	int   eyes;
 } safe_data_t;
 
 static int
@@ -517,7 +526,7 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 	assert(board_at(b, lib) == S_NONE);
 #endif
 	safe_data_t *d = (safe_data_t*)data;
-	if (d->visited[lib])  /* Don't visit big eyes multiple times */
+	if (mq_has(d->visited, lib))  /* Don't visit big eyes multiple times */
 		return 0;
 
 	if (is_real_one_point_eye(b, lib, color))  {
@@ -530,7 +539,7 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 	coord_t other = pass;
 	if (is_real_two_point_eye(b, lib, color, &other))  {
 		// fprintf(stderr, "two-point eye: %s\n", coord2sstr(lib, b));
-		d->visited[other] = 1;
+		mq_add(d->visited, other);
 		if (++(d->eyes) >= 2)
 			return -1;
 		return 0;
@@ -541,7 +550,7 @@ count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 	if (area_size) {
 		/* Mark area visited */
 		for (int i = 0; i < area.moves; i++)
-			d->visited[area.move[i]] = 1;
+			mq_add(d->visited, area.move[i]);
 
 		/* Check nakade area shape
 		 *    O O O O    XXX we look at empty eyespace (prisoners removed)
@@ -567,8 +576,8 @@ dragon_is_safe(board_t *b, group_t g, enum stone color)
 	assert(is_player_color(color));
 	assert(board_at(b, g) == color);
 #endif
-	int visited[BOARD_MAX_COORDS] = {0, };
-	safe_data_t d = { visited, 0 };
+	mq_t visited;  mq_init(&visited);
+	safe_data_t d = { &visited, 0 };
 	foreach_lib_in_connected_groups(b, color, g, count_eyes, &d);
 	return (d.eyes >= 2);
 }

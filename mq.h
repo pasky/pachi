@@ -43,6 +43,9 @@ static bool mq_has(mq_t *q, coord_t c);
 /* Cat two queues together. */
 static void mq_append(mq_t *qd, mq_t *qs);
 
+/* Copy qs into qd */
+static void mq_copy(mq_t *qd, mq_t *qs);
+
 /* Subtract two queues (find elements in a not in b) */
 static void mq_sub(mq_t *a, mq_t *b, mq_t *res);
 
@@ -107,8 +110,15 @@ static inline void
 mq_append(mq_t *qd, mq_t *qs)
 {
 	assert(qd->moves + qs->moves < MQL);
-	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(*qs->move));
+	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(qs->move[0]));
 	qd->moves += qs->moves;
+}
+
+static inline void
+mq_copy(mq_t *qd, mq_t *qs)
+{
+	qd->moves = qs->moves;
+	memcpy(qd->move, qs->move, qs->moves * sizeof(qs->move[0]));
 }
 
 static inline void
