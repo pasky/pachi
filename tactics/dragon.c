@@ -177,11 +177,11 @@ virtual_connection_at(board_t *b, enum stone color, coord_t lib, coord_t c2, gro
 
 
 /* Handler should return -1 to stop iterating */
-typedef int (*foreach_in_connected_groups_t)(board_t *b, enum stone color, coord_t c, void *data);
+typedef int (*coord_handler_t)(board_t *b, enum stone color, coord_t c, void *data);
 
 static int
 foreach_in_connected_groups_(board_t *b, enum stone color, group_t g, 
-			     foreach_in_connected_groups_t f, void *data, int *visited)
+			     coord_handler_t f, void *data, int *visited)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
@@ -218,7 +218,7 @@ foreach_in_connected_groups_(board_t *b, enum stone color, group_t g,
 /* Call f() for each stone in dragon at @to. */
 static void 
 foreach_in_connected_groups(board_t *b, enum stone color, coord_t to, 
-			    foreach_in_connected_groups_t f, void *data)
+			    coord_handler_t f, void *data)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
@@ -232,11 +232,11 @@ foreach_in_connected_groups(board_t *b, enum stone color, coord_t to,
 
 
 /* Handler should return -1 to stop iterating. */
-typedef int (*foreach_connected_group_t)(board_t *b, enum stone color, group_t g, void *data);
+typedef int (*group_handler_t)(board_t *b, enum stone color, group_t g, void *data);
 
 static int
 foreach_connected_group_(board_t *b, enum stone color, group_t g, 
-			 foreach_connected_group_t f, void *data, int *visited)
+			 group_handler_t f, void *data, int *visited)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
@@ -271,7 +271,7 @@ foreach_connected_group_(board_t *b, enum stone color, group_t g,
 /* Call f() for each group in dragon at @to. */
 static void 
 foreach_connected_group(board_t *b, enum stone color, coord_t to,
-			foreach_connected_group_t f, void *data)
+			group_handler_t f, void *data)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
@@ -285,7 +285,7 @@ foreach_connected_group(board_t *b, enum stone color, coord_t to,
 
 typedef struct {
 	int *visited;
-	foreach_in_connected_groups_t f;
+	coord_handler_t f;
 	void *data;
 } foreach_lib_data_t;
 
@@ -313,7 +313,7 @@ foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 /* Call f() for each liberty of dragon at @to. */
 static void
 foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
-				foreach_in_connected_groups_t f, void *data)
+				coord_handler_t f, void *data)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
