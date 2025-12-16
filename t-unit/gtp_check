@@ -53,7 +53,7 @@ foreach my $s (<STDIN>)
     if ($s =~ m/^#/)   { next; }
     chomp($s);
     
-    printf("  %-30s  ", $s);
+    printf("  %-40s  ", $s);
     pachi_command("$s");
     $prev_cmd = $s;
     print "ok\n";
