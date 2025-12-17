@@ -58,8 +58,9 @@ three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfa
 
 	/* Playing on the third liberty might be useful if it enables
 	 * capturing some group (are we doing nakade or semeai?). */
-	for (int i = 0; i < s->groupcts[stone_other(color)]; i++)
-		if (group_libs(b, s->groupids[stone_other(color)][i]) <= 3)
+	enum stone other_color = stone_other(color);
+	for (int i = 0; i < s->groupcts[other_color]; i++)
+		if (group_libs(b, s->groupids[other_color][i]) <= 3)
 			return false;
 
 
@@ -179,9 +180,10 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	group_t can_capture = 0;
 
 	/* Examine enemy groups: */
-	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
+	enum stone other_color = stone_other(color);
+	for (int i = 0; i < s->groupcts[other_color]; i++) {
 		/* We can escape by capturing this group if it's in atari. */
-		group_t g = s->groupids[stone_other(color)][i];
+		group_t g = s->groupids[other_color][i];
 		if (group_libs(b, g) > 1)
 			continue;
 
@@ -1069,15 +1071,16 @@ selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
 		return pass;
 
 	int gn;
-	if (groupsbycolor[stone_other(color)]) {
+	enum stone other_color = stone_other(color);
+	if (groupsbycolor[other_color]) {
 		/* Prefer to fill the other liberty of an opponent
 		 * group to filling own approach liberties. */
 		int gl = fast_random(groups_n);
 		for (gn = gl; gn < groups_n; gn++)
-			if (board_at(b, groups[gn]) == stone_other(color))
+			if (board_at(b, groups[gn]) == other_color)
 				goto found;
 		for (gn = 0; gn < gl; gn++)
-			if (board_at(b, groups[gn]) == stone_other(color))
+			if (board_at(b, groups[gn]) == other_color)
 				goto found;
 found:;
 	} else {
