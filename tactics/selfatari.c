@@ -113,21 +113,6 @@ next_lib:
 	return false;
 }
 
-/* Return number of stones in resulting group after playing move.
- * @max_stones: max number of stones we care about */
-static int
-selfatari_group_stones(board_t *b, enum stone color, selfatari_state_t *s, int max_stones)
-{
-	int stones = 1;  /* Selfatari move stone */
-	for (int i = 0; i < s->groupcts[color]; i++) {
-		group_t g = s->groupids[color][i];
-		stones += group_stone_count(b, g, max_stones);
-		if (stones >= max_stones)
-			return stones;
-	}
-	return stones;
-}
-
 static int
 examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int flags)
 {
@@ -368,28 +353,24 @@ is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_
 	assert(sane_coord(lib2));
 	assert(board_at(b, to) == S_NONE);
 	assert(board_at(b, lib2) == S_NONE);
-#endif	
+#endif
 	/* If the other liberty has empty neighbor, it must be the original liberty;
-	 * otherwise, since the whole group has only 2 liberties, the other liberty
-	 * may not be internal and we are nakade'ing eyeless group from outside,
-	 * which is stupid. */
+         * otherwise, since the whole group has only 2 liberties, the other liberty
+         * may not be internal and we are nakade'ing eyeless group from outside,
+         * which is stupid. */
 	foreach_neighbor(b, lib2, {
 		if (c != to && board_at(b, c) == S_NONE)
 			return true;
 	});
 
-	/* Let's look at neighbors of the other liberty: */
+	/* Let's look at neighbors of the other liberty:
+	 * If there's a group we don't know about it's a bad nakade
+	 * (should connect these groups / play outside liberty instead) */
 	foreach_neighbor(b, lib2, {
-		if (board_at(b, c) != color)
-			continue;
-
+		if (board_at(b, c) != color)  continue;
 		group_t g2 = group_at(b, c);
-		/* Looking for a group we don't know about */
-		if (is_neighbor_group(s, color, g2))
-			continue;
-		
-		/* Should connect these groups instead of self-atari on the other side. */
-		return true;
+		if (!is_neighbor_group(s, color, g2))
+			return true;
 	});
 
 	/* Check if the other liberty is internal:
@@ -459,17 +440,21 @@ selfatari_nakade_area(board_t *b, selfatari_state_t *s, enum stone color, coord_
 	mq_add(area, to);  /* Selfatari move */
 }
 
-/* Only cares about dead shape. */
+/* Only cares about dead shape (and not screwing up sekis) */
 static bool
-nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to)
+nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int stones)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
 	assert(sane_coord(to));
+	assert(stones > 2);
+	assert(stones <= 6);
 #endif
-	mq_t area;  selfatari_nakade_area(b, s, color, to, &area);
-	if (!nakade_area_dead_shape(b, &area))
-		return false;
+	if (stones >= 4) {
+		mq_t area;  selfatari_nakade_area(b, s, color, to, &area);
+		if (!nakade_area_dead_shape(b, &area))
+			return false;
+	}
 
 	/* If breaking seki check we are really atariing *everything* around us from the inside */
 	if (breaking_local_seki(b, s, to))
@@ -487,239 +472,6 @@ nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coo
 			} foreach_in_group_end;
 		});
 	return true;
-}
-
-static bool
-useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
-				bool atariing_group, int stones)
-{
-	if (stones == 1)
-		return false;
-
-#ifdef EXTRA_CHECKS
-	assert(is_player_color(color));
-	assert(sane_coord(to));
-	assert(stones != 2);
-	assert(stones <= 6);
-#endif
-	/* If not atariing surrounding group it's a good move if:
-	 *   - Shape after capturing us is dead   AND 
-	 *     - Oponent gets extra eye if he plays first OR
-	 *     - would create living shape
-	 *
-	 * If atariing surrounding group we only care about dead shape. */
-	
-	/* TODO: If there's so much eye space that even with filling + capture
-	 *       opponent still makes an extra eye it's a silly move. */
-
-	/* Can oponent make living shape if we don't play ?
-	 * (don't bother killing stuff that's already dead...) */
-	if (!atariing_group && s->groupcts[color] == 1 &&	/* Single group */
-	    !capture_would_make_extra_eye(b, color, to, s)) {
-		/* Adding stone to single group, check its shape. */
-		mq_t area;  mq_init(&area);
-		group_t g = s->groupids[color][0];
-		foreach_in_group(b, g) {
-			mq_add(&area, c);
-		} foreach_in_group_end;
-
-		if (nakade_area_dead_shape(b, &area))
-			return false;
-	}
-
-	return nakade_making_dead_shape(b, s, color, to);
-}
-
-
-/* More complex throw-in, or in-progress capture from
- * the inside - we are in one of several situations:
- * a O O O O X  b O O O X  c O O O X  d O O O O O
- *   O . X . O    O X . .    O . X .    O . X . O
- *   # # # # #    # # # #    # # # #    # # # # #
- * Throw-ins have been taken care of in check_throwin(),
- * so it's either b or d now:
- * - b is desirable here (since maybe O has no backup two eyes)
- * - d is desirable if putting group in atari (otherwise we
- *   would never capture a single-eyed group). */
-#define check_throw_in_or_inside_capture(b, color, to, s, capturing)			\
-	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {	\
-		group_t g2 = s->groupids[color][0];					\
-		assert(group_libs(b, g2) <= 2);						\
-		if (group_libs(b, g2) == 1)						\
-			return false;  /*  b */						\
-		return !capturing;							\
-	}
-
-
-/* There is another possibility - we can self-atari if it is
- * a nakade: we put an enemy group in atari from the inside.
- * This branch also allows eyes falsification:
- * O O O . .  (This is different from throw-in to false eye
- * X X O O .  checked below in that there is no X stone at the
- * X . X O .  right of the star point in this diagram.)
- * X X X O O
- * X O * . . 
- * We also allow to only nakade if the created shape is dead
- * (http://senseis.xmp.net/?Nakade). */
-static int
-setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
-{
-#ifdef EXTRA_CHECKS
-	assert(sane_coord(to));
-	assert(is_player_color(color));
-#endif
-	/* Look at the enemy groups and determine the other contended
-	 * liberty. We must make sure the liberty:
-	 * (i) is an internal liberty
-	 * (ii) filling it to capture our group will not gain safety */
-	coord_t lib2 = pass;
-	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
-		group_t g = s->groupids[stone_other(color)][i];
-		if (group_libs(b, g) != 2)
-			continue;
-
-		coord_t this_lib2 = group_other_lib(b, g, to);
-		if (is_pass(lib2)) 
-			lib2 = this_lib2;
-		else if (this_lib2 != lib2) {
-			/* If we have two neighboring groups that do
-			 * not share the other liberty, this for sure
-			 * is not a good nakade. */
-			return -1;
-		}
-	}
-	if (is_pass(lib2)) {
-	        /* Not putting any group in atari.
-		 * Could be creating dead shape though */
-		
-		/* Before checking if it's a useful nakade
-		 * make sure it can't connect out ! */
-		if (can_escape_instead(b, color, to, s))
-			return -1;
-		
-		check_throw_in_or_inside_capture(b, color, to, s, false);
-
-		/* No good nakade above 6 stones. */
-		int stones = selfatari_group_stones(b, color, s, 7);
-		if (stones > 6)
-			return true;
-
-		return (useful_nakade_making_dead_shape(b, color, to, s, false, stones) ? false : -1);
-	}
-
-	/* Let's look at neighbors of the other liberty: */
-	if (is_bad_nakade(b, color, to, lib2, s) ||
-	    can_escape_instead(b, color, to, s))
-		return -1;
-	
-	/* Now, we must distinguish between nakade and eye
-	 * falsification; moreover, we must not falsify an eye
-	 * by more than two stones. */
-
-	if (s->groupcts[color] < 1)
-		return false;  /* Simple throw-in, an easy case */
-	
-	check_throw_in_or_inside_capture(b, color, to, s, true);
-	
-	/* We would create more than 2-stone group; in that
-	 * case, the liberty of our result must be lib2,
-	 * indicating this really is a nakade. */
-	for (int j = 0; j < s->groupcts[color]; j++) {
-		group_t g2 = s->groupids[color][j];
-		assert(group_libs(b, g2) <= 2);
-		if (group_libs(b, g2) == 2) {
-			if (group_lib(b, g2, 0) != lib2
-			    && group_lib(b, g2, 1) != lib2)
-				return -1;
-		} else
-			assert(group_lib(b, g2, 0) == to);
-	}
-
-	/* No good nakade above 6 stones. */
-	int stones = selfatari_group_stones(b, color, s, 7);
-	if (stones > 6)
-		return true;
-	
-	return !useful_nakade_making_dead_shape(b, color, to, s, true, stones);
-}
-
-static int
-setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
-{
-#ifdef EXTRA_CHECKS
-	assert(sane_coord(to));
-	assert(is_player_color(color));
-#endif
-	// Throwing a single stone in ? Fine.
-	if (!s->groupcts[color])
-		return false;
-	
-	/* Before checking if it's a useful nakade
-	 * make sure it can't connect out ! */
-	if (can_escape_instead(b, color, to, s))
-		return true;
-	
-	/* Creating a 2-stone group ? Fine too */
-	/* Could still be really stupid though
-	 * (if can countercapture instead for ex) */
-	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0]))
-		return false;
-	
-	/* Making 3-stone group or more */	
-	
-	/* Not always true but for the most part, if we're creating
-	 * a 3+ stone group in atari and we could have captured
-	 * something instead it's really stupid, even if shape is
-	 * dead locally. */
-	for (int j = 0; j < s->groupcts[color]; j++) {
-		group_t g2 = s->groupids[color][j];
-		if (can_countercapture(b, g2, NULL))
-			return true;
-	}
-
-	/* No good nakade above 6 stones. */
-	int stones = selfatari_group_stones(b, color, s, 7);
-	if (stones > 6)
-		return true;
-
-	/* Look at the enemy groups and determine the other contended
-	 * liberty. We must make sure the liberty:
-	 * (i) is an internal liberty
-	 * (ii) filling it to capture our group will not gain safety */
-	coord_t lib2 = pass;
-	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
-		group_t g = s->groupids[stone_other(color)][i];
-		if (group_libs(b, g) != 2)
-			continue;
-
-		coord_t this_lib2 = group_other_lib(b, g, to);
-		if (is_pass(lib2)) 
-			lib2 = this_lib2;
-		else if (this_lib2 != lib2) {
-			/* If we have two neighboring groups that do
-			 * not share the other liberty, this for sure
-			 * is not a good nakade. */
-			return -1;
-		}
-	}
-
-	if (!is_pass(lib2)) {
-		/* We would create more than 2-stone group; in that
-		 * case, the liberty of our result must be lib2,
-		 * indicating this really is a nakade. */
-		for (int j = 0; j < s->groupcts[color]; j++) {
-			group_t g2 = s->groupids[color][j];
-			assert(group_libs(b, g2) <= 2);
-			if (group_libs(b, g2) == 2) {
-				if (group_lib(b, g2, 0) != lib2 &&
-				    group_lib(b, g2, 1) != lib2)
-					return -1;
-			} else
-				assert(group_lib(b, g2, 0) == to);
-		}
-	}
-	
-	return (nakade_making_dead_shape(b, s, color, to) ? false : true);
 }
 
 #if 0
@@ -774,6 +526,210 @@ nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2
 }
 #endif
 
+/* If not atariing surrounding group it's a good move if:
+ *   - Shape after capturing us is dead   AND
+ *     - Oponent gets extra eye if he plays first OR
+ *     - would create living shape */
+static bool
+useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int stones)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(stones > 2);
+	assert(stones <= 6);
+#endif
+	
+	/* TODO: If there's so much eye space that even with filling + capture
+	 *       opponent still makes an extra eye it's a silly move. */
+
+	/* Can oponent make living shape if we don't play ?
+	 * (don't bother killing stuff that's already dead...) */
+	if (s->groupcts[color] == 1 &&	/* Single group */
+	    !capture_would_make_extra_eye(b, color, to, s)) {
+		/* Adding stone to single group, check its shape. */
+		mq_t area;  mq_init(&area);
+		group_t g = s->groupids[color][0];
+		foreach_in_group(b, g) {
+			mq_add(&area, c);
+		} foreach_in_group_end;
+
+		if (nakade_area_dead_shape(b, &area))
+			return false;
+	}
+
+	return nakade_making_dead_shape(b, color, to, s, stones);
+}
+
+/* Return number of stones in resulting group after playing move.
+ * @max_stones: max number of stones we care about */
+static int
+selfatari_group_stones(board_t *b, enum stone color, selfatari_state_t *s, int max_stones)
+{
+	int stones = 1;  /* Selfatari move stone */
+	for (int i = 0; i < s->groupcts[color] && stones < max_stones; i++) {
+		group_t g = s->groupids[color][i];
+		stones += group_stone_count(b, g, max_stones);
+	}
+	return stones;
+}
+
+/* Find opponent group other liberty if we are putting it in atari. */
+#define find_opponent_lib2(b, color, s)  \
+	enum stone other_color = stone_other(color); \
+	lib2 = pass; \
+	for (int i = 0; i < s->groupcts[other_color]; i++) { \
+		group_t g = s->groupids[other_color][i]; \
+		if (group_libs(b, g) != 2) \
+			continue; \
+		\
+		coord_t this_lib2 = group_other_lib(b, g, to); \
+		if (is_pass(lib2)) \
+			lib2 = this_lib2; \
+		else if (this_lib2 != lib2) { \
+			/* If we have two neighboring groups that do
+			 * not share the other liberty, this for sure
+			 * is not a good nakade. */ \
+			return -1; \
+		} \
+	}
+
+/* More complex throw-in, or in-progress capture from
+ * the inside - we are in one of several situations:
+ * a O O O O X  b O O O X  c O O O X  d O O O O O
+ *   O . X . O    O X . .    O . X .    O . X . O
+ *   # # # # #    # # # #    # # # #    # # # # #
+ * Throw-ins have been taken care of in check_throwin(),
+ * so it's either b or d now:
+ * - b is desirable here (since maybe O has no backup two eyes)
+ * - d is desirable if putting group in atari (otherwise we
+ *   would never capture a single-eyed group). */
+#define check_throw_in_or_inside_capture(b, color, to, s, capturing)			\
+	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {	\
+		group_t g2 = s->groupids[color][0];					\
+		assert(group_libs(b, g2) <= 2);						\
+		if (group_libs(b, g2) == 1)						\
+			return false;  /*  b */						\
+		return !capturing;							\
+	}
+
+
+/* There is another possibility - we can self-atari if it is
+ * a nakade: we put an enemy group in atari from the inside.
+ * This branch also allows eyes falsification:
+ * O O O . .  (This is different from throw-in to false eye
+ * X X O O .  checked below in that there is no X stone at the
+ * X . X O .  right of the star point in this diagram.)
+ * X X X O O
+ * X O * . . 
+ * We also allow to only nakade if the created shape is dead
+ * (http://senseis.xmp.net/?Nakade). */
+static int
+setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
+	/* Look at the enemy groups and determine the other contended
+	 * liberty. We must make sure the liberty:
+	 * (i) is an internal liberty
+	 * (ii) filling it to capture our group will not gain safety */
+	coord_t lib2;
+	find_opponent_lib2(b, color, s);
+
+	if (is_pass(lib2)) {
+	        /* Not putting any group in atari.
+		 * Could be creating dead shape though */
+		
+		/* Before checking if it's a useful nakade
+		 * make sure it can't connect out ! */
+		if (can_escape_instead(b, color, to, s))
+			return -1;
+		
+		check_throw_in_or_inside_capture(b, color, to, s, false);
+
+		/* No good nakade above 6 stones. */
+		int stones = selfatari_group_stones(b, color, s, 7);
+		if (stones > 6)   return true;
+
+		return !useful_nakade_making_dead_shape(b, color, to, s, stones);
+	}
+
+	/* Check other liberty is internal.
+	 * If so it also can't escape (we would have 2 libs then). */
+	if (is_bad_nakade(b, color, to, lib2, s))
+		return -1;
+
+	/* Now, we must distinguish between nakade and eye
+	 * falsification; moreover, we must not falsify an eye
+	 * by more than two stones. */
+
+	if (s->groupcts[color] < 1)
+		return false;  /* Simple throw-in, an easy case */
+	
+	check_throw_in_or_inside_capture(b, color, to, s, true);
+
+	/* No good nakade above 6 stones. */
+	int stones = selfatari_group_stones(b, color, s, 7);
+	if (stones > 6)
+		return true;
+	
+	return !nakade_making_dead_shape(b, color, to, s, stones);
+}
+
+static int
+setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
+	// Throwing a single stone in ? Fine.
+	if (!s->groupcts[color])
+		return false;
+	
+	/* Before checking if it's a useful nakade
+	 * make sure it can't connect out ! */
+	if (can_escape_instead(b, color, to, s))
+		return true;
+	
+	/* Creating a 2-stone group ? Fine too */
+	/* Could still be really stupid though
+	 * (if can countercapture instead for ex) */
+	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0]))
+		return false;
+	
+	/* Making 3-stone group or more */	
+	
+	/* Not always true but for the most part, if we're creating
+	 * a 3+ stone group in atari and we could have captured
+	 * something instead it's really stupid, even if shape is
+	 * dead locally. */
+	for (int j = 0; j < s->groupcts[color]; j++) {
+		group_t g2 = s->groupids[color][j];
+		if (can_countercapture(b, g2, NULL))
+			return true;
+	}
+
+	/* No good nakade above 6 stones. */
+	int stones = selfatari_group_stones(b, color, s, 7);
+	if (stones > 6)
+		return true;
+
+	/* Look at the enemy groups and determine the other contended
+	 * liberty. We must make sure the liberty:
+	 * (i) is an internal liberty
+	 * (ii) filling it to capture our group will not gain safety */
+	coord_t lib2;
+	find_opponent_lib2(b, color, s);
+
+	if (!is_pass(lib2))
+		if (is_bad_nakade(b, color, to, lib2, s))
+			return -1;
+
+	return !nakade_making_dead_shape(b, color, to, s, stones);
+}
 
 /* We can be throwing-in to false eye:
  *   X X X O X X X O X X X X X
