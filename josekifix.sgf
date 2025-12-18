@@ -1860,12 +1860,23 @@ around = E3
 
 E5 worse than E6 for black]))))
 (;W[hp]
-;B[]C[[override\]
+(;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
 around = E4
 
 
 Ex: YZ1509 pachipachi  2018-02-19 ])
+(;B[ip]
+;W[gp]
+;B[io]
+;W[iq]C[[override\]
+name = "4-4 keima pincer tsuke"
+around = G4
+
+
+D6 can quickly turn into disaster.
+
+Ex: pachipachi xyh1969  2025-12-18 16:04]))
 (;W[dn]
 (;B[fp]
 ;W[cp]
