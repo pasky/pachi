@@ -152,13 +152,9 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 		    && s->needs_more_lib_except != lib2)
 			return false;
 
-		/* Can we get the liberty locally? */
-		/* Yes if we are route to more liberties... */
-		if (s->libs > 1)
-			return false;
-		/* ...or one liberty, but not lib2. */
-		if (s->libs > 0
-		    && !coord_is_adjecent(lib2, to))
+		/* Can we get the liberty locally ?
+		 * Ok if we have one liberty, but not lib2. */
+		if (!is_pass(s->lib) && s->lib != lib2)
 			return false;
 
 		/* ...ok, then we can still contribute a liberty
@@ -189,11 +185,10 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 		if (group_libs(b, g) > 1)
 			continue;
 
-		/* But we need to get to at least two liberties by this;
-		 * we already have one outside liberty, or the group is
-		 * more than 1 stone (in that case, capturing is always
-		 * nice!). */
-		if (s->libs > 0 || !group_is_onestone(b, g))
+		/* But we need to get to at least two liberties by this:
+		 * if we already have one outside liberty, or the group is
+		 * more than 1 stone (in that case, capturing is always nice!). */
+		if (!is_pass(s->lib) || !group_is_onestone(b, g))
 			return false;
 		/* ...or, it's a ko stone, */
 		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
@@ -213,7 +208,7 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	if (DEBUGL(6))
 		fprintf(stderr, "no cap group\n");
 
-	if (!s->needs_more_lib && !can_capture && !s->libs) {
+	if (!s->needs_more_lib && !can_capture && is_pass(s->lib)) {
 		/* We have no hope for more fancy tactics - this move is simply
 		 * a suicide, not even a self-atari. */
 		if (DEBUGL(6))
@@ -269,11 +264,14 @@ check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	assert(sane_coord(to));
 	assert(is_player_color(color));
 	assert(board_at(b, to) == S_NONE);
-#endif	
+	/* Single-stone throw-in should have one liberty, captures have been checked. */
+	if (!s->groupcts[color])
+		assert(sane_coord(s->lib));
+#endif
 	enum stone other_color = stone_other(color);
 
 	/* Must be single-stone throw-in. */
-	if (s->groupcts[color] || s->libs != 1)
+	if (s->groupcts[color])
 		return -1;
 
 	/* Cramped space */
@@ -630,6 +628,9 @@ setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 #ifdef EXTRA_CHECKS
 	assert(sane_coord(to));
 	assert(is_player_color(color));
+	/* Single-stone throw-in should have one liberty, captures have been checked. */
+	if (!s->groupcts[color])
+		assert(sane_coord(s->lib));
 #endif
 	/* Look at the enemy groups and determine the other contended
 	 * liberty. We must make sure the liberty:
@@ -813,11 +814,10 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 #endif
 	// memset() slower here ...
 	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
-	s->libs = immediate_liberty_count(b, to);
+	s->lib = pass;
 	s->friend_has_no_libs = false;
 	s->needs_more_lib = 0;
 	s->needs_more_lib_except = 0;
-	// s->lib uninitialized (check s->libs before using)
 
 	foreach_neighbor(b, to, {
 		enum stone color = board_at(b, c);
@@ -863,16 +863,13 @@ is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group)
 	assert(sane_coord(to));
 	assert(is_player_color(color));
 #endif
-	if (immediate_liberty_count(b, to) > 1 ||
+	if (immediate_liberty_count(b, to) != 1 ||
 	    neighbor_count_at(b, to, color) ||			  // fast examine_friendly_groups()
 	    board_get_atari_neighbor(b, to, stone_other(color)))  // fast examine_enemy_groups()
 		return false;
 
 	selfatari_state_t s;
 	init_selfatari_state(b, color, to, &s);
-
-	/* We have shortage of liberties; that's the point. */
-	assert(s.libs <= 1);
 
 	if (check_snapback(b, color, to, &s) == false) {
 		if (snapback_group)
@@ -885,6 +882,10 @@ is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_group)
 bool
 is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 {
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
 	if (DEBUGL(6))
 		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to));
 	/* Assess if we actually gain any liberties by this escape route.
@@ -894,12 +895,6 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 	selfatari_state_t s;
 	init_selfatari_state(b, color, to, &s);
 
-#ifdef EXTRA_CHECKS
-	assert(sane_coord(to));
-	assert(is_player_color(color));
-	/* We have shortage of liberties; that's the point. */
-	assert(s.libs <= 1);
-#endif
 	int d;
 	d = examine_friendly_groups(b, color, to, &s, flags);
 	if (d >= 0)     return d;

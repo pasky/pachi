@@ -10,7 +10,6 @@
 typedef struct {
 	int     groupcts[S_MAX];	/* number of neighbor groups for each color */
 	group_t groupids[S_MAX][4];	/* and their ids */
-	int     libs;
 	coord_t lib;			/* liberty after playing selfatari */
 	
 	bool    friend_has_no_libs;	/* This is set if this move puts a group out of _all_
