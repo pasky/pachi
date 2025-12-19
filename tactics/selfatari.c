@@ -16,6 +16,54 @@
 #include "nakade.h"
 
 
+/**********************************************************************************/
+/* Selfatari state */
+
+static inline bool
+is_neighbor_group(selfatari_state_t *s, enum stone color, group_t g)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(g));
+#endif
+	for (int i = 0; i < s->groupcts[color]; i++)
+		if (g == s->groupids[color][i])
+			return true;
+	return false;
+}
+
+static void
+init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+#endif
+	// memset() slower here ...
+	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
+	s->lib = pass;
+	s->friend_has_no_libs = false;
+	s->needs_more_lib = 0;
+	s->needs_more_lib_except = 0;
+
+	foreach_neighbor(b, to, {
+		enum stone color = board_at(b, c);
+		if (color == S_NONE) {
+			s->lib = c;
+			continue;
+		}
+		group_t group = group_at(b, c);
+		if (!group) { continue; }
+
+		if (!is_neighbor_group(s, color, group))
+			s->groupids[color][s->groupcts[color]++] = group;
+	});
+}
+
+
+/**********************************************************************************/
+/* Friendly groups */
+
 static bool
 three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfatari_state_t *s)
 {
@@ -168,6 +216,10 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 	return -1;
 }
 
+
+/**********************************************************************************/
+/* Enemy groups */
+
 static int
 examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
@@ -222,6 +274,88 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 
 	return -1;
 }
+
+
+/**********************************************************************************/
+/* Throw-in */
+
+/* We can be throwing-in to false eye:
+ *   X X X O X X X O X X X X X
+ *   X . * X * O . X * O O . X
+ *   # # # # # # # # # # # # #   */
+static int
+check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(to));
+	assert(is_player_color(color));
+	if (own_group) {
+		assert(sane_group(b, own_group));
+		assert(board_at(b, own_group) == color);
+	}
+#endif
+	enum stone other_color = stone_other(color);
+
+	/* Throw-in situation ? */
+	if (!(neighbor_count_at(b, to, other_color) + neighbor_count_at(b, to, S_OFFBOARD) == 3 &&
+	      board_is_false_eyelike(b, to, other_color)))
+		return -1;
+
+	/* We cannot sensibly throw-in into a corner. */
+	if (neighbor_count_at(b, to, S_OFFBOARD) == 2)
+		return true;
+
+	/* Single-stone throw-in may be ok... */
+	if (!own_group) {
+		/* O X .  There is one problem - when it's
+		 * . * X  actually not a throw-in!
+		 * # # #  */
+		foreach_neighbor(b, to, {
+			if (board_at(b, c) != S_NONE) continue;
+			/* Is the empty neighbor an escape path?
+			 * (Note that one S_NONE neighbor is already @to.)
+			 * We need at least 2 opponent stones nearby (1 at the edge). */
+			int other_stones = neighbor_count_at(b, c, other_color);
+			if (!other_stones ||
+			    other_stones + neighbor_count_at(b, c, S_OFFBOARD) < 2)
+				return true;
+			/* Shape must be right also: Stones above/below empty spot
+			 * in example must be either black or offboard. */
+			int diff = board_stride(b) + 1 - abs(c - to);
+			enum stone e1 = board_at(b, c + diff);
+			enum stone e2 = board_at(b, c - diff);
+			if ((e1 != other_color && e1 != S_OFFBOARD) ||
+			    (e2 != other_color && e2 != S_OFFBOARD))
+				return true;
+		});
+		return false;
+	}
+
+	/* Multi-stone throwin...? */
+	group_t g = own_group;
+
+	assert(group_libs(b, g) <= 2);
+	/* Suicide is definitely NOT ok, no matter what else
+	 * we could test. */
+	if (group_libs(b, g) == 1)
+		return true;
+
+	/* In that case, we must be connected to at most one stone,
+	 * or throwin will not destroy any eyes. */
+	if (group_is_onestone(b, g)) {
+		/* Must be somewhat enclosed */
+		coord_t other_lib = group_other_lib(b, g, to);
+		int other_own = neighbor_count_at(b, other_lib, color) - 1;
+		if (immediate_liberty_count(b, other_lib) + other_own < 2)
+			return false;
+	}
+
+	return true;
+}
+
+
+/**********************************************************************************/
+/* Snapback */
 
 /*   . X O .	Check if playing at @to snapbacks 2lib group @group.
  *   X . * O	@lib is throw-in stone's liberty.
@@ -296,18 +430,9 @@ check_snapback(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 	return -1;
 }
 
-static inline bool
-is_neighbor_group(selfatari_state_t *s, enum stone color, group_t g)
-{
-#ifdef EXTRA_CHECKS
-	assert(is_player_color(color));
-	assert(sane_coord(g));
-#endif
-	for (int i = 0; i < s->groupcts[color]; i++)
-		if (g == s->groupids[color][i])
-			return true;
-	return false;
-}
+
+/**********************************************************************************/
+/* Nakade */
 
 static bool
 unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
@@ -845,107 +970,9 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 	return !nakade_making_dead_shape(b, color, to, s, stones);
 }
 
-/* We can be throwing-in to false eye:
- *   X X X O X X X O X X X X X
- *   X . * X * O . X * O O . X
- *   # # # # # # # # # # # # #   */
-static int
-check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
-{
-#ifdef EXTRA_CHECKS
-	assert(sane_coord(to));
-	assert(is_player_color(color));
-	if (own_group) {
-		assert(sane_group(b, own_group));
-		assert(board_at(b, own_group) == color);
-	}
-#endif
-	enum stone other_color = stone_other(color);
 
-	/* Throw-in situation ? */
-	if (!(neighbor_count_at(b, to, other_color) + neighbor_count_at(b, to, S_OFFBOARD) == 3 &&
-	      board_is_false_eyelike(b, to, other_color)))
-		return -1;
-
-	/* We cannot sensibly throw-in into a corner. */
-	if (neighbor_count_at(b, to, S_OFFBOARD) == 2)
-		return true;
-
-	/* Single-stone throw-in may be ok... */
-	if (!own_group) {
-		/* O X .  There is one problem - when it's
-		 * . * X  actually not a throw-in!
-		 * # # #  */
-		foreach_neighbor(b, to, {
-			if (board_at(b, c) != S_NONE) continue;
-			/* Is the empty neighbor an escape path?
-			 * (Note that one S_NONE neighbor is already @to.)
-			 * We need at least 2 opponent stones nearby (1 at the edge). */
-			int other_stones = neighbor_count_at(b, c, other_color);
-			if (!other_stones ||
-			    other_stones + neighbor_count_at(b, c, S_OFFBOARD) < 2)
-				return true;
-			/* Shape must be right also: Stones above/below empty spot
-			 * in example must be either black or offboard. */
-			int diff = board_stride(b) + 1 - abs(c - to);
-			enum stone e1 = board_at(b, c + diff);
-			enum stone e2 = board_at(b, c - diff);
-			if ((e1 != other_color && e1 != S_OFFBOARD) ||
-			    (e2 != other_color && e2 != S_OFFBOARD))
-				return true;
-		});
-		return false;
-	}
-
-	/* Multi-stone throwin...? */
-	group_t g = own_group;
-
-	assert(group_libs(b, g) <= 2);
-	/* Suicide is definitely NOT ok, no matter what else
-	 * we could test. */
-	if (group_libs(b, g) == 1)
-		return true;
-
-	/* In that case, we must be connected to at most one stone,
-	 * or throwin will not destroy any eyes. */
-	if (group_is_onestone(b, g)) {
-		/* Must be somewhat enclosed */
-		coord_t other_lib = group_other_lib(b, g, to);
-		int other_own = neighbor_count_at(b, other_lib, color) - 1;
-		if (immediate_liberty_count(b, other_lib) + other_own < 2)
-			return false;
-	}
-
-	return true;
-}
-
-static void
-init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
-{
-#ifdef EXTRA_CHECKS
-	assert(sane_coord(to));
-	assert(is_player_color(color));
-#endif
-	// memset() slower here ...
-	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
-	s->lib = pass;
-	s->friend_has_no_libs = false;
-	s->needs_more_lib = 0;
-	s->needs_more_lib_except = 0;
-
-	foreach_neighbor(b, to, {
-		enum stone color = board_at(b, c);
-		if (color == S_NONE) {
-			s->lib = c;
-			continue;
-		}
-		group_t group = group_at(b, c);
-		if (!group) { continue; }
-
-		if (!is_neighbor_group(s, color, group))
-			s->groupids[color][s->groupcts[color]++] = group;
-	});
-}
+/**********************************************************************************/
+/* Public API */
 
 /* For testing purposes mostly.
  * Only does the 3lib suicide check of is_bad_selfatari(). */
