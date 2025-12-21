@@ -20,6 +20,7 @@
 #include "playout.h"
 #include "timeinfo.h"
 #include "ownermap.h"
+#include "pattern3.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
 #include "uct/internal.h"
@@ -1099,6 +1100,86 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+
+/**************************************************************************************************/
+/* Bad selfatari stats */
+
+typedef struct {
+	int selfataris;				/* Number of selfataris seen */
+	int bad_selfataris;			/* Number of bad selfataris seen */
+	hash3_t last_pat3[BOARD_MAX_COORDS];	/* Last selfatari 3x3 hash for each point */
+} selfatari_stats_t;
+
+/* Keep track of bad selfatari stats:
+ * Percentage of playable selfataris classified as bad selfataris during
+ * playout. Remember 3x3 pattern at each point so we only check new ones. */
+static void
+bad_selfatari_stats(board_t *b, void *data)
+{
+	selfatari_stats_t *s = (selfatari_stats_t *)data;
+
+	foreach_free_point(b) {
+		for (int color = S_BLACK; color <= S_WHITE; color++) {
+			if (!board_is_valid_play(b, color, c))  continue;
+			if (!is_selfatari(b, color, c))  continue;
+
+			/* New selfatari or same situation as last time ? */
+			hash3_t h = pattern3_hash(b, c);
+			if (h == s->last_pat3[c])  continue;
+			s->last_pat3[c] = h;
+
+			if (is_bad_selfatari(b, color, c))
+				s->bad_selfataris++;
+			s->selfataris++;
+		}
+	} foreach_free_point_end;
+}
+
+static void
+selfatari_stats_game_start(board_t *b, void *data)
+{
+	selfatari_stats_t *s = (selfatari_stats_t *)data;
+
+	/* Clear hashes for new game */
+	memset(s->last_pat3, 0, sizeof(s->last_pat3));
+
+	/* Show current stats */
+	if (stress_test.game) {
+		float pc = (float)s->bad_selfataris * 100 / s->selfataris;
+		fprintf(stderr, "Playing games: %i/%i     selfataris: %.1f%% bad\r", stress_test.game + 1, stress_test.games, pc);
+		fflush(stderr);
+	}
+}
+
+/* Measure is_bad_selfatari() filtering:
+ * Percentage of playable selfataris classified as bad selfataris
+ * during playouts.
+ *
+ * Values for previous versions of Pachi:
+ *      now            91.1%  (allow nakades helping semeais)
+ *     12.88           91.9%  (snapback, throw-in, nakade fixes)
+ *     12.00 - 12.86   88.9%
+ *     11.00           95.1%  (only nakades making atari allowed)  */
+static bool
+test_bad_selfatari_stats(board_t *b, char *arg)
+{
+	args_end();
+
+	selfatari_stats_t s;
+	memset(&s, 0, sizeof(s));
+
+	stress_test_foreach_playout_move(300, b, bad_selfatari_stats, (void*)&s, selfatari_stats_game_start);
+	if (DEBUGL(2))  fprintf(stderr, "\n");
+
+	float pc = (float)s.bad_selfataris * 100 / s.selfataris;
+	fprintf(stderr, "\nSelfatari filtering:  %.1f%% bad\n\n", pc);
+
+	return (pc > 90.0);
+}
+
+
+/**************************************************************************************************/
+
 /* Run playout showing board, candidate moves and playout logic behind
  * each move. Useful to visualize / debug / investigate what's going on
  * in playouts in a real game. Other tools give either candidate moves
@@ -1406,6 +1487,7 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
+	{ "bad_selfatari_stats",    test_bad_selfatari_stats    },
 	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "breaking_nakade_seki",   test_breaking_nakade_seki,  },
