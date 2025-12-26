@@ -1546,3 +1546,128 @@ X . . X .
 . . . . .
 
 bad_selfatari w c3 1
+
+
+##############################################################################
+# 3 libs suicide
+
+% 3 libs suicide
+boardsize 5
+O O O . .
+O . O . .
+. X O . .
+. X O . .
+O O O . .
+
+bad_selfatari b b4 1
+
+% Not 3 libs suicide (connecting groups)
+boardsize 5
+O X X X .
+O . O . .
+. X O . .
+. X O . .
+O O O . .
+
+bad_selfatari b b4 0
+
+% Not 3 libs suicide (connecting groups)
+boardsize 5
+O O O . .
+O X O . .
+O . O . .
+. X . O .
+O O O . .
+
+bad_selfatari b b3 0
+
+% Not 3 libs suicide (connecting groups)
+boardsize 5
+. . . . .
+O O O . .
+X . O . .
+. X . O .
+O O O . .
+
+bad_selfatari b b3 0
+
+% Not 3 libs suicide right now (connecting groups)
+boardsize 5
+. O X X O
+. O . O O
+O . X O .
+O . X O .
+. O O O .
+
+!bad_selfatari b c4 1		# FIXME, making 2 lib group, not dead shape
+
+% Not 3 libs suicide (atari other group)
+boardsize 5
+O O . O X
+O . X O .
+O . X O X
+O O O X X
+. . . . .
+
+bad_selfatari b c5 0
+
+% Not 3 libs suicide right now (semeai)
+boardsize 5
+O O . O X
+O . X O .
+O . X O .
+O O O X X
+. . . . .
+
+!bad_selfatari b c5 1		# FIXME silly, we just lose semeai
+
+% Not 3 libs suicide (can countercap)
+boardsize 5
+O O . O .
+O . X O .
+O . X O .
+O X O X X
+. . . . .
+
+!bad_selfatari b c5 0		# FIXME countercaps not checked right now
+
+% Not 3 libs suicide (both libs can connect to another group)
+boardsize 5
+. O O . O
+. X . X O
+. X . X O
+. O O O O
+. . . . .
+
+bad_selfatari b d5 0
+
+% Not 3 libs suicide (1 lib can connect, other lib gains liberties)
+boardsize 5
+. O O . O
+. X . X O
+. . . X O
+. O . O O
+. . . . .
+
+bad_selfatari b d5 0
+
+% 3 libs suicide (only 1 lib can connect out)
+boardsize 5
+. O O . O
+. O . X O
+. X . X O
+. . O O O
+. . . . .
+
+bad_selfatari b d5 1
+
+% 3 libs suicide (bad semeai)
+boardsize 5
+. O O . O
+X O . X O
+. X . X O
+. . O O O
+. . . . .
+
+!bad_selfatari b d5 1		# FIXME, lose semeai
+
