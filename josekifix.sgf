@@ -558,14 +558,28 @@ pachipachi masato3012  2023-05-07  (weird variation)]
 ;B[bn]
 ;W[cm]
 ;B[em]
-;W[br]
+;W[br]C[[override\]]
 ;B[dl]
 ;W[cl]C[[override\]
 name = "magic sword mega mess"
 around = D5
 
 
-spring pachipachi 2023-02-18])
+spring pachipachi 2023-02-18]
+;B[ck]
+;W[el]C[[override\]
+]
+;B[gn]
+;W[dk]
+;B[dq]
+;W[cr]
+;B[eq]
+;W[fp]
+;B[fq]
+;W[bp]
+;B[bo]
+;W[aq]
+;B[fn])
 (;W[do]
 ;B[dn]
 ;W[cn]C[[override\]
