@@ -11,7 +11,7 @@ log_full() {  cat >> full.log;  }
 lgrep()    {  grep --line-buffered "$@";  }
 
 
-pachi_options="--dcnn --patterns -t =5000:10000 --tunit-fatal "
+default_options="--dcnn --patterns -t =5000:10000 --tunit-fatal "
 
 base_dir=`dirname "$( realpath "$0" )"`
 cd "$base_dir" || die "cd $base_dir failed"
@@ -39,7 +39,16 @@ for f in $dir/*/*.gtp; do
     echo ""					       | log_full    
 
     echo -n "$f: " | log
-    if  (cd .. ; ./pachi $pachi_options) < $f     2>&1  >/dev/null |
+
+    # Use pachi options from gtp file if present.
+    # format:
+    #    # pachi options: --nodcnn -t =5000
+    options=$default_options
+    if head -1 $f | grep -q '^# *pachi options:'; then
+	options="`head -1 $f | sed -e 's/^# *pachi options://'`  --tunit-fatal"
+    fi
+    
+    if  (cd .. ; ./pachi $options) < $f     2>&1  >/dev/null |
 	    lgrep -v "^IN:" | log_full ; then
 	echo "OK" | log;	passed=$[$passed + 1]
     else
