@@ -2038,7 +2038,7 @@ Ex: mss2 SwissBot3  2025-10-01 04:01]))
 (;B[co]
 ;W[cr]C[[override\]
 name = "3-3 block overplay"
-around = C4
+around = C2
 
 
 b can't block at C5 because of F3]
