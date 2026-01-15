@@ -295,14 +295,6 @@ uct_progress_status(uct_t *u, tree_t *t, board_t *b, enum stone color, int playo
 	uct_progress_gogui_livegfx(u, t, b, color, playouts, final);
 }
 
-static inline void
-record_amaf_move(amafmap_t *amaf, coord_t coord, bool is_ko_capture)
-{
-	assert(amaf->gamelen < MAX_GAMELEN);
-	amaf->is_ko_capture[amaf->gamelen] = is_ko_capture;
-	amaf->game[amaf->gamelen++] = coord;
-}
-
 static floating_t
 uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
               tree_t *t, tree_node_t *n, enum stone node_color, int spaces)
@@ -451,7 +443,7 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 		}
 
 		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b));
+		amaf_record_move(&amaf, b);
 
 		if (is_pass(node_coord(n)))  passes++;
 		else                         passes = 0;

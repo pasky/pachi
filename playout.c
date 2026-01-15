@@ -19,6 +19,14 @@ amaf_init(amafmap_t *amaf)
 	amaf->gamelen = amaf->game_baselen = 0;
 }
 
+void
+amaf_record_move(amafmap_t *amaf, board_t *b)
+{
+	assert(amaf->gamelen < MAX_GAMELEN);
+	amaf->is_ko_capture[amaf->gamelen] = board_playing_ko_threat(b);
+	amaf->game[amaf->gamelen++] = last_move(b).coord;
+}
+
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
@@ -122,11 +130,7 @@ playout_play_move(playout_t *playout, board_t *b, enum stone color)
 		if (unlikely(is_pass(coord)))  passes++; \
 		else                           passes = 0; \
 \
-		if (amafmap) { \
-			assert(amafmap->gamelen < MAX_GAMELEN); \
-			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b); \
-			amafmap->game[amafmap->gamelen++] = coord; \
-		} \
+		if (amafmap)  amaf_record_move(amafmap, b); \
 \
 		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin) \
 			break; \

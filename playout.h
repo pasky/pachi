@@ -87,6 +87,9 @@ typedef struct {
 
 void amaf_init(amafmap_t *map);
 
+/* Record last move in amafmap. */
+void amaf_record_move(amafmap_t *amaf, board_t *b);
+
 /* Run one simulation and return score from white's perspective:
  *   >0: white wins
  *   <0: black wins
