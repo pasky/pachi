@@ -121,6 +121,22 @@ check_bent_four_surrounding(board_t *b, enum stone other_color, coord_t lib, gro
 	return (surrounding != 0);
 }
 
+/* Kill group, or capture if opponent didn't take. */
+static coord_t
+kill_bent_four(board_t *b, enum stone color, coord_t bent4_lib, coord_t bent4_kill)
+{
+	if (board_at(b, bent4_kill) == S_NONE &&
+	    immediate_liberty_count(b, bent4_kill) > 1)
+		return bent4_kill;
+
+	/* Must check for suicide here, opponent may not be in atari anymore. */
+	if (board_at(b, bent4_lib) == S_NONE &&
+	    board_is_valid_play_no_suicide(b, color, bent4_lib))
+		return bent4_lib;
+
+	return pass;
+}
+
 /* Fill bent-four in the corner:
  * 
  *   | . . . . . .       | O O O . . .              | X X O O . .     | . . . . . .
@@ -311,9 +327,8 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		coord_t coord;
 		
 		/* Kill bent-four group after filling. */
-		if (b->moves == bent4_moves + 2) {
-			/* Kill group (or capture if opponent didn't take) */
-			coord = (board_at(b, bent4_lib) == S_NONE ? bent4_lib : bent4_kill);
+		if (b->moves == bent4_moves + 2 &&
+		    (coord = kill_bent_four(b, color, bent4_lib, bent4_kill)) != pass) {
 			if (DEBUGL(5))  fprintf(stderr, "Kill bent-four: %s\n", coord2sstr(coord));
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r >= 0);
