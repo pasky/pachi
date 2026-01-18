@@ -268,6 +268,8 @@ floating_t
 playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		  amafmap_t *amafmap, ownermap_t *ownermap)
 {
+	if (DEBUGL(5))  fprintf(stderr, "------------------------------- playout start -------------------------------\n\n");
+
 	assert(playout && playout->setup && playout->policy);
 	playout_setup_t *setup = playout->setup;
 	playout_policy_t *policy = playout->policy;
@@ -291,6 +293,8 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		random_game_loop_stuff
 	}	
 
+	if (DEBUGL(5))  fprintf(stderr, "------------------------------- bent4 handling -------------------------------\n\n");
+
 	int bent4_moves = -2;
 	coord_t bent4_lib = pass;
 	coord_t bent4_kill = pass;
@@ -305,8 +309,8 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		/* Kill bent-four group after filling. */
 		if (b->moves == bent4_moves + 2) {
 			/* Kill group (or capture if opponent didn't take) */
-			//fprintf(stderr, "bent-four: capture / kill ...\n");
 			coord = (board_at(b, bent4_lib) == S_NONE ? bent4_lib : bent4_kill);
+			if (DEBUGL(5))  fprintf(stderr, "Kill bent-four: %s\n", coord2sstr(coord));
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r >= 0);
 		}
@@ -314,7 +318,7 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		
 		/* Fill bent-fours */
 		if (coord == pass && (coord = fill_bent_four(b, color, &bent4_lib, &bent4_kill)) != pass) {
-			//fprintf(stderr, "bent-four: filling ...\n");
+			if (DEBUGL(5))  fprintf(stderr, "Fill bent-four: %s\n", coord2sstr(coord));
 			bent4_moves = b->moves;
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r >= 0);
@@ -322,7 +326,7 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 
 		/* Fill bent-threes */
 		if (coord == pass && (coord = fill_bent_three(b, color)) != pass) {
-			//fprintf(stderr, "bent-three: filling ...\n");
+			if (DEBUGL(5))  fprintf(stderr, "Fill bent-three: %s\n", coord2sstr(coord));
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r >= 0);
 		}
@@ -342,9 +346,9 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 
 	floating_t score = board_fast_score(b);
 
-	if (DEBUGL(6)) {
-		fprintf(stderr, "Random playout result: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
-		if (DEBUGL(7))  board_print(b, stderr);
+	if (DEBUGL(5)) {
+		fprintf(stderr, "Playout finished: score: %s+%.1f\n\n", (score > 0 ? "W" : "B"), fabs(score));
+		fprintf(stderr, "------------------------------- playout end -------------------------------\n\n");
 	}
 
 	if (ownermap)  ownermap_fill(ownermap, b, score);
