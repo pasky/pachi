@@ -11,6 +11,7 @@
 #include "mq.h"
 #include "random.h"
 #include "ownermap.h"
+#include "playout.h"
 #include "dcnn/dcnn.h"
 
 #ifdef BOARD_PAT3
@@ -222,7 +223,10 @@ board_clear(board_t *board)
 
 	board_done(board);
 
+	/* Init statics that depend on boardsize. */
 	board_statics_init(board);
+	bent4_statics_init(size);
+
 	static board_t bcache[BOARD_MAX_SIZE + 2];
 	assert(size > 1 && size <= BOARD_MAX_SIZE);
 	if (bcache[size - 1].rsize == size)
