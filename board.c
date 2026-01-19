@@ -11,8 +11,8 @@
 #include "mq.h"
 #include "random.h"
 #include "ownermap.h"
-#include "playout.h"
 #include "dcnn/dcnn.h"
+#include "tactics/bent4.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"
