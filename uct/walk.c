@@ -474,20 +474,24 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 
 	amaf.game_baselen = amaf.gamelen;
 
-	if (t->use_extra_komi && u->dynkomi->persim)
-		b->komi += round(u->dynkomi->persim(u->dynkomi, b, t, n));
-
-	/* !!! !!! !!!
-	 * ALERT: The "result" number is extremely confusing. In some parts
-	 * of the code, it is from white's perspective, but here positive
-	 * number is black's win! Be VERY CAREFUL.
-	 * !!! !!! !!! */
-
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
 
+	int extra_komi = 0;
+	if (t->use_extra_komi && u->dynkomi->persim)
+		extra_komi = round(u->dynkomi->persim(u->dynkomi, b, t, n));
+
+	/* !!! !!! !!!
+	 * ALERT: The "score" number is extremely confusing. In some parts
+	 * of the code (board, ownermap) it is from white's perspective,
+	 * but here positive number is black's win! Be VERY CAREFUL.
+	 * !!! !!! !!! */
+
 	floating_t score = uct_leaf_node(u, b, player_color, &amaf, t, n, node_color, spaces);
+
+	/* Add extra komi (from black perspective: subtract) */
+	score -= extra_komi;
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
