@@ -330,6 +330,7 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
 	return score;
 }
 
+/* XXX can we remove t->avg_score and use ownermap avg_score instead ? */
 static floating_t
 scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significant[2], floating_t score)
 {
@@ -505,6 +506,8 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	floating_t rval = scale_value(u, b, node_color, significant, score);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b, rval);
 
+	/* TODO Now that ownermap keeps track of real playouts average score
+	 *      can we remove avg_score and use only that ? */
 	stats_add_result(&t->avg_score, score, 1);
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, score, 1);

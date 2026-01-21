@@ -797,6 +797,7 @@ tree_promote_node(tree_t *t, tree_node_t *node, board_t *b, enum promote_reason 
 	    (t->nodes_size >= t->max_tree_size / 10 && node->u.playouts < SMALL_TREE_PLAYOUTS))
 		tree_garbage_collect(t);
 
+	t->avg_score.value = 0;
 	t->avg_score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,

@@ -829,11 +829,15 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 	*best_coord = node_coord(best);
 	floating_t winrate = tree_node_get_value(u->t, 1, best->u.value);
 
-	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(node_coord(best)), winrate,
+	if (UDEBUGL(3))
+		fprintf(stderr, "*** WINNER is %s with score %.1f%% (%d/%d games, %d new), extra komi %.1f\n",
+			coord2sstr(node_coord(best)), winrate * 100,
 			best->u.playouts, u->t->root->u.playouts,
-			u->t->root->u.playouts - base_playouts, played_games,
+			played_games, u->t->extra_komi);
+	else if (UDEBUGL(1))
+		fprintf(stderr, "*** WINNER is %s with score %.1f%% (%d/%d games), extra komi %.1f\n",
+			coord2sstr(node_coord(best)), winrate * 100,
+			best->u.playouts, u->t->root->u.playouts,
 			u->t->extra_komi);
 
 	/* Do not resign if we're so short of time that evaluation of best

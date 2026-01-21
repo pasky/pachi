@@ -543,11 +543,18 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		tree_dump(t, u->dumpthres);
 		fprintf(stderr, "expanded nodes: %i\n", u->expanded_nodes);
 	}
-	if (UDEBUGL(2))
-		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
+	if (UDEBUGL(3))
+		fprintf(stderr, "(avg score %.1f/%d dev %.1f) (xkomi avg score %.1f/%d dynkomi score %.1f/%d value %.1f)\n",
+			-u->ownermap.avg_score.value,  /* ownermap score is from white perspective */
+			u->ownermap.avg_score.playouts,
+			playouts_score_std_dev(&u->ownermap),
 			t->avg_score.value, t->avg_score.playouts,
-			u->dynkomi->score.value, u->dynkomi->score.playouts,
-			u->dynkomi->value.value, u->dynkomi->value.playouts);
+			u->dynkomi->score.value, u->dynkomi->score.playouts, u->dynkomi->value.value);
+	else if (UDEBUGL(2))
+		fprintf(stderr, "(avg score %s/%d dev %.1f)\n",
+			playouts_score_est_str(&u->ownermap), u->ownermap.avg_score.playouts,
+			playouts_score_std_dev(&u->ownermap));
+
 	if (print_progress)
 		uct_progress_status(u, t, b, color, 0, NULL);
 

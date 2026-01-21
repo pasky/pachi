@@ -108,9 +108,9 @@ typedef struct tree {
 	 * is only informative, the actual value is computed per simulation
 	 * based on leaf node depth. */
 	floating_t extra_komi;
-	/* Score in simulations, averaged over all branches, in the last
-	 * search episode. */
-	move_stats_t avg_score;
+	/* Score in simulations **with local extra komi**, averaged over all
+	 * branches, in the last search episode. */
+	move_stats_t avg_score;   // XXX remove ? see walk.c comment.
 
 #ifdef DISTRIBUTED
 	/* Hash table used when working as slave for the distributed engine.
