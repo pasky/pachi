@@ -231,8 +231,8 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 
 	if (big) {
 		/* Average score. */
-		if (t->avg_score.playouts > 0)
-			fprintf(fh, ", \"avg\": {\"score\": %.3f}", t->avg_score.value);
+		if (u->ownermap.avg_score.playouts > 0)
+			fprintf(fh, ", \"avg\": {\"score\": %.3f}", u->ownermap.avg_score.value);
 		/* Per-intersection information. */
 		fprintf(fh, ", \"boards\": {");
 		/* Position coloring information. */
