@@ -332,14 +332,15 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
 }
 
 static floating_t
-scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significant[2], int result)
+scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significant[2], floating_t score)
 {
-	floating_t rval = result > 0 ? 1.0 : result < 0 ? 0.0 : 0.5;
-	if (u->val_scale && result != 0) {
+	floating_t rval = (score > 0 ? 1.0 : (score < 0 ? 0.0 : 0.5));
+
+	if (u->val_scale && score != 0) {
 		if (u->val_byavg) {
 			if (u->t->avg_score.playouts < 50)
 				return rval;
-			result -= u->t->avg_score.value * 2;
+			score -= u->t->avg_score.value;
 		}
 
 		double scale = u->val_scale;
@@ -352,12 +353,13 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 
 		int vp = u->val_points;
 		if (!vp) {
-			vp = board_stride(b) - 1; vp *= vp; vp *= 2;
+			vp = board_stride(b) - 1;  /* XXX typo ? board_rsize() ? */
+			vp *= vp;
 		}
 
-		floating_t sval = (floating_t) abs(result) / vp;
-		sval = sval > 1 ? 1 : sval;
-		if (result < 0) sval = 1 - sval;
+		floating_t sval = fabs(score) / vp;
+		sval = MIN(sval, 1.0);
+		if (score < 0) sval = 1 - sval;
 		if (u->val_extra)
 			rval += scale * sval;
 		else
@@ -497,7 +499,8 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	/* Record the result. */
 
 	assert(n == t->root || n->parent);
-	floating_t rval = scale_value(u, b, node_color, significant, result);
+	floating_t score = 0.5 * result;
+	floating_t rval = scale_value(u, b, node_color, significant, score);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
