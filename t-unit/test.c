@@ -998,10 +998,11 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 	for (int i = 0; i < games; i++)  {
 		board_t b2;
 		board_copy(&b2, b);
-		
-		int score = playout_play_game(&playout, &b2, color, NULL, ownermap);
-		if (color == S_WHITE)
-			score = -score;
+
+		/* Get score from black's perspective. */
+		floating_t score = playout_play_game(&playout, &b2, color, NULL, ownermap);
+		score = -score;
+
 		wr += (score > 0);
 		board_done(&b2);
 	}

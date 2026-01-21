@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "debug.h"
 #include "board.h"
@@ -99,6 +100,7 @@ static coord_t
 montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	montecarlo_t *mc = (montecarlo_t*)e->data;
+	enum stone our_color = stone_other(color);
 
 	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
@@ -148,13 +150,20 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 
 		playout_setup_t ps = playout_setup(mc->gamelen, 0);
 		playout_t playout = { &ps, mc->playout };
-		int result = playout_play_game(&playout, &b2, color, NULL, NULL);
+		floating_t score = playout_play_game(&playout, &b2, color, NULL, NULL);
+
+		if (MCDEBUGL(3))
+			fprintf(stderr, "\tresult: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
+
+		/* Get result from our perspective (was white's). */
+		if (our_color == S_BLACK)
+			score = -score;
 
 		board_done(&b2);
 
 #if 0		/* XXX we don't check superko in playouts anymore.
 		 *     If we did it would set board superko_violation, not return 0. */
-		if (result == 0) {
+		if (score == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
 			if (unlikely(superko > 2 * stop.desired.playouts)) {
@@ -171,16 +180,13 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 		}
 #endif
 
-		if (MCDEBUGL(3))
-			fprintf(stderr, "\tresult for other player: %d\n", result);
-
 		int pos = is_pass(coord) ? 0 : coord;
 
 		good_games++;
 		moves[pos].games++;
 
-		losses += result > 0;
-		moves[pos].wins += 1 - (result > 0);
+		losses += (score < 0);
+		moves[pos].wins += (score > 0);
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.

@@ -264,8 +264,7 @@ fill_bent_three(board_t *b, enum stone color)
 		color = stone_other(color);
 
 
-
-int
+floating_t
 playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		  amafmap_t *amafmap, ownermap_t *ownermap)
 {
@@ -340,18 +339,17 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		memcpy(b->passes, starting_passes, sizeof(starting_passes));
 		last_move(b).color = stone_other(starting_color);
 	}
-	
+
 	floating_t score = board_fast_score(b);
-	int result = (starting_color == S_WHITE ? score * 2 : - (score * 2));
 
 	if (DEBUGL(6)) {
-		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
+		fprintf(stderr, "Random playout result: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
 		if (DEBUGL(7))  board_print(b, stderr);
 	}
 
 	if (ownermap)  ownermap_fill(ownermap, b);
 
-	return result;
+	return score;
 }
 
 

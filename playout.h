@@ -87,11 +87,13 @@ typedef struct {
 
 void amaf_init(amafmap_t *map);
 
-/* >0: starting_color wins,
- * <0: starting_color loses; returned number is DOUBLE the score difference.
- *  0: superko inside the game tree (XXX: jigo not handled) */
-int playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
-		      amafmap_t *amafmap, ownermap_t *ownermap);
+/* Run one simulation and return score from white's perspective:
+ *   >0: white wins
+ *   <0: black wins
+ *    0: jigo (shouldn't happen with komi)
+ * Note: superko not checked during playouts. */
+floating_t playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
+			     amafmap_t *amafmap, ownermap_t *ownermap);
 
 /* Play move returned by playout policy, or a randomly picked move if there was none. */
 coord_t playout_play_move(playout_t *playout, board_t *b, enum stone color);

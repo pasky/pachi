@@ -303,7 +303,7 @@ record_amaf_move(amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 	amaf->game[amaf->gamelen++] = coord;
 }
 
-static int
+static floating_t
 uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
               tree_t *t, tree_node_t *n, enum stone node_color, int spaces)
 {
@@ -318,17 +318,16 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
 
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
 	playout_t playout = { &ps, u->playout };
-	int result = playout_play_game(&playout, b, next_color, amaf, &u->ownermap);
-	
-	/* Get result from black's perspective. */
-	if (next_color == S_WHITE)
-		result = - result;
+	floating_t score = playout_play_game(&playout, b, next_color, amaf, &u->ownermap);
+
+	/* Get score from black's perspective. */
+	score = -score;
 	
 	if (UDEBUGL(7))
-		fprintf(stderr, "%*s -- [%d..%d] %s random playout result %d\n",
-		        spaces, "", player_color, next_color, coord2sstr(node_coord(n)), result);
+		fprintf(stderr, "%*s -- [%d..%d] %s random playout result %.1f\n",
+		        spaces, "", player_color, next_color, coord2sstr(node_coord(n)), score);
 
-	return result;
+	return score;
 }
 
 static floating_t
@@ -395,7 +394,6 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	if (n->u.playouts >= u->significant_threshold)
 		significant[node_color - 1] = n;
 
-	int result;
 	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* debug */
@@ -488,7 +486,8 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, b, player_color, &amaf, t, n, node_color, spaces);
+
+	floating_t score = uct_leaf_node(u, b, player_color, &amaf, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
@@ -499,13 +498,12 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	/* Record the result. */
 
 	assert(n == t->root || n->parent);
-	floating_t score = 0.5 * result;
 	floating_t rval = scale_value(u, b, node_color, significant, score);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b, rval);
 
-	stats_add_result(&t->avg_score, (float)result / 2, 1);
+	stats_add_result(&t->avg_score, score, 1);
 	if (t->use_extra_komi) {
-		stats_add_result(&u->dynkomi->score, (float)result / 2, 1);
+		stats_add_result(&u->dynkomi->score, score, 1);
 		stats_add_result(&u->dynkomi->value, rval, 1);
 	}
 
