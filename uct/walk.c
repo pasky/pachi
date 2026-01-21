@@ -368,7 +368,7 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 }
 
 static tree_node_t *
-uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, int *presult)
+uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 {
 	amafmap_t amaf;
 	amaf_init(&amaf);
@@ -446,7 +446,6 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 					res, group_at(b, m.coord), b->superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
-			*presult = 0;
 			return n;
 		}
 
@@ -507,11 +506,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		stats_add_result(&u->dynkomi->value, rval, 1);
 	}
 
-	*presult = result;
 	return n;
 }
 
-int
+static void
 uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 {
 #ifdef EXTRA_CHECKS
@@ -519,10 +517,9 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 #endif
 	board_t b2;
 	board_copy(&b2, b);
-	
-	int result;
-	tree_node_t *n = uct_playout_descent(u, &b2, player_color, t, &result);
-	
+
+	tree_node_t *n = uct_playout_descent(u, &b2, player_color, t);
+
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
 		for (; n->parent; n = n->parent) {
@@ -531,7 +528,6 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	}
 
 	board_done(&b2);
-	return result;
 }
 
 int
