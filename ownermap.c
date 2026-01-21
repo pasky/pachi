@@ -24,7 +24,9 @@ printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
-		sbprintf(buf, "Score Est: %s", ownermap_score_est_str(board, ownermap));
+		sbprintf(buf, "Score Est: %s  Playouts: %s",
+			 ownermap_score_est_str(board, ownermap),
+			 playouts_score_est_str(ownermap));
 		return;
 	}
 	
@@ -45,7 +47,7 @@ board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap)
 }
 
 void
-ownermap_fill(ownermap_t *ownermap, board_t *b)
+ownermap_fill(ownermap_t *ownermap, board_t *b, floating_t score)
 {
 	ownermap->playouts++;
 	foreach_point(b) {
@@ -54,6 +56,12 @@ ownermap_fill(ownermap_t *ownermap, board_t *b)
 		if (color == S_NONE)      color = board_eye_color(b, c);
 		ownermap->map[c][color]++;
 	} foreach_point_end;
+
+	/* Keep track of average score, deviation. */
+	floating_t prev_avg = ownermap->avg_score.value;
+	stats_add_result(&ownermap->avg_score, score, 1);
+	floating_t avg = ownermap->avg_score.value;
+	stats_add_result(&ownermap->score_sq_dev, (score - prev_avg) * (score - avg), 1);
 }
 
 float
@@ -203,6 +211,28 @@ ownermap_score_est_str(board_t *b, ownermap_t *ownermap)
 {
 	static char buf[32];
 	float s = ownermap_score_est(b, ownermap);
+	sprintf(buf, "%s+%.1f", (s > 0 ? "W" : "B"), fabs(s));
+	return buf;
+}
+
+float
+playouts_score_est(ownermap_t *ownermap)
+{
+	return ownermap->avg_score.value;
+}
+
+float
+playouts_score_std_dev(ownermap_t *ownermap)
+{
+	return sqrt(ownermap->score_sq_dev.value);
+}
+
+/* Returns static buffer */
+char *
+playouts_score_est_str(ownermap_t *ownermap)
+{
+	static char buf[32];
+	float s = playouts_score_est(ownermap);
 	sprintf(buf, "%s+%.1f", (s > 0 ? "W" : "B"), fabs(s));
 	return buf;
 }

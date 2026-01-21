@@ -347,7 +347,7 @@ playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 		if (DEBUGL(7))  board_print(b, stderr);
 	}
 
-	if (ownermap)  ownermap_fill(ownermap, b);
+	if (ownermap)  ownermap_fill(ownermap, b, score);
 
 	return score;
 }
