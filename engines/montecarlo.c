@@ -130,6 +130,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 		board_t b2;
 		board_copy(&b2, b);
 
+		/* Play one random move first. */
 		coord_t coord = board_play_random(&b2, color, NULL, NULL);
 		if (!is_pass(coord) && !group_at(&b2, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
@@ -151,6 +152,8 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 
 		board_done(&b2);
 
+#if 0		/* XXX we don't check superko in playouts anymore.
+		 *     If we did it would set board superko_violation, not return 0. */
 		if (result == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
@@ -166,6 +169,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			i--, superko++;
 			continue;
 		}
+#endif
 
 		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult for other player: %d\n", result);
@@ -191,7 +195,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
 			board_print(b, stderr);
 		}
-pass_wins:
+//pass_wins:
 		top_coord = pass; top_ratio = 0.5;
 		goto move_found;
 	}
