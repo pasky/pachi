@@ -465,14 +465,15 @@ cmd_gogui_livegfx(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
-	
+	/* Make new ownermap, engine ownermap usually has few playouts. */
+	ownermap_t ownermap;  ownermap_init(&ownermap);
+	batch_playouts(MAX_THREADS, 2000, b, board_to_play(b), &ownermap, false, NULL, NULL);
+
 	gtp_printf(gtp, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)
 			continue;
-		float p = ownermap_estimate_point(ownermap, c);
+		float p = ownermap_estimate_point(&ownermap, c);
 		
 		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i
 		if      (p < -.8)  p = -1.0;
@@ -484,28 +485,39 @@ cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		else               p = 1.0;
 		printf(" %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
+	printf("\n");
 
-	printf("\nTEXT Score Est: %s\n", ownermap_score_est_str(b, ownermap));
+	/* Score estimate */
+	printf("TEXT %s   Playouts: %s\n",
+	       ownermap_score_est_str(b, &ownermap),
+	       playouts_score_est_str(&ownermap));
+
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
-	
+	/* Make new ownermap, engine ownermap usually has few playouts. */
+	ownermap_t ownermap;  ownermap_init(&ownermap);
+	batch_playouts(MAX_THREADS, 2000, b, board_to_play(b), &ownermap, false, NULL, NULL);
+
 	gtp_printf(gtp, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
-		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
+		enum point_judgement j = ownermap_score_est_coord(b, &ownermap, c);
 		float p = 0;
 		if (j == PJ_BLACK)  p = 0.5;
 		if (j == PJ_WHITE)  p = -0.5;
 		printf(" %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
+	printf("\n");
 
-	printf("\nTEXT Score Est: %s\n", ownermap_score_est_str(b, ownermap));
+	/* Score estimate */
+	printf("TEXT %s   Playouts: %s\n",
+	       ownermap_score_est_str(b, &ownermap),
+	       playouts_score_est_str(&ownermap));
+
 	return P_OK;
 }
 
