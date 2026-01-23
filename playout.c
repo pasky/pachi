@@ -23,7 +23,12 @@ void
 amaf_record_move(amafmap_t *amaf, board_t *b)
 {
 	assert(amaf->gamelen < MAX_GAMELEN);
-	amaf->is_ko_capture[amaf->gamelen] = board_playing_ko_threat(b);
+
+	int flags = 0;
+	if (unlikely(board_playing_ko_threat(b)))
+		flags |= AMAF_KO_CAPTURE;
+
+	amaf->flags[amaf->gamelen] = flags;
 	amaf->game[amaf->gamelen++] = last_move(b).coord;
 }
 
@@ -57,14 +62,12 @@ amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp)
 int
 amaf_ko_length(amafmap_t *map, int move)
 {
-	bool *ko_capture_map = &map->is_ko_capture[move];
-	int map_length = map->gamelen - move;
-
-	if (map_length <= 0 || !ko_capture_map[0])
+	if (move >= map->gamelen || !amaf_is_ko_capture(map, move))
 		return 0;
 
 	int length = 1;
-	while (length + 2 < map_length && ko_capture_map[length + 2])
+	while (move + length + 2 < map->gamelen &&
+	       amaf_is_ko_capture(map, move + length + 2))
 		length += 3;
 	return length;
 }

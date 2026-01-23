@@ -76,13 +76,18 @@ typedef struct {
  * reading some tactical positions in depth (even if they are just one-stone
  * snapback). */
 typedef struct {
-	coord_t game[MAX_GAMELEN];
-	bool is_ko_capture[MAX_GAMELEN];
 	int gamelen;
-	/* Start of the playout part of the record.
-	 * in AMAF, we search the range [game_baselen, gamelen[ */
-	int game_baselen;
+	int game_baselen;		/* Start of the playout part of the record.
+					 * in AMAF, we search the range [game_baselen, gamelen[ */
+	coord_t game[MAX_GAMELEN];	/* Playout record */
+	int    flags[MAX_GAMELEN];	/* Move flags */
 } amafmap_t;
+
+/* amafmap move flags */
+#define AMAF_KO_CAPTURE 1
+
+#define amaf_is_ko_capture(map, index)  ((map)->flags[index] & AMAF_KO_CAPTURE)
+
 
 /* AMAF first play data */
 typedef struct {
