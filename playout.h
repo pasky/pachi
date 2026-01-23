@@ -85,8 +85,10 @@ typedef struct {
 
 /* amafmap move flags */
 #define AMAF_KO_CAPTURE 1
+#define AMAF_SELFATARI  2
 
 #define amaf_is_ko_capture(map, index)  ((map)->flags[index] & AMAF_KO_CAPTURE)
+#define amaf_is_selfatari(map, index)   ((map)->flags[index] & AMAF_SELFATARI)
 
 
 /* AMAF first play data */

@@ -28,8 +28,15 @@ amaf_record_move(amafmap_t *amaf, board_t *b)
 	if (unlikely(board_playing_ko_threat(b)))
 		flags |= AMAF_KO_CAPTURE;
 
+	coord_t last = last_move(b).coord;
+	if (likely(last != pass)) {
+		group_t g = group_at(b, last);
+		if (g && group_libs(b, g) == 1)
+			flags |= AMAF_SELFATARI;
+	}
+
 	amaf->flags[amaf->gamelen] = flags;
-	amaf->game[amaf->gamelen++] = last_move(b).coord;
+	amaf->game[amaf->gamelen++] = last;
 }
 
 /* Find first play at each location in the playout. */
