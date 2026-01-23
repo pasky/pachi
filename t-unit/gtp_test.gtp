@@ -333,6 +333,7 @@ gogui-pattern_features J9
 gogui-pattern_gammas J9
 gogui-show_spatial J9
 gogui-spatial_size 6
+gogui-set_criticality_filters playouts 1000
 gogui-point_criticality
 gogui-move_criticality
 gogui-amaf_criticality

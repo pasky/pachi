@@ -139,6 +139,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 			printf("gfx/Move Criticality At/gogui-move_criticality %%p/Show move criticality at given position\n");
 			printf("gfx/AMAF Criticality At/gogui-amaf_criticality %%p/Show AMAF criticality at given position\n");
 		}
+		printf("param/Set Criticality Filters/gogui-set_criticality_filters/Set least played moves filters used by Move and AMAF criticality\n");
 	}
 	if (str_prefix("UCT", e->name)) {
 		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
@@ -712,6 +713,56 @@ cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 
 /*************************************************************************************************/
+/* Get/set criticality filters
+ *
+ * Since we only focus on moves' values, move and AMAF criticality visualizations depend
+ * a lot on the filter value used to discard rarely played moves:
+ * Too low and insignificant good moves that are never played will pollute the results,
+ * Too high we exclude too much stuff and some good moves will be missing.
+ * Let user set them through gogui in case default values need to be adjusted. */
+
+static float move_criticality_filter = 0.25;
+static float amaf_criticality_filter = 0.25;
+static float rave_amaf_criticality_filter = 0.40;
+
+/* Number of playouts for gogui criticality functions */
+static int gogui_criticality_playouts = 10000;
+
+float gogui_get_rave_amaf_criticality_filter() {  return rave_amaf_criticality_filter;  }
+
+enum parse_code
+cmd_gogui_set_criticality_filters(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *name;
+	gtp_arg_optional(name);
+
+	/* Set value: 'name' 'value' arguments. */
+	if (*name) {
+		char *value; gtp_arg(value);
+		float val = atof(value);
+		if      (strcmp(name, "playouts") && (val < 0.0 || val > 1.0)) {
+			gtp_error(gtp, "value should be between 0.0 and 1.0");  return P_OK;
+		}
+
+		if      (!strcmp(name, "playouts"))                      gogui_criticality_playouts = atoi(value);
+		else if (!strcmp(name, "move_criticality_filter"))       move_criticality_filter = val;
+		else if (!strcmp(name, "amaf_criticality_filter"))       amaf_criticality_filter = val;
+		else if (!strcmp(name, "rave_amaf_criticality_filter"))  rave_amaf_criticality_filter = val;
+		else     gtp_error_printf(gtp, "unknown variable '%s'\n", name);
+		return P_OK;
+	}
+
+	/* Get values: no arguments. */
+	gtp_printf(gtp, "playouts %i\n", gogui_criticality_playouts);
+	gtp_printf(gtp, "move_criticality_filter %.2f\n", move_criticality_filter);
+	gtp_printf(gtp, "amaf_criticality_filter %.2f\n", amaf_criticality_filter);
+	gtp_printf(gtp, "rave_amaf_criticality_filter %.2f\n", rave_amaf_criticality_filter);
+
+	return P_OK;
+}
+
+
+/*************************************************************************************************/
 /* Point criticality:   (ownership criticality)
  *
  * Visualize how owning a point and winning the game are correlated in playouts. */
@@ -779,8 +830,6 @@ gogui_criticality_collect_data(board_t *b, enum stone color,
 	}
 }
 
-#define GOGUI_CRITICALITY_PLAYOUTS 10000
-
 /* Display point criticality colormap  (ownership criticality)
  * This is for visualization purposes, doesn't reflect criticality data used by ucb1amaf
  * (see criticality.h for details). */
@@ -796,7 +845,7 @@ cmd_gogui_point_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp
 	if (*gtp->next)
 		gtp_arg_coord(g.coord);
 
-	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, false,
+	batch_playouts(MAX_THREADS, gogui_criticality_playouts, b, color, NULL, false,
 		       gogui_criticality_collect_data, &g);
 
 	gtp_printf(gtp, "");
@@ -821,7 +870,7 @@ gogui_move_criticality_display(FILE *fh, board_t *b, gogui_move_crit_t *g)
 	move_criticality_t *crit = &g->crit;
 	float *values = crit->criticality;
 
-	move_criticality_compute(b, crit, 0.20);
+	move_criticality_compute(b, crit, move_criticality_filter);
 
 	//gogui_signed_colormap_fixed_scale(fh, b, values, -0.8, 0.20);
 	gogui_signed_colormap_linear(fh, b, values);
@@ -864,7 +913,7 @@ cmd_gogui_move_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (*gtp->next)
 		gtp_arg_coord(g.coord);
 
-	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, true,
+	batch_playouts(MAX_THREADS, gogui_criticality_playouts, b, color, NULL, true,
 		       gogui_move_criticality_collect_data, &g);
 
 	gtp_printf(gtp, "");
@@ -890,7 +939,7 @@ gogui_amaf_criticality_display(FILE *fh, board_t *b, gogui_amaf_crit_t *g)
 	amaf_criticality_t *crit = &g->crit;
 	float *values = crit->rating;
 
-	amaf_criticality_compute(b, crit, 0.20);
+	amaf_criticality_compute(b, crit, amaf_criticality_filter);
 
 	//gogui_signed_colormap_fixed_scale(fh, b, values, -0.8, 0.20);
 	gogui_signed_colormap_linear(fh, b, values);
@@ -933,7 +982,7 @@ cmd_gogui_amaf_criticality(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (*gtp->next)
 		gtp_arg_coord(g.coord);
 
-	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, true,
+	batch_playouts(MAX_THREADS, gogui_criticality_playouts, b, color, NULL, true,
 		       gogui_amaf_criticality_collect_data, &g);
 
 	gtp_printf(gtp, "");
@@ -1040,7 +1089,7 @@ cmd_gogui_amaf_playouts(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (*gtp->next)
 		gtp_arg_coord(g.coord);
 
-	batch_playouts(MAX_THREADS, GOGUI_CRITICALITY_PLAYOUTS, b, color, NULL, true,
+	batch_playouts(MAX_THREADS, gogui_criticality_playouts, b, color, NULL, true,
 		       gogui_amaf_playouts_collect_data, &g);
 
 	gtp_printf(gtp, "");

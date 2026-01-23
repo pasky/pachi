@@ -235,10 +235,10 @@ uct_progress_gogui_rave_amaf_criticality(uct_t *u, tree_t *t, board_t *b, enum s
 	float ratings[BOARD_MAX_COORDS];	/*	 but with real rave data)		*/
 	memset(ratings, 0, sizeof(ratings));
 
-	float top_moves_filter = 0.55;
+	float bottom_moves_filter = gogui_get_rave_amaf_criticality_filter();
 	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
 		if (!is_pass(node_coord(n)) &&
-		    n->amaf.playouts >= max_playouts * top_moves_filter) {
+		    n->amaf.playouts >= max_playouts * bottom_moves_filter) {
 			/* rating = rave winrate - average winrate */
 			ratings[node_coord(n)] = tree_node_get_value(u->t, 1, n->amaf.value) - winrate;
 		}
