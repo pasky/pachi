@@ -15,6 +15,7 @@
 #include "tactics/util.h"
 #include "tactics/1lib.h"
 #include "tactics/ladder.h"
+#include "tactics/selfatari.h"
 #include "timeinfo.h"
 #include "uct/prior.h"
 #include "uct/internal.h"
@@ -755,8 +756,10 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	for (int i = 0; i < consider.moves; i++, ni++) {
 		coord_t c = consider.move[i];
 		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
-		
+
 		tree_setup_node(t, ni, c, node->depth + 1);
+		if (!board_playing_ko_threat(b) && is_selfatari(b, color, c))
+			ni->hints |= TREE_HINT_SELFATARI;
 		ni->parent = node;
 		ni->prior = map.prior[c];
 

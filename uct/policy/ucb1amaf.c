@@ -51,6 +51,8 @@ typedef struct {
 	/* Give 0 or negative rave bonus to ko threats before taking the ko.
 	   1=normal bonus, 0=no bonus, -1=invert rave bonus, -2=double penalty... */
 	int threat_rave;
+	/* Exclude selfatari moves which were not selfataris when played ? */
+	bool filter_selfataris;
 	/* Coefficient of criticality embedded in RAVE. */
 	floating_t crit_rave;
 	int crit_min_playouts;
@@ -260,6 +262,12 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			int distance = first - start;
 			if (distance & 1) continue;
 
+			/* Exclude selfatari moves which were not selfataris when played
+			 * (typically a case of amaf logic confusing cause and effect). */
+			if (b->filter_selfataris &&
+			    (ni->hints & TREE_HINT_SELFATARI) && !amaf_is_selfatari(map, first))
+				continue;
+
 			int weight = 1;
 			floating_t res = result;
 
@@ -315,6 +323,9 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	b->sylvain_rave = true;
 	b->distance_rave = 3;
 	b->threat_rave = 0;
+	/* XXX Although this removes a lot of bad moves from RAVE and should be beneficial
+	*      it lowers winrate slightly, so off by default for now. Investigate... */
+	b->filter_selfataris = false;
 
 	b->crit_rave = 1.1f;
 	b->crit_min_playouts = 2000;
@@ -351,6 +362,8 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 				b->distance_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "threat_rave") && optval) {
 				b->threat_rave = atoi(optval);
+			} else if (!strcasecmp(optname, "filter_selfataris") && optval) {
+				b->filter_selfataris = atoi(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
 				b->crit_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_min_playouts") && optval) {

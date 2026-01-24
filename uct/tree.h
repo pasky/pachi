@@ -76,8 +76,9 @@ typedef struct tree_node {
 	* Used for virtual loss computation. */
 	signed char descents;
 
-#define TREE_HINT_INVALID 1 // don't go to this node, invalid move
-#define TREE_HINT_DCNN    2 // node has dcnn priors
+#define TREE_HINT_INVALID   1  // don't go to this node, invalid move
+#define TREE_HINT_DCNN      2  // node has dcnn priors
+#define TREE_HINT_SELFATARI 4  // move is selfatari
 	unsigned char hints;
 
 	/* In case multiple threads walk the tree, is_expanded is set
