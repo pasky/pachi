@@ -138,39 +138,6 @@ countercapturable_groups(board_t *b, group_t group, mq_t *q)
 	return found;
 }
 
-/* Doesn't check snapbacks.
- * We can't use b->clen, not maintained by board_quick_play(). */
-bool
-can_countercapture_any(board_t *b, group_t group, mq_t *q)
-{
-	enum stone color = board_at(b, group);
-	enum stone other = stone_other(color);
-
-#ifdef EXTRA_CHECKS
-	assert(sane_group(b, group));
-	assert(is_player_color(color));
-#endif
-	int qmoves_prev = q ? q->moves : 0;
-
-	foreach_in_group(b, group) {
-		foreach_neighbor(b, c, {
-			group_t g = group_at(b, c);
-			if (board_at(b, c) != other ||
-			    group_libs(b, g) > 1)
-				continue;
-			coord_t lib = group_lib(b, g, 0);
-			if (!board_is_valid_play(b, color, lib))
-				continue;
-
-			if (!q) return true;
-			mq_add_nodup(q, group_lib(b, group_at(b, c), 0));
-		});
-	} foreach_in_group_end;
-
-	bool can = q ? q->moves > qmoves_prev : false;
-	return can;
-}
-
 
 #ifdef NO_DOOMED_GROUPS
 static bool
@@ -219,11 +186,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 	}
 
 	/* Can we capture some neighbor? */
-	/* XXX Attempts at using new can_countercapture() here failed so far.
-	 *     Could be because of a bug / under the stones situations
-	 *     (maybe not so uncommon in moggy ?) / it upsets moggy's balance somehow
-	 *     (there's always a chance opponent doesn't capture after taking snapback) */
-	bool ccap = can_countercapture_any(b, group, q);
+	bool ccap = can_countercapture(b, group, q);
 	if (ccap && alwaysccaprate > fast_random(100))
 		return;
 

@@ -21,8 +21,6 @@ bool capturing_group_is_snapback(board_t *b, group_t group);
 bool can_countercapture(board_t *b, group_t group, mq_t *q);
 /* Same as can_countercapture() but returns capturable groups instead of moves. */
 bool countercapturable_groups(board_t *b, group_t group, mq_t *q);
-/* Can group @group capture *any* neighbor ? */
-bool can_countercapture_any(board_t *b, group_t group, mq_t *q);
 
 /* Examine given group in atari, suggesting suitable moves for player
  * @to_play to deal with it (rescuing or capturing it). */
