@@ -56,8 +56,11 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 typedef struct {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, patternrate, korate, josekirate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
+#ifdef MOGGY_GLOBAL_ATARI
+	unsigned int capturerate;
+#endif
 	unsigned int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
@@ -258,6 +261,7 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 }
 #endif /* MOGGY_JOSEKI */
 
+#ifdef MOGGY_GLOBAL_ATARI
 static void
 global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
@@ -296,6 +300,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 		}
 	}
 }
+#endif  /* MOGGY_GLOBAL_ATARI */
 
 static int
 local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
@@ -687,6 +692,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 	/* Global checks */
 
+#ifdef MOGGY_GLOBAL_ATARI
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
 		mq_t q;  mq_init(&q);
@@ -694,6 +700,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
+#endif
 
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
@@ -823,9 +830,11 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 
 	/* Global checks */
 
+#ifdef MOGGY_GLOBAL_ATARI
 	/* Any groups in atari? */
 	if (pp->capturerate > 0)
 		FULLCHOOSE_ADD_TAGGED(global_atari_check(p, b, to_play, &q), 1<<MQ_GATARI);
+#endif
 
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
@@ -1043,8 +1052,10 @@ playout_moggy_init(char *arg, board_t *b)
 				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nlibrate") && optval) {
 				pp->nlibrate = atoi(optval);
+#ifdef MOGGY_GLOBAL_ATARI
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
@@ -1113,7 +1124,6 @@ playout_moggy_init(char *arg, board_t *b)
 	if (pp->lcapturerate == -1U) pp->lcapturerate = rate;
 	if (pp->atarirate == -1U) pp->atarirate = rate;
 	if (pp->nlibrate == -1U) pp->nlibrate = rate;
-	if (pp->capturerate == -1U) pp->capturerate = rate;
 	if (pp->patternrate == -1U) pp->patternrate = rate;
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->eyefillrate == -1U) pp->eyefillrate = rate;
@@ -1123,6 +1133,9 @@ playout_moggy_init(char *arg, board_t *b)
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
 	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
+#ifdef MOGGY_GLOBAL_ATARI
+	if (pp->capturerate == -1U) pp->capturerate = rate;
+#endif
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
 
