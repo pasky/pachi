@@ -57,6 +57,8 @@ coord_t selfatari_cousin_approach_moves(board_t *b, enum stone color, coord_t co
 #define SELFATARI_BIG_GROUPS_ONLY	2
 
 bool is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags);
+bool is_selfatari_slow(board_t *b, enum stone color, coord_t to);
+
 
 static inline bool
 is_bad_selfatari(board_t *b, enum stone color, coord_t to)
@@ -96,18 +98,11 @@ is_selfatari(board_t *b, enum stone color, coord_t to)
 	assert(sane_coord(to));
 	assert(board_at(b, to) == S_NONE);
 #endif
-        /* More than one immediate liberty, thumbs up! */
-        if (immediate_liberty_count(b, to) > 1)
-                return false;
+	/* More than one immediate liberty, thumbs up! */
+	if (immediate_liberty_count(b, to) > 1)
+		return false;
 
-        bool r = true;
-        with_move(b, to, color, {
-                group_t g = group_at(b, to);
-                if (g && group_libs(b, g) > 1)
-                        r = false;
-        });
-
-        return r;
+	return is_selfatari_slow(b, color, to);
 }
 
 

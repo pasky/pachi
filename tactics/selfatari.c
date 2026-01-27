@@ -19,6 +19,10 @@
 /**********************************************************************************/
 /* Selfatari state */
 
+/* Suppress maybe-uninitialized warning when accessing s->groupids */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 static inline bool
 group_is_selfatari_neighbor(selfatari_state_t *s, board_t *b, group_t g, enum stone color)
 {
@@ -29,6 +33,23 @@ group_is_selfatari_neighbor(selfatari_state_t *s, board_t *b, group_t g, enum st
 	for (int i = 0; i < s->groupcts[color]; i++)
 		if (g == s->groupids[color][i])
 			return true;
+	return false;
+}
+
+#pragma GCC diagnostic pop
+
+
+/* Return true if c is next to a selfatari neighbor group of given color. */
+static bool
+coord_is_selfatari_group_neighbor(selfatari_state_t *s, board_t *b, coord_t c, enum stone color)
+{
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) != color)
+			continue;
+		group_t g = group_at(b, c);
+		if (group_is_selfatari_neighbor(s, b, g, color))
+			return true;
+	});
 	return false;
 }
 
@@ -1059,6 +1080,85 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 	 * is a bad self-atari! */
 	return true;
 }
+
+/* Custom init_selfatari_state():
+ * Store only opponent groups in atari,
+ * Return if own neighbor with enough libs found. */
+#define init_is_selfatari_state(b, color, to, s)			\
+	s.groupcts[S_BLACK] = s.groupcts[S_WHITE] = 0;			\
+	s.lib = pass;							\
+									\
+	foreach_neighbor(b, to, {					\
+		enum stone col = board_at(b, c);			\
+		if (col == S_NONE) {					\
+			s.lib = c;					\
+			continue;					\
+		}							\
+		group_t group = group_at(b, c);				\
+		if (!group) { continue; }				\
+									\
+		int libs = group_libs(b, group);			\
+									\
+		/* Speedup: Own neighbor with enough liberties ? */	\
+		if (col == color && libs > 2)  return false;		\
+									\
+		/* Store only groups in atari for other color. */	\
+		if (col == color || libs == 1)				\
+			if (!group_is_selfatari_neighbor(&s, b, group, col)) \
+				s.groupids[col][s.groupcts[col]++] = group; \
+	});
+
+bool
+is_selfatari_slow(board_t *b, enum stone color, coord_t to)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+#endif
+	selfatari_state_t s;
+	init_is_selfatari_state(b, color, to, s);  // custom init_selfatari_state()
+
+	enum stone other_color = stone_other(color);
+	int libs = (s.lib != pass);
+
+	/* Quick check: immediate liberty + captures */
+	if (libs + s.groupcts[other_color] > 1)
+		return false;
+
+	/* Check if neighbor groups gives enough liberties. */
+	for (int i = 0; i < s.groupcts[color]; i++) {
+		group_t g = s.groupids[color][i];
+		int glibs = group_libs(b, g);
+		// (glibs > 2)  checked by init_is_selfatari_state()
+		if (glibs != 2)  continue;
+
+		/* 2 liberty neighbor */
+		for (int i = 0; i < 2; i++) {
+			coord_t c = group_lib(b, g, i);
+			if (c == to || c == s.lib)  continue;
+			/* Found extra liberty */
+			if (++libs > 1)
+				return false;
+			s.lib = c;  /* hack */
+		}
+	}
+
+	/* Check if captures give enough liberties.
+	 * (if no own neighbor we just need to check neighbors but faster this way). */
+	for (int i = 0; i < s.groupcts[other_color]; i++) {
+		group_t g = s.groupids[other_color][i];
+		foreach_in_group(b, g) {
+			coord_t stone = c;
+			if ((coord_is_adjecent(stone, to) ||
+			     coord_is_selfatari_group_neighbor(&s, b, stone, color)) &&
+			    ++libs > 1)
+				return false;
+		} foreach_in_group_end;
+	}
+
+	return true;
+}
+
 
 coord_t
 selfatari_cousin_approach_moves(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
