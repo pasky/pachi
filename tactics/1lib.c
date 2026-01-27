@@ -81,7 +81,7 @@ can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 
 	/* Can group escape by playing on liberty ? */
 	return (board_is_valid_play_no_suicide(b, to_play, lib) &&
-		!is_bad_selfatari(b, to_play, lib));
+		!is_selfatari(b, to_play, lib));
 }
 
 /* Find group countercapture moves which are not snapbacks.
