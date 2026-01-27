@@ -56,10 +56,13 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 typedef struct {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, patternrate, korate, josekirate, nakaderate, eyefixrate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, patternrate, korate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 #ifdef MOGGY_GLOBAL_ATARI
 	unsigned int capturerate;
+#endif
+#ifdef MOGGY_JOSEKI
+	unsigned int josekirate;
 #endif
 	unsigned int fillboardtries;
 	int koage;
@@ -979,12 +982,15 @@ playout_moggy_init(char *arg, board_t *b)
 
 	pp->patternrate = pp->eyefixrate = 100;
 	pp->lcapturerate = 90;
-	pp->atarirate = pp->josekirate = -1U;
+	pp->atarirate = -1U;
 	pp->nakaderate = 80;
 	pp->korate = 40; pp->koage = 3;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;
 	pp->nlibrate = 25;
+#ifdef MOGGY_JOSEKI
+	pp->josekirate = -1U;
+#endif
 
 	/* selfatarirate is slightly special, since to avoid playing some
 	 * silly move that stays on the board, it needs to block it many
@@ -1064,8 +1070,10 @@ playout_moggy_init(char *arg, board_t *b)
 				pp->eyefillrate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
+#ifdef MOGGY_JOSEKI
 			} else if (!strcasecmp(optname, "josekirate") && optval) {
 				pp->josekirate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "nakaderate") && optval) {
 				pp->nakaderate = atoi(optval);
 			} else if (!strcasecmp(optname, "eyefixrate") && optval) {
@@ -1128,13 +1136,15 @@ playout_moggy_init(char *arg, board_t *b)
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->eyefillrate == -1U) pp->eyefillrate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
-	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
 	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 #ifdef MOGGY_GLOBAL_ATARI
 	if (pp->capturerate == -1U) pp->capturerate = rate;
+#endif
+#ifdef MOGGY_JOSEKI
+	if (pp->josekirate == -1U) pp->josekirate = rate;
 #endif
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
