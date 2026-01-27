@@ -1179,6 +1179,72 @@ test_bad_selfatari_stats(board_t *b, char *arg)
 
 
 /**************************************************************************************************/
+/* is_selfatari() stress test */
+
+static bool
+real_is_selfatari(board_t *b, enum stone color, coord_t to)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
+	/* More than one immediate liberty, thumbs up! */
+	if (immediate_liberty_count(b, to) > 1)
+		return false;
+
+	bool r = true;
+	with_move(b, to, color, {
+		group_t g = group_at(b, to);
+		if (g && group_libs(b, g) > 1)
+			r = false;
+	});
+
+	return r;
+}
+
+/* Double check is_selfatari() at every move on the board. */
+static void
+is_selfatari_sanity_checks(board_t *b, void *data)
+{
+	static int checks = 0;
+
+	foreach_free_point(b) {
+		enum stone colors[] = { S_BLACK, S_WHITE };
+		for (int i = 0; i < 2; i++) {
+			enum stone color = colors[i];
+			checks++;
+
+			if (is_selfatari(b, color, c) != real_is_selfatari(b, color, c)) {
+				board_print(b, stderr);
+				fprintf(stderr, "is_selfatari(%s, %s) = %i   should be %i\n",
+					stone2str(color), coord2sstr(c),
+					is_selfatari(b, color, c), real_is_selfatari(b, color, c));
+				assert(0);
+			}
+
+			/* Show stats from time to time. */
+			if (checks % 16384 == 0) {
+				fprintf(stderr, "Checking moves ...  %i   %i games\r", checks, stress_test.game);
+				fflush(stderr);
+			}
+		}
+	} foreach_free_point_end;
+}
+
+/* Play some games and double check is_selfatari() at every move on the board. */
+static bool
+is_selfatari_stress_test(board_t *b, char *arg)
+{
+	args_end();
+	board_print_test(b);
+	stress_test_foreach_playout_move(100, b, is_selfatari_sanity_checks, NULL, NULL);
+	if (DEBUGL(2))  fprintf(stderr, "\n");
+	return true;
+}
+
+
+/**************************************************************************************************/
 
 /* Run playout showing board, candidate moves and playout logic behind
  * each move. Useful to visualize / debug / investigate what's going on
@@ -1488,6 +1554,7 @@ static t_unit_cmd commands[] = {
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
 	{ "bad_selfatari_stats",    test_bad_selfatari_stats    },
+	{ "is_selfatari_stress_test", is_selfatari_stress_test  },
 	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "breaking_nakade_seki",   test_breaking_nakade_seki,  },
