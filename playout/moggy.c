@@ -266,38 +266,34 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 static void
 global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+
 	if (b->clen == 0)
 		return;
 
-	moggy_policy_t *pp = (moggy_policy_t*)p->data;
-	if (pp->capcheckall) {
+	/* Moggy seqchoose (or fullchoose with capcheckall): pick from all available moves. */
+	if (!pp->fullchoose || pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (DEBUGL(5) && q->moves)
 			mq_print_line(q, "Moggy global atari: ");
-		if (pp->fullchoose)
-			return;
+		return;
 	}
 
+	/* Moggy fullchoose (without capcheckall): pick moves from one group only. */
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
-			/* XXX: Try carrying on. */
-			if (DEBUGL(5))
-				mq_print_line(q, "Moggy global atari: ");
-			if (pp->fullchoose)
-				return;
+			if (DEBUGL(5))  mq_print_line(q, "Moggy global atari: ");
+			return;
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
-			/* XXX: Try carrying on. */
-			if (DEBUGL(5))
-				mq_print_line(q, "Moggy global atari: ");
-			if (pp->fullchoose)
-				return;
+			if (DEBUGL(5))  mq_print_line(q, "Moggy global atari: ");
+			return;
 		}
 	}
 }
