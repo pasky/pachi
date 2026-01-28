@@ -1,5 +1,4 @@
-/* Heuristical playout (and tree prior) policy modelled primarily after
- * the description of the Mogo engine. */
+/* Heuristical playout policy modeled primarily after the description of the Mogo engine. */
 
 #include <assert.h>
 #include <math.h>
@@ -83,10 +82,6 @@ typedef struct {
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
-	/* Prior stone weighting. Weight of each stone between
-	 * cap_stone_min and cap_stone_max is (assess*100)/cap_stone_denom. */
-	int cap_stone_min, cap_stone_max;
-	int cap_stone_denom;
 
 	/* 2lib settings: */
 	bool atari_def_no_hopeless;
@@ -1014,10 +1009,6 @@ playout_moggy_init(char *arg, board_t *b)
 
 	pp->pattern2 = true;
 
-	pp->cap_stone_min = 2;
-	pp->cap_stone_max = 15;
-	pp->cap_stone_denom = 200;
-
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
 	pp->nlib_count = 4;
@@ -1102,12 +1093,6 @@ playout_moggy_init(char *arg, board_t *b)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "cap_stone_min") && optval) {
-				pp->cap_stone_min = atoi(optval);
-			} else if (!strcasecmp(optname, "cap_stone_max") && optval) {
-				pp->cap_stone_max = atoi(optval);
-			} else if (!strcasecmp(optname, "cap_stone_denom") && optval) {
-				pp->cap_stone_denom = atoi(optval);
 			} else if (!strcasecmp(optname, "atari_miaisafe")) {
 				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
