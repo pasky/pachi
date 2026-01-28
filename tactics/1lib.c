@@ -109,7 +109,6 @@ can_countercapture(board_t *b, group_t group, mq_t *q)
 	assert(sane_group(b, group));
 	assert(is_player_color(color));
 #endif
-	if (q) mq_init(q);
 	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {

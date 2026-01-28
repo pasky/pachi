@@ -474,7 +474,7 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m,
 		if (!cutting_stones(b, atariable))		break;
 		if (!cutting_stones(b, other))			break;
 		
-		mq_t mq;
+		mq_t mq;  mq_init(&mq);
 		coord_t lib = group_lib(b, atariable, 0);
 		can_countercapture(b, atariable, &mq);
 		mq_add(&mq, lib);
@@ -543,7 +543,7 @@ cutting_stones_and_can_capture_nearby_after_atari_(board_t *b, move_t *m, group_
 	//fprintf(stderr, "found %i targets\n", targets.moves);
 	
 	/* Find possible atari answers */
-	mq_t q;
+	mq_t q;  mq_init(&q);
 	coord_t lib = group_lib(b, atariable, 0);
 	can_countercapture(b, atariable, &q);
 	mq_add(&q, lib);
