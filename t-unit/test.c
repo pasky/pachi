@@ -166,11 +166,21 @@ board_load(board_t *b, FILE *f, char *arg)
 	next_arg(arg);
 	assert(isdigit(*arg));
 	int size = atoi(arg);
-	move_t last_move = move(pass, S_NONE);
+
+	/* last_move[1]: last move
+	 * last_move[2]: second last move
+	 * last_move[3]: third last move
+	 * last_move[4]: fourth last move */
+	move_t last_move[5];
+	move_t pass_move = move(pass, S_NONE);
+	for (int i = 1; i <= 4; i++)
+		last_move[i] = pass_move;
 	last_move_set = false;
+
 	board_resize(b, size);
 	b->rules = RULES_CHINESE;  /* reset rules in case they got changed */
 	board_clear(b);
+
 	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
 		if (!fgets(line, sizeof(line), f))  die("Premature EOF.\n");
@@ -196,16 +206,25 @@ board_load(board_t *b, FILE *f, char *arg)
 				default : die("Invalid stone '%c'\n", line[i]);
 			}
 			i++;
-			if (line[i] && line[i] != ' ' && line[i] != ')')
-				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
+			char nc = line[i];
+			bool is_last_move = (nc == ')' || nc == '2' || nc == '3' || nc == '4');
+			if (nc && nc != ' ' && !is_last_move)
+				die("No space after stone %i: '%c'\n", i/2 + 1, nc);
 
 			move_t m = move(coord_xy(i/2 + 1, y + 1), s);
-			if (line[i] == ')') {
+
+			/* Store last moves */
+			if (is_last_move) {
+				int j = (nc == ')' ? 1 : nc - '0');
+				assert(j >= 1 && j <= 4);
+				move_t *last = &last_move[j];
 				assert(s == S_BLACK || s == S_WHITE);
-				assert(last_move.coord == pass);
-				last_move = m;
-				last_move_set = true;
-				continue;	/* Play last move last ... */
+				if (last->coord != pass)
+					die("Last move #%i given multiple times !\n", j);
+				*last = m;
+				if (j == 1)
+					last_move_set = true;
+				continue;			/* Play last moves last ... */
 			}
 
 			if (s == S_NONE) continue;
@@ -213,8 +232,26 @@ board_load(board_t *b, FILE *f, char *arg)
 			check_play_move(b, &m);
 		}
 	}
-	if (last_move.coord != pass)
-		check_play_move(b, &last_move);
+
+	/* Play last moves at the end (or passes if not given). */
+	if (last_move_set) {
+		int passes[S_MAX];  memcpy(passes, b->passes, sizeof(passes));
+		enum stone color = stone_other(last_move[1].color);
+		for (int j = 4; j >= 1; j--) {
+			move_t *last = &last_move[j];
+
+			/* Check alternating colors... */
+			if (last->coord != pass && last->color != color)
+				die("Bad color for last move #%i: should be %s\n", j, stone2str(color));
+
+			last->color = color;
+			check_play_move(b, last);
+			color = stone_other(color);
+		}
+		/* Don't mess up japanese score ... */
+		memcpy(b->passes, passes, sizeof(passes));
+	}
+
 	int suicides = b->captures[S_BLACK] || b->captures[S_WHITE];
 	assert(!suicides);
 }
