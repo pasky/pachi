@@ -161,11 +161,66 @@ set_handicap(board_t *b, char *arg)
 }
 
 static void
-board_load(board_t *b, FILE *f, char *arg)
+skip_board_edge_line(FILE *f)
 {
-	next_arg(arg);
-	assert(isdigit(*arg));
-	int size = atoi(arg);
+	char buf[256];
+	if (!fgets(buf, sizeof(buf), f))      die("Premature EOF.\n");
+	if (!str_prefix("    +------", buf))  die("Board diagram: missing board edge.\n");
+}
+
+/* Full board diagram: Find board size from header */
+static int
+fullboard_size_from_header(char *line)
+{
+	int size = 0;
+	for (int i = 6; isupper(line[i]) && line[i+1] == ' '; i += 2)
+		size++;
+	return size;
+}
+
+#define fullboard_header(line)	str_prefix("      A B C", line)
+
+/* Parse board diagram from file.
+ * Diagram can be either minimalist or board_print() format with coordinates:
+ *                                 A B C D E  
+ *       boardsize 5             +-----------+
+ *       . X . O .             5 | . X . O . |
+ *       X . X O .             4 | X . X O . |
+ *       X X X O .             3 | X X X O . |
+ *       O O O X O             2 | O O O X O |
+ *       . . O)X .             1 | . . O)X . |
+ *                               +-----------+
+ *
+ * Other board attributes (komi, rules, passes, handicap) are set via commands:
+ *                             komi 6.5
+ *       boardsize 5               A B C D E  
+ *       komi 6.5                +-----------+
+ *       . X . O .             5 | . X . O . |
+ *       X . X O .             4 | X . X O . |
+ *       X X X O .             3 | X X X O . |
+ *       O O O X O             2 | O O O X O |
+ *       . . O)X .             1 | . . O)X . |
+ *                               +-----------+
+ */
+static void
+board_load(board_t *b, FILE *f, char *line, char *arg)
+{
+	/* Full board diagram with coordinates ? */
+	bool fullboard = false;
+
+	/* Find board size */
+	int size = 0;
+	if (str_prefix("boardsize", line)) {
+		init_arg(line);
+		next_arg(arg);
+		assert(isdigit(*arg));
+		size = atoi(arg);
+	} else if (fullboard_header(line)) {
+		fullboard = true;
+		current_cmd = "board_load";
+		size = fullboard_size_from_header(line);
+		skip_board_edge_line(f);
+	}
 
 	/* last_move[1]: last move
 	 * last_move[2]: second last move
@@ -181,22 +236,44 @@ board_load(board_t *b, FILE *f, char *arg)
 	b->rules = RULES_CHINESE;  /* reset rules in case they got changed */
 	board_clear(b);
 
-	for (int y = size - 1; y >= 0; y--) {
-		char line[256];
-		if (!fgets(line, sizeof(line), f))  die("Premature EOF.\n");
+	for (int y = size - 1; y >= 0; ) {
+		char buf[256];
+		char *line = buf;
+		if (!fgets(buf, sizeof(buf), f))  die("Premature EOF.\n");
 		chomp(line);
 		remove_comments(line);
 
+		/* Board header commands */
 		char *cmd = line;
 		if ('a' <= line[0] && line[0] <= 'z')  init_arg(line);
-		if (!strcmp("komi", cmd))     {  set_komi(b, next);     y++; continue;  }
-		if (!strcmp("rules", cmd))    {  set_rules(b, next);    y++; continue;  }
-		if (!strcmp("passes", cmd))   {  set_passes(b, next);   y++; continue;  }
-		if (!strcmp("handicap", cmd)) {  set_handicap(b, next); y++; continue;  }
+		if (!strcmp("komi", cmd))     {  set_komi(b, next);      continue;  }
+		if (!strcmp("rules", cmd))    {  set_rules(b, next);     continue;  }
+		if (!strcmp("passes", cmd))   {  set_passes(b, next);    continue;  }
+		if (!strcmp("handicap", cmd)) {  set_handicap(b, next);  continue;  }
 
-		if ((int)strlen(line) != size * 2 - 1 && 
-		    (int)strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
+		/* boardsize command + full board diagram ? */
+		if (fullboard_header(line)) {
+			if (size != fullboard_size_from_header(line))
+				die("boardsize %i given but board is of size %i.\n", size, fullboard_size_from_header(line));
+			fullboard = true;
+			skip_board_edge_line(f);
+			continue;
+		}
 		
+		/* Full diagram: trim coordinates / edge */
+		if (fullboard) {
+			int len = strlen(line);
+			if (len != size * 2 + 7 || line[4] != '|' || line[len - 1] != '|')
+				die("Doesn't look like a valid board diagram: '%s'\n", line);
+			line[len - 1] = 0;
+			line += 6;
+		}
+
+		int len = strlen(line);
+		if (len != size * 2 - 1 && len != size * 2)
+			die("Board line not %d char long: '%s'\n", size * 2 - 1, line);
+
+		/* Parse board line */
 		for (int i = 0; i < size * 2; i++) {
 			enum stone s;
 			switch (line[i]) {
@@ -231,7 +308,11 @@ board_load(board_t *b, FILE *f, char *arg)
 
 			check_play_move(b, &m);
 		}
+		y--;
 	}
+
+	if (fullboard)
+		skip_board_edge_line(f);
 
 	/* Play last moves at the end (or passes if not given). */
 	if (last_move_set) {
@@ -1682,10 +1763,11 @@ unit_test(char *filename)
 			case  0 : continue;
 		}
 
-		if (str_prefix("boardsize ", line)) {  init_arg(line); board_load(b, f, next); continue;  }
-		if (str_prefix("rules ", line))     {  init_arg(line); set_rules(b, next); continue;  }
-		if (str_prefix("komi ", line))      {  init_arg(line); set_komi(b, next); continue;  }
-		if (str_prefix("ko ", line))	    {  init_arg(line); set_ko(b, next); continue;  }
+		if (str_prefix("boardsize ", line) ||
+		    str_prefix("      A B C", line)) {  board_load(b, f, line, next); continue;  }
+		if (str_prefix("rules ", line))      {  init_arg(line); set_rules(b, next); continue;  }
+		if (str_prefix("komi ", line))       {  init_arg(line); set_komi(b, next); continue;  }
+		if (str_prefix("ko ", line))	     {  init_arg(line); set_ko(b, next); continue;  }
 		
 		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
 		else           {  total++;      passed     += unit_test_cmd(b, line); }
