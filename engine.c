@@ -162,7 +162,7 @@ engine_options_add(options_t *options, const char *name, const char *val)
 	options->n++;
 }
 
-static void
+void
 engine_options_copy(options_t *dest, options_t *src)
 {
 	memcpy(dest, src, sizeof(*src));
@@ -201,7 +201,7 @@ engine_options_concat(strbuf_t *buf, options_t *options)
 /* Engine init */
 
 /* init from scratch, preserving options. */
-static void
+void
 engine_init_(engine_t *e, int id, board_t *b)
 {
 	assert(id >= 0 && id < E_MAX);

@@ -149,6 +149,7 @@ char* supported_engines(bool show_all);
 
 /* Initialize engine. Call engine_done() later when finished with it. */
 void engine_init(engine_t *e, int id, const char *e_arg, board_t *b);
+void engine_init_(engine_t *e, int id, board_t *b);
 
 /* Clean up what engine_init() did. */
 void engine_done(engine_t *e);
@@ -200,6 +201,7 @@ void      engine_options_print(options_t *options);
 option_t *engine_options_lookup(options_t *options, const char *name);
 void      engine_options_concat(strbuf_t *buf, options_t *options);
 void	  engine_options_add(options_t *options, const char *name, const char *val);
+void      engine_options_copy(options_t *dest, options_t *src);
 
 /* For options which need to be set at engine setup time: */
 #define ENGINE_SETOPTION_NEED_RESET  \

@@ -496,6 +496,46 @@ uct_done(engine_t *e)
 #endif
 }
 
+/* Preserve saved dead groups on reset:
+ * Fixes scoring loopholes on kgs if we pass first and opponent disagrees.
+ * If we pass second and opponent disagrees no problem, we'll get 2 undo
+ * commands and another genmove, so dead groups will recomputed safely.
+ * But if we pass first, opponent disagrees and passes immediately:
+ *   genmove b			(engine passes, saves dead groups)
+ *   play w pass
+ *   final_status_list dead	(safe, uses saved dead groups)
+ *   undo			(reset engine)
+ *   play w pass
+ *   final_status_list dead	(unsafe if reset clears saved dead groups)
+ * No genmove command and we have lost saved dead groups, scoring will be
+ * unsafe if there are unclear groups. So preserve saved dead groups on
+ * reset and clear them in uct_genmove_setup() so they don't affect next
+ * game. */
+static void
+uct_reset(engine_t *e, board_t *b)
+{
+	uct_t *u = (uct_t*)e->data;
+	int engine_id = e->id;
+	options_t options;
+	mq_t dead_groups;
+	int pass_moveno;
+
+	/* Copy saved dead groups */
+	mq_copy(&dead_groups, &u->dead_groups);
+	pass_moveno = u->pass_moveno;
+
+	engine_options_copy(&options, &e->options);  /* Save options. */
+
+	e->options.n = 0;
+	engine_done(e);
+
+	engine_options_copy(&e->options, &options);  /* Restore options. */
+	engine_init_(e, engine_id, b);
+
+	/* Restore saved dead groups */
+	mq_copy(&u->dead_groups, &dead_groups);
+	u->pass_moveno = pass_moveno;
+}
 
 
 /* Run time-limited MCTS search on foreground. */
@@ -694,6 +734,10 @@ uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 
 	assert(u->t);
 	u->my_color = color;
+
+	/* Clear saved dead groups */
+	u->pass_moveno = -1;
+	mq_init(&u->dead_groups);
 
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
@@ -1699,6 +1743,7 @@ uct_engine_init(engine_t *e, board_t *b)
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
+	e->reset = uct_reset;
 
 	uct_state_init(e, b);
 
