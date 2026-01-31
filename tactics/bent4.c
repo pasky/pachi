@@ -218,9 +218,9 @@ bent4_play_move(bent4_t *b4, playout_t *playout, board_t *b, enum stone color)
 		goto play_move;
 	}
 
-	/* Playout plays if it can. */
-	if ((coord = playout_play_move(playout, b, color)) != pass)
-		return coord;  /* Move already played */
+	/* Let playout play if it can. */
+	if ((coord = playout_get_move(playout, b, color)) != pass)
+		goto play_move;
 
 	/* Fill bent-fours */
 	if ((coord = fill_bent4(b4, b, color)) != pass) {
