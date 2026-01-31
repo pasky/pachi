@@ -73,9 +73,8 @@ random_permit_handler(board_t *b, move_t *m, void *data)
 	return playout_permit_move(policy, b, m, true, true);
 }
 
-
 coord_t
-playout_play_move(playout_t *playout, board_t *b, enum stone color)
+playout_get_move(playout_t *playout, board_t *b, enum stone color)
 {
 	playout_setup_t *setup = playout->setup;
 	playout_policy_t *policy = playout->policy;
@@ -89,22 +88,30 @@ playout_play_move(playout_t *playout, board_t *b, enum stone color)
 	if (DEBUGL(5) && coord != playout_coord)
 		fprintf(stderr, "Playout move %s was invalid !\n", coord2sstr(playout_coord));
 
-	if (!is_pass(coord)) {
-		move_t m = move(coord, color);
-		int r = board_play(b, &m);
-		if (unlikely(r < 0)) {
-			board_print(b, stderr);
-			die("Picked playout move %s %s is ILLEGAL:\n", stone2str(color), coord2sstr(coord));
-		}
+	if (!is_pass(coord))
 		return coord;
-	}
 
 	/* Defer to uniformly random move choice if policy failed to produce a move.
 	 * This must never happen if the policy is tracking internal board state, obviously. */
-	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
+#ifdef EXTRA_CHECKS
 	assert(!policy->setboard || policy->setboard_randomok);
-	coord = board_play_random(b, color, random_permit_handler, policy);
+#endif
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
+	coord = board_pick_random_move(b, color, random_permit_handler, policy);
 	if (DEBUGL(5))  fprintf(stderr, "Playout random move: %s\n", coord2sstr(coord));
+	return coord;
+}
+
+coord_t
+playout_play_move(playout_t *playout, board_t *b, enum stone color)
+{
+	coord_t coord = playout_get_move(playout, b, color);
+	move_t m = move(coord, color);
+	int r = board_play(b, &m);
+	if (unlikely(r < 0)) {
+		board_print(b, stderr);
+		die("Picked playout move %s %s is ILLEGAL.\n", stone2str(color), coord2sstr(coord));
+	}
 	return coord;
 }
 

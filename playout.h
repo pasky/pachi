@@ -95,7 +95,10 @@ void amaf_init(amafmap_t *map);
 floating_t playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
 			     amafmap_t *amafmap, ownermap_t *ownermap);
 
-/* Play move returned by playout policy, or a randomly picked move if there was none. */
+/* Get move from playout policy, or a randomly picked move if there was none. */
+coord_t playout_get_move(playout_t *playout, board_t *b, enum stone color);
+
+/* Get + play move returned by playout policy, or a randomly picked move if there was none. */
 coord_t playout_play_move(playout_t *playout, board_t *b, enum stone color);
 
 /* Is *this* move permitted ? 

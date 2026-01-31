@@ -465,22 +465,8 @@ board_permit(board_t *b, move_t *m, void *data)
 	return true;
 }
 
-static inline bool
-board_try_random_move(board_t *b, int f, move_t *m, ppr_permit permit, void *permit_data)
-{
-	coord_t c = m->coord = b->f[f];
-	if (DEBUGL(10))
-		fprintf(stderr, "trying random move %d: %s %d\n", f, coord2sstr(c), board_is_valid_move(b, m));
-	if (!permit(b, m, permit_data))
-		return false;
-	if (likely(m->coord == c))
-		return likely(board_play_f(b, m, f) >= 0);
-	// permit modified the coordinate
-	return likely(board_play(b, m) >= 0);
-}
-
 coord_t
-board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
+board_pick_random_move(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
 {
 #ifdef EXTRA_CHECKS
 	assert(!quick_board(b));
@@ -495,21 +481,32 @@ board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_
 	 * - we end up checking the same unplayable moves again and again.
 	 * ideal would be to maintain a list of playable moves and pick from that. */
 	if (likely(b->flen)) {
-		int base = fast_random(b->flen), f;
+		int base = fast_random(b->flen);
 		move_t m = move(pass, color);
-		for (f = base; f < b->flen; f++)
-			if (board_try_random_move(b, f, &m, permit, permit_data))
+		for (int f = base; f < b->flen; f++) {
+			m.coord = b->f[f];
+			if (permit(b, &m, permit_data))
 				return m.coord;
-		for (f = 0; f < base; f++)
-			if (board_try_random_move(b, f, &m, permit, permit_data))
+		}
+		for (int f = 0; f < base; f++) {
+			m.coord = b->f[f];
+			if (permit(b, &m, permit_data))
 				return m.coord;
+		}
 	}
 
-	move_t m = move(pass, color);
-	board_play(b, &m);
 	return pass;
 }
 
+coord_t
+board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data)
+{
+	coord_t coord = board_pick_random_move(b, color, permit, permit_data);
+	move_t m = move(coord, color);
+	int r = board_play(b, &m);
+	assert(r >= 0);
+	return coord;
+}
 
 /********************************************************************************************************/
 
