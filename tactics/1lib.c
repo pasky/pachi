@@ -74,6 +74,7 @@ can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(to_play));
 	assert(sane_group(b, g));
+	assert(board_at(b, g) == to_play);
 #endif
 	coord_t lib = group_lib(b, g, 0);
 
@@ -180,7 +181,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 		if (!can_be_rescued(b, group, color))
 			return;
 #endif
-		if (can_play_on_lib(b, group, to_play))
+		if (can_capture(b, group, to_play))
 			mq_add_nodup(q, lib);
 		return;
 	}
