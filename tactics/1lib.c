@@ -128,8 +128,7 @@ can_countercapture(board_t *b, group_t group, mq_t *q)
 	return can;
 }
 
-/* Same as can_countercapture() but returns capturable groups instead of moves,
- * queue may not be NULL, and is always cleared. */
+/* Same as can_countercapture() but returns capturable groups instead of moves. */
 bool
 countercapturable_groups(board_t *b, group_t group, mq_t *q)
 {
@@ -140,9 +139,7 @@ countercapturable_groups(board_t *b, group_t group, mq_t *q)
 	assert(sane_group(b, group));
 	assert(is_player_color(color));
 #endif
-	q->moves = 0;
-	// Not checking b->clen, not maintained by board_quick_play()
-	
+	bool found = false;
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
@@ -152,10 +149,11 @@ countercapturable_groups(board_t *b, group_t group, mq_t *q)
 				continue;
 
 			mq_add_nodup(q, group_at(b, c));
+			found = true;
 		});
 	} foreach_in_group_end;
 
-	return (q->moves > 0);
+	return found;
 }
 
 /* Doesn't check snapbacks.

@@ -364,7 +364,7 @@ pattern_match_capture(board_t *b, move_t *m)
 		/* Capture group contiguous to new group in atari ? */
 		foreach_atari_neighbor(b, last_move, m->color) {
 			group_t own_atari = g;
-			mq_t q;
+			mq_t q;  mq_init(&q);
 			countercapturable_groups(b, own_atari, &q);
 			for (int i = 0; i < q.moves; i++)
 				if (capg == q.move[i])
