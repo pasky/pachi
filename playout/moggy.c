@@ -56,10 +56,13 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 typedef struct {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, patternrate, korate, nakaderate, eyefixrate;
+	unsigned int lcapturerate, atarirate, nlibrate, patternrate, korate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 #ifdef MOGGY_GLOBAL_ATARI
 	unsigned int capturerate;
+#endif
+#ifdef MOGGY_LADDER
+	unsigned int ladderrate;
 #endif
 #ifdef MOGGY_JOSEKI
 	unsigned int josekirate;
@@ -341,7 +344,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	return 0;
 }
 
-
+#ifdef MOGGY_LADDER
 static void
 local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
@@ -359,6 +362,7 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	if (DEBUGL(5) && q->moves)
 		mq_print_line(q, "Moggy ladder: ");
 }
+#endif
 
 
 static void
@@ -631,6 +635,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 				return mq_pick(&q);
 		}
 
+#ifdef MOGGY_LADDER
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > fast_random(100)) {
 			mq_t q;  mq_init(&q);
@@ -638,6 +643,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
+#endif
 
 		/* Did we just reject selfatari move as opponent ?
 		 * Check if his group can be laddered / put in atari */
@@ -797,9 +803,11 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 		if (pp->lcapturerate > 0)
 			FULLCHOOSE_ADD_TAGGED(local_atari_check(p, b, &last_move(b), &q), 1<<MQ_LATARI);
 
+#ifdef MOGGY_LADDER
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > 0)
 			FULLCHOOSE_ADD_TAGGED(local_ladder_check(p, b, &last_move(b), &q), 1<<MQ_LADDER);
+#endif
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > 0)
@@ -1049,11 +1057,13 @@ playout_moggy_init(char *arg, board_t *b)
 
 			if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
+#ifdef MOGGY_LADDER
 			} else if (!strcasecmp(optname, "ladderrate") && optval) {
 				/* Note that ladderrate is considered obsolete;
 				 * it is ineffective and superseded by the
 				 * prune_ladders prior. */
 				pp->ladderrate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nlibrate") && optval) {
@@ -1136,12 +1146,14 @@ playout_moggy_init(char *arg, board_t *b)
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->eyefillrate == -1U) pp->eyefillrate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
-	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
 	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 #ifdef MOGGY_GLOBAL_ATARI
 	if (pp->capturerate == -1U) pp->capturerate = rate;
+#endif
+#ifdef MOGGY_LADDER
+	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 #endif
 #ifdef MOGGY_JOSEKI
 	if (pp->josekirate == -1U) pp->josekirate = rate;
