@@ -57,7 +57,6 @@ typedef struct {
 	floating_t crit_plthres_coef;
 	bool crit_negative;
 	bool crit_negflip;
-	bool crit_amaf;
 	bool crit_lvalue;
 } ucb1_policy_amaf_t;
 
@@ -242,7 +241,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	 * Index of current tree node move is (start - 1). */
 	int start = map->game_baselen;
 	while (node) {
-		if (!b->crit_amaf && !is_pass(node_coord(node))) {
+		if (!is_pass(node_coord(node))) {
 			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
 			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
@@ -276,11 +275,6 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			}
 			if (weight)
 				stats_add_result(&ni->amaf, res, weight);
-
-			if (b->crit_amaf) {
-				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
-				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
-			}
 		}
 		if (node->parent) {
 			int tree_move = start - 1;
@@ -325,7 +319,6 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	b->crit_rave = 1.1f;
 	b->crit_min_playouts = 2000;
 	b->crit_negative = 1;
-	b->crit_amaf = 0;
 
 	b->vloss_sqrt = true;
 
@@ -368,8 +361,6 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 				b->crit_negative = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_negflip")) {
 				b->crit_negflip = !optval || *optval == '1';
-			} else if (!strcasecmp(optname, "crit_amaf")) {
-				b->crit_amaf = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_lvalue")) {
 				b->crit_lvalue = !optval || *optval == '1';
 #ifdef DISTRIBUTED
