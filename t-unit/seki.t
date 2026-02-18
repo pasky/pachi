@@ -546,7 +546,7 @@ X)X O O O O O
 
 breaking_nakade_seki w d3 0
 breaking_nakade_seki w d5 0
-moggy status c4 O   e4 O
+moggy status c4 O   e4 o
 
 
 % Not 4-stone seki (must break, false eye = 2nd eye)
@@ -561,7 +561,7 @@ X)X . O O O O
 
 breaking_nakade_seki w e3 0
 breaking_nakade_seki w g5 0
-moggy status c4 O   e4 O
+moggy status c4 O   e4 o
 
 
 % Not 4-stone seki (must break, false eyes = 2nd eye)
@@ -838,7 +838,7 @@ X)X X O O O O
 
 breaking_nakade_seki w d5 0
 breaking_nakade_seki w g5 0
-moggy status c4 O   e4 O
+moggy status c4 O    e4 o
 
 
 % Not 5-stone seki (safe, eye in the corner)
@@ -982,7 +982,7 @@ X)X X O O O O
 
 breaking_nakade_seki w d5 0
 breaking_nakade_seki w g5 0
-moggy status c4 O   e4 O
+moggy status c4 O   e4 o
 
 
 % Not 6-stone seki (must break, extra eye)
