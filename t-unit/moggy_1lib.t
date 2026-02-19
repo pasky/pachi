@@ -1,6 +1,8 @@
 # auto-run off
 
-% Moggy local atari testing
+# Moggy 1lib testing (local_atari_check())
+# (work in progress ...)
+
 
 % Capture selfatari
 boardsize 7
@@ -8,13 +10,13 @@ boardsize 7
 . . X O O O .
 . . X X X O .
 . X . . X O .
-. X . O X O .
-. X . O X O .
-. X . X)O O .
+. X . . X O .
+. . O O X O .
+. . . X)O O .
 
 moggy moves 1=C1>90
 
-% Prefer to capture selfatari
+% Always capture selfatari that can connect out
 boardsize 7
 . . . . . . .
 . . X O O O .
@@ -24,9 +26,31 @@ boardsize 7
 . X . O X O .
 . X . X)O . .
 
-# XXX Connecting instead of capturing selfatari can be really bad
-moggy moves 1=C1>60
+moggy moves 1=C1>100		# connecting instead really bad
 
+% Always capture selfatari that can escape
+boardsize 7
+. . . . . . .
+. . X O O O .
+. . X X X O .
+. X . . X O .
+. X . O X O .
+. X . O X O .
+. . . X)O . .
+
+moggy moves 1=C1>100		# connecting instead really bad
+
+% Always capture selfatari that can escape (play in tiger mouth)
+boardsize 7
+. . . . . . .
+. . . . . . .
+. . . O X . .
+. . . O X . .
+. . . X)O . .
+. . . O X . .
+. . . . . . .
+
+moggy moves 1=C3>100		# defending instead really bad
 
 % Defend big group
 boardsize 5
@@ -56,7 +80,7 @@ X . O O X
 . X X O X
 . . X)O X
 
-moggy moves !B3 !A1>50
+moggy moves !B3
 
 
 % Defend big group, capture
@@ -69,7 +93,7 @@ boardsize 5
 
 moggy moves 1=(C5|E5)
 
-% Defend big group, capture right one
+% Defend big group, avoid snapback
 boardsize 5
 . . O X X
 . . X O).
@@ -77,7 +101,7 @@ boardsize 5
 . . . . .
 . . . . .
 
-moggy moves		# XXX should be B5 ~100%, definitely not E2 ! (selfatari_cousin() bug)
+moggy moves 1=B5>80 !E4
 
 % Defend big groups, choose one
 boardsize 7
