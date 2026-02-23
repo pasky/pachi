@@ -13,7 +13,7 @@ BASIC USAGE
 
 Create a networked (NFS or FUSE-sshfs) directory, copy the contents of this
 directory there, and customize the rc file - it is heavily commented and
-should be self-guiding. You will need the twogtp tool from gogui package.
+should be self-guiding. You will need gogui-twogtp tool from gogui package.
 
 Then on each computer, change to this directory and run:
 
@@ -128,10 +128,10 @@ The client workers will create a directory structure like:
 
 	c/drahokam-1/beacon	# when was the client last active
 	c/drahokam-1/log	# various events from client's life
-	c/drahokam-1/<pair_id>/game.dat
-	c/drahokam-1/<pair_id>/game-<N>.sgf
+	c/drahokam-1/<pairing>/game.dat
+	c/drahokam-1/<pairing>/game-<N>.sgf
 
-...where drahokam-1 is the autotest-client parameter and <pair_id>
+...where drahokam-1 is the autotest-client parameter and <pairing>
 is basically straightforwardly mangled version of `pairing` parameters.
 
 

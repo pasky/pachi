@@ -9,12 +9,12 @@
 ########################################################################################
 # General parameters
 
-# twogtp path
+# gogui-twogtp path
 # We need the gogui twogtp variant (the one that takes -black, not --black as parameter).
-# If you want handicap support you need gogui-1.4.10:
+# If you want handicap support you need gogui >= 1.4.10:
 #   https://github.com/lemonsqueeze/gogui/releases
 # (or patch gogui: http://pasky.or.cz/dev/pachi/gogui-handicap.diff)
-twogtp_path="/path/to/gogui-1.4.10/bin/gogui-twogtp"
+twogtp_path="/path/to/gogui-1.4.11/bin/gogui-twogtp"
 
 
 ########################################################################################
