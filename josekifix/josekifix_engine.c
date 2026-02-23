@@ -348,10 +348,10 @@ josekifix_engine_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	uct_engine->analyze(uct_engine, b, color, start);
 }
 
-static void
+static bool
 josekifix_engine_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
-	uct_engine->dead_groups(uct_engine, b, dead);
+	return uct_engine->dead_groups(uct_engine, b, dead);
 }
 
 static void

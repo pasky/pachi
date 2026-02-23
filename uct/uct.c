@@ -439,7 +439,7 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 			    u->threads, winrate, extra_komi, score_est);
 }
 
-static void
+static bool
 uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
@@ -448,23 +448,24 @@ uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 	uct_pondering_stop(u);
 	
 	if (u->pass_all_alive)
-		return; // no dead groups
+		return true; // no dead groups
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
 	 * Don't recompute dead groups here, result could be different this time and
 	 * lead to bad result ! */
 	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
-		return;
+		return true;
 	}
 
-	if (UDEBUGL(1)) fprintf(stderr, "WARNING: Recomputing dead groups\n");
+	if (UDEBUGL(1)) fprintf(stderr, "WARNING: Recomputing dead groups !\n");
 
 	/* Make sure the ownermap is well-seeded. */
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (UDEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	ownermap_dead_groups(b, &u->ownermap, dead, NULL);
+	return false;
 }
 
 static void

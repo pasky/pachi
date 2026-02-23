@@ -305,19 +305,22 @@ print_dead_groups(board_t *b, mq_t *dead)
 }
 
 /* Ask engine for dead stones */
-void
+bool
 engine_dead_groups(engine_t *e, board_t *b, mq_t *q)
 {
 	mq_init(q);
 
 	/* Tell engine to stop pondering, the game is probably over. */
 	if (e->stop)  e->stop(e);
-	
-	if (e->dead_groups)  e->dead_groups(e, b, q);
+
+	bool safe = true;
+	if (e->dead_groups)
+		safe = e->dead_groups(e, b, q);
 	/* else we return empty list - i.e. engine not supporting
 	 * this assumes all stones alive at the game end. */
 
 	print_dead_groups(b, q);  /* log output */
+	return safe;
 }
 
 /* For engines internal use, ensures optval is properly strdup'ed / freed

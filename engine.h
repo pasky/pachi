@@ -75,7 +75,7 @@ typedef char *(*engine_genmoves_t)(engine_t *e, board_t *b, time_info_t *ti, enu
 typedef void  (*engine_best_moves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best);
 typedef void (*engine_analyze_t)(engine_t *e, board_t *b, enum stone color, int start);
 typedef void (*engine_evaluate_t)(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color);
-typedef void (*engine_dead_groups_t)(engine_t *e, board_t *b, mq_t *mq);
+typedef bool (*engine_dead_groups_t)(engine_t *e, board_t *b, mq_t *mq);
 typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
 typedef char *(*engine_result_t)(engine_t *e, board_t *b);
 typedef void (*engine_collect_stats_t)(engine_t *e, board_t *b, move_t *m, best_moves_t *best, int moves, int games);
@@ -167,8 +167,12 @@ void engine_reset(engine_t *e, board_t *b);
 void engine_board_print(engine_t *e, board_t *b, FILE *f);
 void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
-/* Ask engine for dead stones */
-void engine_dead_groups(engine_t *e, board_t *b, mq_t *mq);
+/* Ask engine for dead stones. Return whether these are safe:
+ *   true:  Normally last move was pass and engine knows dead groups. These are good.
+ *   false: Weird stuff going on (asking for dead groups in the middle of a game ?).
+ *          Dead groups are being computed on the fly, scoring with these will be
+ *          unreliable if there are unclear groups or position is not final. */
+bool engine_dead_groups(engine_t *e, board_t *b, mq_t *mq);
 
 /* Set/change engine option(s). May reset engine if needed.
  * New options are saved, so persist across engine resets.

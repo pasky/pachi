@@ -673,16 +673,20 @@ static enum parse_code
 cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	ownermap_t *o = engine_ownermap(e, b);
-	if (o && !board_position_final(b, o, &msg)) {
-		gtp_error(gtp, msg);
-		return P_OK;
-	}
 
 	mq_t q;
-	engine_dead_groups(e, b, &q);
-	char *score_str = board_official_score_str(b, &q);
+	bool safe = engine_dead_groups(e, b, &q);
 
+	/* Try to guard against final_score calls in the middle of a game. */
+	if (!safe) {
+		ownermap_t *o = engine_ownermap(e, b);
+		if (o && !board_position_final(b, o, &msg)) {
+			gtp_error(gtp, msg);
+			return P_OK;
+		}
+	}
+
+	char *score_str = board_official_score_str(b, &q);
 	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
 	gtp_printf(gtp, "%s\n", score_str);
 
