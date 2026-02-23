@@ -9,11 +9,31 @@
 ########################################################################################
 # General parameters
 
+# Synchronize workers ?
+# Without this each worker will just play one game after the other as fast as
+# possible. This maximizes cpu usage but can create significant winrate bias
+# initially if one player tends to win faster than the other (or if it never
+# resigns but the other player does !): wins accumulate faster for that player
+# resulting in an inflated winrate that slowly drops over time as losses catch
+# up. It will stabilize around the actual winrate eventually but can take
+# hundreds of games to do so.
+# The alternative is to synchronize workers: next round doesn't begin until all
+# games for current round have finished. This removes time asymmetry between
+# players at the cost of a little down time. You can still add/remove workers at
+# any time, they will sync with each other automatically. However don't remove
+# first worker, it's the one that picks pairings for each round.
+# Recommended with players like KataGo or GnuGo which resign late or play until
+# the end when losing.
+
+sync_workers=y
+
+
 # gogui-twogtp path
 # We need the gogui twogtp variant (the one that takes -black, not --black as parameter).
 # If you want handicap support you need gogui >= 1.4.10:
 #   https://github.com/lemonsqueeze/gogui/releases
 # (or patch gogui: http://pasky.or.cz/dev/pachi/gogui-handicap.diff)
+
 twogtp_path="/path/to/gogui-1.4.11/bin/gogui-twogtp"
 
 

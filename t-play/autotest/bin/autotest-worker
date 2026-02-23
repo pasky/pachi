@@ -62,6 +62,13 @@ pairing_param() { # Accessor method
 	eval "echo \$$pairvar"
 }
 
+pick_pairing()
+{
+	# XXX RANDOM is bash-specific
+	pair="$((RANDOM % $pairs))"
+	pairid="$(pairing_param $pair id)"
+}
+
 . ./rc
 
 
@@ -71,11 +78,42 @@ if [ "$pairs" = "0" ]; then
 	sleep 1; exit 0
 fi
 
-# XXX RANDOM is bash-specific
-pair="$((RANDOM % $pairs))"
-pairid="$(pairing_param $pair id)"
-echo "Picked pairing #$pair: $pairid"
+if [ "$sync_workers" = "y" ]; then
+	if [ "$clientid" = "$HOSTNAME-1" ]; then
+		# First worker waits until other workers are ready ...
+		msg='Sync workers: Waiting for worker #$i ...'
+		wait_for_other_workers "round_ready" .1 "$msg"
+		echo "Sync workers: Picking pairing for next round."
+		echo ""
 
+		# And picks pairing for next round.
+		pick_pairing
+		echo "$pair"   > c/pair
+		echo "$pairid" > c/pairing
+
+		rm -f c/$clientid/round_done
+		touch c/$clientid/round_ready
+	else
+		# Other workers signal they're ready, wait for others ...
+		touch "c/$clientid/round_ready"
+		msg='Sync workers: Waiting for worker #$i ...'
+		wait_for_other_workers "round_ready" .1 "$msg"
+		echo "Sync workers: Ready for next round."
+		echo ""
+		rm -f c/$clientid/round_done
+
+		# And use common pairing for this round.
+		[ -f "c/pair" ]    || die "Sync workers: c/pair missing !"
+		[ -f "c/pairing" ] || die "Sync workers: c/pairing missing !"
+		pair=`cat c/pair`
+		pairid=`cat c/pairing`
+	fi
+else
+	# Each worker picks its own pairing.
+	pick_pairing
+fi
+
+echo "Picked pairing #$pair: $pairid"
 log "starting game with pairing #$pair: $pairid"
 
 

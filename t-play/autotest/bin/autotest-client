@@ -29,9 +29,31 @@ collect_crashlog()
 	fi
 }
 
+# Sync workers at the end of each round.
+# Syncing workers involves 2 locks:
+# - One at the end of the round to ensure all games are finished (this one)
+# - Another before next round starts to ensure all workers have been notified
+#   and use the same pairing (see autotest-worker).
+sync_workers()
+{
+	[ "$sync_workers" = "y" ] || return 0
+	echo ""
+
+	# Round finished, wait for other workers to finish their game.
+	rm -f c/$clientid/round_ready
+	touch "c/$clientid/round_done"
+	msg='Sync workers: Waiting for game #$i to finish ...'
+	wait_for_other_workers "round_done" .5 "$msg"
+	echo "Sync workers: All games for this round finished."
+}
+
+# Get sync_workers variable from rc
+eval "`grep sync_workers rc`"
+
 while true; do
 	mkdir -p "c/$clientid"
 	date +%s >"c/$clientid/beacon"
+
 	if ! $bin/autotest-worker "$clientid"; then
 		collect_crashlog
 		echo "*** WORKER FAILED ***"
@@ -39,4 +61,6 @@ while true; do
 		echo ""
 		sleep 1
 	fi
+
+	sync_workers
 done
