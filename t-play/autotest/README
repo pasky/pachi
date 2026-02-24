@@ -23,26 +23,28 @@ Leave cooking, stir now and then.  You can start and stop clients as much
 as you wish on the fly, or edit the rc file to change pairings without any
 need for restarting clients.
 
+To monitor results run:
 
-From time to time you will of course want to view the results of pairings.
-First, you will want to run:
+	bin/autotest-monitor
+
+This will show results every minute.
+Alternatively, to check results at any time run:
 
 	bin/autotest-gather
-
-This will collect the results all in one place. Then, you can repeatedly
-examine the results using:
-
+  then
 	bin/autotest-show
-or	bin/autotest-show --elo
-or	bin/autotest-show-diagram
+  or	bin/autotest-show --elo
+  or	bin/autotest-show-diagram
 
-That will show results from all pairings. You can also use e.g.
+autotest-gather will collect all the results in one place, which can then
+be examined with different autotest-show variants.
+This will show results from all pairings. You can also use e.g.
 
 	bin/autotest-show '^9-'
 
-to show only results of 9x9 pairings. To refresh the shown results, you
-will need to re-run autotest-gather; if you will always want to just see
-fresh results, combine the two commands:
+to show only results of 9x9 pairings. To refresh the results, you will need
+to re-run autotest-gather; if you always want to see fresh results, combine
+the two commands (or use autotest-monitor):
 
 	bin/autotest-gather; bin/autotest-show
 
