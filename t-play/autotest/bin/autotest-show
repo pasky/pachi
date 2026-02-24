@@ -63,7 +63,7 @@ pairing_status() {
 [ -n "$do_elo" ] && echo "Formula: 100 ELO = 1 stone = 71.3% winning prob  (EGF)"
 elo_rank=100
 prob2elo() {
-    echo "110 * l($1 / (1-$1))" | bc -l
+	echo "110 * l($1 / (1-$1))" | bc -l
 }
 
 elo_stats() {
