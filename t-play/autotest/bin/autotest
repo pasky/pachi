@@ -1,14 +1,13 @@
 #!/bin/bash
 # Play autotest games.
-# Wrapper for autotest-client, picking an id automatically:
+# Run autotest-client with low priority, picking an id automatically.
 # Will run something like:
 #
-#	nice -n 18 ./autotest-client `hostname`-1
+#	nice -n 18 bin/autotest-client `hostname`-N
 #
-# where 1 should be 2, 3, 4, ... for further instances of autotest you would
-# run on the same machine (no two instaces with the same id must be run).
-# The `nice -n 18` prefix will make sure the client is being run with low
-# priority, in case someone wants to use the computer for some real interaction.
+# where N = 1, 2, 3, 4, ... for each instance of autotest you run (each instance
+# must have its own id). 'nice -n 18' ensures go programs are run with low
+# priority so cpu is available for interactive work.
 
 die()  {  echo "$@"; exit 1;  }
 bin=`dirname $0`
@@ -18,8 +17,8 @@ find_id()
 {
 	echo -n "Looking for free id... "
 	for i in `seq 1 16`; do
-		id="`hostname`-$i"
-		if ! ps aux | grep autotest | grep -q " $id\$"; then
+		id="$HOSTNAME-$i"
+		if ! ps aux | grep -q "autotest-client $id\$"; then
 			echo "Ok"
 			return
 		fi

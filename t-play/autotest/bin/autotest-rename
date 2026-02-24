@@ -27,7 +27,7 @@ if find c -type d -name $to | grep -q . ; then
 	exit 1
 fi
 
-rm -f r/$from.dat r/$from.summary.dat r/$from.html r/$from.beacon r/$from.error
+rm -f r/$from.*
 
 for dir in c/*; do
 	[ -d $dir/$from ] || continue
