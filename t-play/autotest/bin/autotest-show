@@ -6,6 +6,13 @@
 # Options:
 #    -e, --elo     display winrates in terms of Elo points.
 #    -f, --force   force regeneration of all pairings summary files
+#
+# If players disagree on winrate a sign is displayed (scoring bug usually):
+#    S GAMES WR B    WR W    S.D.    PAIRING
+#    / 420   0.769   0.769   0.021   9-h2-2-katago-pachi_1290
+#    / 472   0.775 ! 0.773   0.019   9-h2-2-katago-pachi_1290_buggy
+#                 ^^^
+# find_scoring_bugs can be used to find offending games.
 
 bin=`dirname $0`
 
@@ -89,7 +96,7 @@ elo_stats() {
 if [ -n "$do_elo" ]; then
 	printf "\nS GAMES  [-SD    ELO    +SD]     RANK     PAIRING\n"
 else
-	printf "S GAMES\tWINRATE\tS.D.\tPAIRING\n"
+	printf "S GAMES WR B    WR W    S.D.    PAIRING\n"
 fi
 
 list_known_pairings()
@@ -109,16 +116,20 @@ for pairing in `list_known_pairings | grep "$mask"`; do
 	pairing_status "$pairing"	# Sets status
 
 	if ! [ -s "r/$pairing.summary.dat" ]; then
-		printf "$status 0\t-\t-\t$pairing$color_stop\n"
+		printf "$status 0     -       -       -       $pairing$color_stop\n"
 		continue
 	fi
 
-	cat "r/$pairing.summary.dat" | cut -f 1,7,8 | tail -n +2 |
-	while read games winrate sd; do
+	cat "r/$pairing.summary.dat" | cut -f 1,7,8,12 | tail -n +2 |
+	while read games winrate sd winrate2; do
 		if [ -n "$do_elo" ]; then
 			elo_stats
 		else
-			stats=`printf "%-5s %-7s %-7s" "$games" "$winrate" "$sd"`
+			agree=" "
+			# Players disagree on winrate ? (scoring bug usually)
+			[ "$winrate" != "$winrate2" ] && agree="!"
+
+			stats=`printf "%-5s %-5s $agree %-7s %-7s" "$games" "$winrate" "$winrate2" "$sd"`
 		fi
 		printf "$status $stats $pairing$color_stop\n"
 		break
