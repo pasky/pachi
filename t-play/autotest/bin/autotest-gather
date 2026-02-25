@@ -1,45 +1,79 @@
 #!/bin/bash
 # This is autotest gathering tool, collecting game result info from
-# all clients and putting it in single place (which is completely
-# wiped otherwise).
+# all clients and putting it in single place. By default only pairings
+# that need updating are collected (unless -f is given).
+#
+# Usage: autotest-gather [options]
+# Options:
+#    -f, --force   force collection of all pairings
+
 bin=`dirname $0`
 
 . $bin/autotest-lib
 
 mkdir -p "r/"
-rm -f r/*
 
-# First, gather pairing data:
+# Force recreation of all results ?
+if [ "$1" = "-f" ] || [ "$1" = "--force" ]; then
+	shift
+	rm -f r/*
+fi
 
-for dir in c/*/*/; do
-	pairing="${dir%/}"; pairing="${pairing#c/*/}"
+list_clientids()
+{
+	for id in c/*/; do
+		id="${id%/}"; id="${id#c/}"
+		echo "$id"
+	done
+}
+
+list_pairings()
+{
+	for dir in c/*/*/; do
+		pairing="${dir%/}"; pairing="${pairing#c/*/}"
+		echo "$pairing"
+	done | sort -u
+}
+
+pairing_needs_update()
+{
+	[ -s "$datfile" ] || return 0
+	for id in $ids; do
+		[ "c/$id/$pairing/game.dat" -nt "$datfile" ] && return 0
+	done
+	return 1
+}
+
+# Find client ids and pairings
+ids="`list_clientids`"
+pairings="`list_pairings`"
+
+for pairing in $pairings; do
 	datfile="r/$pairing.dat"
 
-	if [ ! -s "$datfile" ]; then
-		# Common datfile header, required for twogtp -analyze
-		{
-		echo "#"
-		printf "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG\n"
-		} >"$datfile"
-		num=0
-	else
-		lastgame="$(tail -n 1 "$datfile")"
-		num="$((${lastgame%%	*} + 1))"
-	fi
+	pairing_needs_update || continue
+
+	##################################################################
+	# First, gather pairing data
+
+	# Common datfile header, required for twogtp -analyze
+	(   echo "#"
+	    printf "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG\n"
+	) >"$datfile"
+	num=0
+
 	# We cannot simply concatenate all the datfiles because
 	# twogtp -analyze is pedantic about the games numbering;
 	# we need to renumber the games to a single sequence.
-	while read orignum line; do
-		printf "$num\t$line\n"
-		num=$((num+1))
-	done <"$dir/game.dat" >>"$datfile"
-done
+	for gamedatfile in c/*/"$pairing"/game.dat; do
+		while read orignum line; do
+			printf "$num\t$line\n"
+			num=$[num+1]
+		done <"$gamedatfile" >>"$datfile"
+	done
 
-
-# Next, fill per-pairing metadata:
-
-for datfile in r/*.dat; do
-	pairing="${datfile%.dat}"; pairing="${pairing#r/}"
+	##################################################################
+	# Next, fill per-pairing metadata
 
 	# Look at last change in pairing:
 	stat -c %Z "$(ls --sort=time c/*/"$pairing"/* | head -n 1)" >"r/$pairing.beacon"
