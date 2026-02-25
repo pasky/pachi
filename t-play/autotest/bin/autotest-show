@@ -4,17 +4,27 @@
 #
 # Usage: ./autotest-show [options] [MASK]
 # Options:
-#    -e, --elo:    display winrates in terms of Elo points.
+#    -e, --elo     display winrates in terms of Elo points.
+#    -f, --force   force regeneration of all pairings summary files
+
 bin=`dirname $0`
 
 # Make printf work for floats
 export LC_NUMERIC="en_US.UTF-8"
 
 do_elo=
-if [ "$1" = "-e" ] || [ "$1" = "--elo" ]; then
-	do_elo=1
-	shift
-fi
+
+while [ ${1:0:1} = "-" ]; do
+	if [ "$1" = "-e" ] || [ "$1" = "--elo" ]; then
+		do_elo=1
+		shift; continue
+	fi
+
+	if [ "$1" = "-f" ] || [ "$1" = "--force " ]; then
+		rm -f r/*.summary.dat r/*.html
+		shift; continue
+	fi
+done
 
 mask="$1"
 [ -n "$mask" ] || mask=".*"
@@ -75,7 +85,6 @@ elo_stats() {
 	stats=`printf "%-7s %-+5i  %-+5i  %-+5i    %-+8.1f" "$games" "$delo_d" "$delo" "$delo_u" "$drank"`
 }
 
-rm -f r/*.summary.dat r/*.html
 
 if [ -n "$do_elo" ]; then
 	printf "\nS GAMES  [-SD    ELO    +SD]     RANK     PAIRING\n"
@@ -83,23 +92,37 @@ else
 	printf "S GAMES\tWINRATE\tS.D.\tPAIRING\n"
 fi
 
-for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq | grep "$mask"); do
-	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
-	pairing_status "$pairing" # sets status
-	if [ -s "r/$pairing.summary.dat" ]; then
-		cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2 | \
-		while read games winrate sd ; do
-			if [ -n "$do_elo" ]; then
-				elo_stats
-			else
-				stats=`printf "%-5s %-7s %-7s" "$games" "$winrate" "$sd"`
-			fi
-			printf "$status $stats $pairing$color_stop\n"
-			break
-		done
-	else
-		printf "$status 0\t-\t-\t$pairing$color_stop\n"
+list_known_pairings()
+{
+	(  echo "$pknown" | tr ' ' '\n'						# Pairings from rc file
+	   ls r/*.dat | grep -vF '.summary.' | sed 's|^r/||; s|\.dat$||'	# Pairings results
+	) | sort -u
+}
+
+for pairing in `list_known_pairings | grep "$mask"`; do
+	# Regenerate pairing .summary.dat if needed
+	if [ "r/$pairing.dat" -nt "r/$pairing.summary.dat" ]; then
+		rm -f "r/$pairing.summary.dat" "r/$pairing.html"
+		$twogtp_path -analyze "r/$pairing.dat"
 	fi
+
+	pairing_status "$pairing"	# Sets status
+
+	if ! [ -s "r/$pairing.summary.dat" ]; then
+		printf "$status 0\t-\t-\t$pairing$color_stop\n"
+		continue
+	fi
+
+	cat "r/$pairing.summary.dat" | cut -f 1,7,8 | tail -n +2 |
+	while read games winrate sd; do
+		if [ -n "$do_elo" ]; then
+			elo_stats
+		else
+			stats=`printf "%-5s %-7s %-7s" "$games" "$winrate" "$sd"`
+		fi
+		printf "$status $stats $pairing$color_stop\n"
+		break
+	done
 done
 
 echo

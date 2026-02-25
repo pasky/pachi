@@ -2,8 +2,6 @@
 * Support for automatic checking against loss-by-points
   (desirable for UCT players)
 
-* Caching unchanged results - faster ./autotest-show
-
 * Nicer support for disconnected usage
 
 * Support for multi-core systems and multi-threaded players

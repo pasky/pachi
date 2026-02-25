@@ -128,9 +128,9 @@ file archived for future inspection).
 
 The client workers will create a directory structure like:
 
-	c/drahokam-1/beacon	# when was the client last active
-	c/drahokam-1/log	# various events from client's life
-	c/drahokam-1/<pairing>/game.dat
+	c/drahokam-1/beacon			# when was the client last active
+	c/drahokam-1/log			# various events from client's life
+	c/drahokam-1/<pairing>/game.dat		# game results (gogui-twogtp output)
 	c/drahokam-1/<pairing>/game-<N>.sgf
 
 ...where drahokam-1 is the autotest-client parameter and <pairing>
@@ -140,12 +140,17 @@ is basically straightforwardly mangled version of `pairing` parameters.
 autotest-gather will simply go through directories of all clients and rain
 down all pairing results to a single place:
 
-	r/<pair_id>.dat
-	r/<pair_id>.beacon  # when was the pairing last active
-	r/<pair_id>.error  # number of games reporting error
+	r/<pairing>.dat			# workers combined game.dat's 
+	r/<pairing>.beacon		# when was the pairing last active
+	r/<pairing>.error		# number of games reporting error
 
-Then, autotest-show will call gogui-twogtp -analyze on the selected
-produced dat files.
+autotest-show calls 'gogui-twogtp -analyze' on the selected r/<pairing>.dat files
+as needed which produces:
+
+	r/<pairing>.summary.dat		# pairing winrates, std deviation etc
+	r/<pairing>.html		# html output (not used)
+
+and displays content of r/<pairing>.summary.dat
 
 
 Copyright (c) Petr Baudis <pasky@ucw.cz>
