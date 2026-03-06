@@ -33,6 +33,10 @@ static bool last_move_set;
 static char *current_cmd = NULL;
 static char *next = NULL;
 
+
+/**************************************************************************************************/
+/* Argument parsing */
+
 /* Get next argument (must be there) */
 #define next_arg(to_)   do { \
 	to_ = next; \
@@ -79,6 +83,10 @@ args_end()
 {
 	if (*next)  die("Invalid extra arg: '%s'\n", next);
 }
+
+
+/**************************************************************************************************/
+/* Unit test command parsing etc */
 
 static void
 remove_comments(char *line)
@@ -267,6 +275,72 @@ show_title_if_needed()
 		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
 } while(0)
 
+
+/**************************************************************************************************/
+/* Stress test tool:
+ * Play some games and call handler at every move. */
+
+typedef void (*stress_test_handler_t)(board_t *b, void *data);
+
+typedef struct {
+	playoutp_permit		permit;		/* Original playout policy permit() */
+	stress_test_handler_t   handler;
+	void *			data;
+	int			game;		/* Current game number */
+	int			games;		/* Number of games that will be played */
+} stress_test_t;
+
+static stress_test_t stress_test = { 0, };
+
+/* Own permit() handler proxy. */
+static bool
+stress_test_permit(playout_policy_t *playout_policy, board_t *b, move_t *m, bool alt, bool rnd)
+{
+	static int move = 0;
+
+	/* Run once per move. */
+	if (b->moves != move) {
+		move = b->moves;
+		stress_test.handler(b, stress_test.data);
+	}
+
+	return stress_test.permit(playout_policy, b, m, alt, rnd);
+}
+
+/* Play some games calling handler at every move.
+ * @move_handler is called for each move.
+ * @game_handler is called before game start (if given).
+ * Single-thread only, uses static variables. */
+static void
+stress_test_foreach_playout_move(int games, board_t *b,
+				 stress_test_handler_t move_handler, void *data,
+				 stress_test_handler_t game_handler)
+{
+	stress_test.handler = move_handler;
+	stress_test.data = data;
+	stress_test.games = games;
+
+	playout_policy_t *policy = playout_moggy_init(NULL, b);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+
+	/* Hijack policy permit() to run at every move. */
+	stress_test.permit = policy->permit;
+	policy->permit = stress_test_permit;
+
+	for (int i = 0; i < games; i++)  {
+		stress_test.game = i;
+		board_t b2;
+		board_copy(&b2, b);
+		if (game_handler)
+			game_handler(&b2, data);
+		playout_play_game(&setup, &b2, S_BLACK, NULL, NULL, policy);
+		board_done(&b2);
+	}
+	// XXX free playout policies
+}
+
+
+/**************************************************************************************************/
 
 static bool
 test_bad_selfatari(board_t *b, char *arg)
