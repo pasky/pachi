@@ -117,6 +117,24 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	return true;
 }
 
+static bool
+surrounding_groups_connected(board_t *b, group_t group)
+{
+	enum stone color = board_at(b, group);
+	enum stone other_color = stone_other(color);
+	mq_t groups;  mq_init(&groups);
+
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != other_color) continue;
+			group_t g = group_at(b, c);
+			mq_add_nodup(&groups, g);
+		});
+	} foreach_in_group_end;
+	assert(groups.moves);
+
+	return same_dragon_groups(b, &groups);
+}
 
 /*   . O O O O |       . O O O O |
  *   O . X X X |       O . X X X |      We're black.
@@ -165,9 +183,9 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 
 	// XXX is this enough to check all the bad shapes ?
 
-	/* Check 3-stone group is completely surrounded.
+	/* Check group is completely surrounded and surrounding groups are connected.
 	 * Can't escape and can't connect out, only countercaptures left to check. */
-	if (can_countercapture(b, g3, NULL))
+	if (can_countercapture(b, g3, NULL) || !surrounding_groups_connected(b, g3))
 		return false;
 
 	/* Group alive after capturing these stones ? */
@@ -244,9 +262,9 @@ breaking_4_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 	if (nakade_area_dead_shape(b, &area))
 		return false;
 
-	/* Check 4-stone group is completely surrounded.
+	/* Check group is completely surrounded and surrounding groups are connected.
 	 * Can't escape and can't connect out, only countercaptures left to check. */
-	if (can_countercapture(b, g4, NULL))
+	if (can_countercapture(b, g4, NULL) || !surrounding_groups_connected(b, g4))
 		return false;
 
 	/* Group alive after capturing these stones ? */
@@ -324,9 +342,9 @@ breaking_5_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 		area.moves--;  // faster mq_remove(&area, lib);
 	}
 
-	/* Check 5-stone group is completely surrounded.
+	/* Check group is completely surrounded and surrounding groups are connected.
 	 * Can't escape and can't connect out, only countercaptures left to check. */
-	if (can_countercapture(b, g5, NULL))
+	if (can_countercapture(b, g5, NULL) || !surrounding_groups_connected(b, g5))
 		return false;
 
 	/* Group alive after capturing these stones ? */
@@ -395,9 +413,9 @@ breaking_6_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 	if (!nakade_area_dead_shape(b, &area))
 		return false;
 
-	/* Check 6-stone group is completely surrounded.
+	/* Check group is completely surrounded and surrounding groups are connected.
 	 * Can't escape and can't connect out, only countercaptures left to check. */
-	if (can_countercapture(b, g6, NULL))
+	if (can_countercapture(b, g6, NULL) || !surrounding_groups_connected(b, g6))
 		return false;
 
 	/* Group alive after capturing these stones ? */

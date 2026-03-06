@@ -40,6 +40,9 @@ static void mq_remove_index(mq_t *q, int i);
 /* Is move in the queue ? */
 static bool mq_has(mq_t *q, coord_t c);
 
+/* Same but return coord index, or -1 if not found. */
+static int mq_index(mq_t *q, coord_t c);
+
 /* Cat two queues together. */
 static void mq_append(mq_t *qd, mq_t *qs);
 
@@ -104,6 +107,15 @@ mq_has(mq_t *q, coord_t c)
 		if (q->move[i] == c)
 			return true;
 	return false;
+}
+
+static inline int
+mq_index(mq_t *q, coord_t c)
+{
+	for (int i = 0; i < q->moves; i++)
+		if (q->move[i] == c)
+			return i;
+	return -1;
 }
 
 static inline void

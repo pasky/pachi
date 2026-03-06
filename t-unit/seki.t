@@ -130,6 +130,19 @@ breaking_nakade_seki w g6 0
 breaking_nakade_seki w f3 0
 
 
+% Not 3-stone seki (surrounding groups not connected)
+boardsize 7
+. . O . . . .
+X . O O . O .
+. X X O O . .
+O)O O X O . .
+. X X X O O .
+X X . . X O .
+. O O O O O .
+
+breaking_nakade_seki b a3 0
+
+
 % Not 3-stone seki (not fully surrounded)
 boardsize 7
 . X). X X X .
@@ -395,6 +408,19 @@ breaking_nakade_seki w d4 0
 breaking_nakade_seki w f6 0
 
 
+% Not 4-stone seki (surrounding groups not connected)
+boardsize 7
+. O O O . . .
+X X X O . . .
+X . X O . O .
+X O X O O . .
+O)O O X O . .
+. X X X O O .
+X X . . X O .
+
+breaking_nakade_seki b a2 0
+
+
 % 4-stone seki (don't break)
 boardsize 7
 . . . X X X .
@@ -653,6 +679,19 @@ breaking_nakade_seki w d4 0
 breaking_nakade_seki w e3 0
 
 
+% Not 5-stone seki (surrounding groups not connected)
+boardsize 7
+. O O O . . .
+X X X O . O .
+. O O X O . .
+O)O O X O . .
+. X X X O O .
+X X . . X O .
+. O O O O O .
+
+breaking_nakade_seki b a3 0
+
+
 % 5-stone seki (don't break)
 boardsize 7
 . . X X X X .
@@ -886,6 +925,19 @@ X)X X O O O O
 
 breaking_nakade_seki w e6 0
 breaking_nakade_seki w f5 0
+
+
+% Not 6-stone seki (surrounding groups not connected)
+boardsize 7
+. O O O . . .
+X X X O . O .
+. O O X O . .
+O)O O X O . .
+. O X X O O .
+X X X . X O .
+. O O O O O .
+
+breaking_nakade_seki b a3 0
 
 
 % 6-stone seki (don't break)

@@ -676,6 +676,35 @@ dragon_at(board_t *b, coord_t to)
 	return d;
 }
 
+static int
+same_dragon_handler(board_t *b, enum stone color, group_t g, void *data)
+{
+	mq_t *groups = (mq_t *)data;
+	int i = mq_index(groups, g);
+	if (i != -1) {
+		mq_remove_index(groups, i);
+		if (!groups->moves)  // All groups found, stop.
+			return -1;
+	}
+	return 0;
+}
+
+bool
+same_dragon_groups(board_t *b, mq_t *groups)
+{
+	enum stone color = board_at(b, groups->move[0]);
+
+#ifdef EXTRA_CHECKS
+	assert(groups->moves);
+	for (int i = 0; i < groups->moves; i++) {
+		group_t g = groups->move[i];
+		assert(sane_group(b, g));
+		assert(board_at(b, g) == color);
+	}
+#endif
+	foreach_connected_group(b, color, groups->move[0], same_dragon_handler, (void*)groups);
+	return !groups->moves;
+}
 
 #define		GAP_LENGTH        4
 

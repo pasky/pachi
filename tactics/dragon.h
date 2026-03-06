@@ -15,6 +15,9 @@
  * be smaller. Doesn't need to be perfect though. */
 group_t dragon_at(board_t *b, coord_t to);
 
+/* Return whether all groups in @groups belong to the same dragon. */
+bool same_dragon_groups(board_t *b, mq_t *groups);
+
 /* Returns total number of liberties of dragon at @to. */
 int dragon_liberties(board_t *b, enum stone color, coord_t to);
 
