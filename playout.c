@@ -78,11 +78,15 @@ playout_play_move(playout_t *playout, board_t *b, enum stone color)
 {
 	playout_setup_t *setup = playout->setup;
 	playout_policy_t *policy = playout->policy;
-	coord_t coord = pass;
+	coord_t coord, playout_coord;
 
-	coord = policy->choose(policy, setup, b, color);
-	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(coord));
-	coord = playout_check_move(policy, b, coord, color);
+	playout_coord = policy->choose(policy, setup, b, color);
+	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(playout_coord));
+	coord = playout_check_move(policy, b, playout_coord, color);
+
+	/* Show if playout move is rejected. */
+	if (DEBUGL(5) && coord != playout_coord)
+		fprintf(stderr, "Playout move %s was invalid !\n", coord2sstr(playout_coord));
 
 	if (!is_pass(coord)) {
 		move_t m = move(coord, color);
