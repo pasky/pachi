@@ -172,19 +172,16 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 
 	/* Group alive after capturing these stones ? */
 	bool safe = false;
-	coord_t lib1 = group_lib(b, g3, 0);
-	coord_t lib2 = group_lib(b, g3, 1);
-	with_move(b, lib1, color, {
-		with_move(b, lib2, color, {
+	with_move_strict(b, coord, color, {
+		assert(group_libs(b, g3) == 1);
+		coord_t lib = group_lib(b, g3, 0);
+		with_move_strict(b, lib, color, {
 			group_t g = group_at(b, own);
 			assert(g);  assert(!group_at(b, g3));
 			safe = dragon_is_safe(b, g, color);
 		});
 	});
-	if (safe)
-		return false;
-
-	return true;
+	return !safe;
 }
 
 /*   . . O O O |
@@ -254,19 +251,16 @@ breaking_4_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 
 	/* Group alive after capturing these stones ? */
 	bool safe = false;
-	coord_t lib1 = group_lib(b, g4, 0);
-	coord_t lib2 = group_lib(b, g4, 1);
-	with_move(b, lib1, color, {
-		with_move(b, lib2, color, {
+	with_move_strict(b, coord, color, {
+		assert(group_libs(b, g4) == 1);
+		coord_t lib = group_lib(b, g4, 0);
+		with_move_strict(b, lib, color, {
 			group_t g = group_at(b, own);
 			assert(g);  assert(!group_at(b, g4));
 			safe = dragon_is_safe(b, g, color);
 		});
 	});
-	if (safe)
-		return false;
-
-	return true;
+	return !safe;
 }
 
 /*   . . O O O |
@@ -337,19 +331,16 @@ breaking_5_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 
 	/* Group alive after capturing these stones ? */
 	bool safe = false;
-	coord_t lib1 = group_lib(b, g5, 0);
-	coord_t lib2 = group_lib(b, g5, 1);
-	with_move(b, lib1, color, {
-		with_move(b, lib2, color, {
+	with_move_strict(b, coord, color, {
+		assert(group_libs(b, g5) == 1);
+		coord_t lib = group_lib(b, g5, 0);
+		with_move_strict(b, lib, color, {
 			group_t g = group_at(b, own);
 			assert(g);  assert(!group_at(b, g5));
 			safe = dragon_is_safe(b, g, color);
 		});
 	});
-	if (safe)
-		return false;
-
-	return true;
+	return !safe;
 }
 
 /*   . . O O O |
@@ -411,19 +402,16 @@ breaking_6_stone_seki(board_t *b, coord_t coord, enum stone color, group_t own, 
 
 	/* Group alive after capturing these stones ? */
 	bool safe = false;
-	coord_t lib1 = group_lib(b, g6, 0);
-	coord_t lib2 = group_lib(b, g6, 1);
-	with_move(b, lib1, color, {
-		with_move(b, lib2, color, {
+	with_move_strict(b, coord, color, {
+		assert(group_libs(b, g6) == 1);
+		coord_t lib = group_lib(b, g6, 0);
+		with_move_strict(b, lib, color, {
 			group_t g = group_at(b, own);
 			assert(g);  assert(!group_at(b, g6));
 			safe = dragon_is_safe(b, g, color);
 		});
 	});
-	if (safe)
-		return false;
-
-	return true;
+	return !safe;
 }
 
 /*   . O O O O |

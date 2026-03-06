@@ -789,6 +789,20 @@ breaking_nakade_seki w g5 0
 moggy status c4 O   e4 O
 
 
+% Not 5-stone seki (safe, one invalid move)
+O O X X . X X O .
+O X . X . X X O O
+O O X X X O X O X
+O . O X O O X X X
+. O O O X O . . X
+O . O O X O . X .
+O O . O X O X . X
+X X X O X X O . .
+. X)X O X . . O .
+
+breaking_nakade_seki w c3 0
+
+
 % 5-stone seki (full board)
 boardsize 19
 . . . . . . . . . . . . . . . . . . .
