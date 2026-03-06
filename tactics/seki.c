@@ -461,7 +461,13 @@ breaking_nakade_seki(board_t *b, coord_t coord, enum stone color)
 
 		group = g;
 	});
-	
+
+	/* Check around other lib */
+	coord_t lib = group_other_lib(b, group, coord);
+	if (!neighbor_count_at(b, lib, color) ||
+	    immediate_liberty_count(b, lib) > 1)
+		return false;
+
 	switch (stones) {
 		case 3:  return breaking_3_stone_seki(b, coord, color, own, group);
 		case 4:  return breaking_4_stone_seki(b, coord, color, own, group);

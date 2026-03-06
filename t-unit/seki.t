@@ -612,6 +612,19 @@ breaking_nakade_seki w d4 0
 breaking_nakade_seki w e5 0
 
 
+% Not 5-stone seki (eye in the corner)
+boardsize 7
+. . . O . X .
+. X X O O X X
+. . . X O X X
+. X . X O O O
+. . X . X X).
+. . . X . . .
+. . . . . . .
+
+breaking_nakade_seki w e7 0
+
+
 % Not 5-stone seki (can escape)
 boardsize 7
 . . X X X . .
@@ -789,7 +802,8 @@ breaking_nakade_seki w g5 0
 moggy status c4 O   e4 O
 
 
-% Not 5-stone seki (safe, one invalid move)
+% Not 5-stone seki (safe, eye in the corner)
+boardsize 9
 O O X X . X X O .
 O X . X . X X O O
 O O X X X O X O X
@@ -832,6 +846,19 @@ moggy status t12 X
 
 ##############################################################################
 # Nakade seki: 6 stones
+
+% Not 6-stone seki (eye in the corner)
+boardsize 7
+. . . O . X .
+. X X O X X X
+. . X O O X X
+. X . X O O O
+. . X . X X).
+. . . X . . .
+. . . . . . .
+
+breaking_nakade_seki w e7 0
+
 
 % Not 6-stone seki (can escape)
 boardsize 7
