@@ -225,6 +225,20 @@ O . . X O
 
 bad_selfatari b c3 0
 
+% Eye falsification throw-ins
+boardsize 7
+. X . O X O .
+. X O O . O .
+X X O X O X .
+O X O X X X X
+. X O . . X O
+X O . O . X .
+O O . . O O .
+
+bad_selfatari w a3 0
+bad_selfatari w g2 0
+bad_selfatari b e6 0
+
 % Bad nakade (play in tiger mouth)
 boardsize 5
 . . . . .

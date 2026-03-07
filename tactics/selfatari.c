@@ -255,9 +255,10 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 /* Throw-in */
 
 /* We can be throwing-in to false eye:
+ *   . . O O O O O O O O O . .
  *   X X X O X X X O X X X X X
  *   X . * X * O . X * O O . X
- *   # # # # # # # # # # # # #   */
+ *   -------------------------  */
 static int
 check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 {
@@ -282,9 +283,9 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 
 	/* Single-stone throw-in may be ok... */
 	if (!own_group) {
-		/* O X .  There is one problem - when it's
-		 * . * X  actually not a throw-in!
-		 * # # #  */
+		/*  O X .  There is one problem - when it's
+		 *  . * X  actually not a throw-in!
+		 *  -----  */
 		foreach_neighbor(b, to, {
 			if (board_at(b, c) != S_NONE) continue;
 			/* Is the empty neighbor an escape path?
@@ -309,11 +310,22 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 	/* Multi-stone throwin...? */
 	group_t g = own_group;
 
+#ifdef EXTRA_CHECKS
 	assert(group_libs(b, g) <= 2);
-	/* Suicide is definitely NOT ok, no matter what else
-	 * we could test. */
-	if (group_libs(b, g) == 1)
-		return true;
+#endif
+
+	/* Capturing stone at edge of group ? Not a throwin.
+	 * Can still be good, this case is handled by setup_nakade():
+	 *     X X X X O .
+	 *     . X O . X O
+	 *     -----------  */
+	if (group_libs(b, g) == 1) {
+#ifdef EXTRA_CHECKS
+		/* We know it's capture and not suicide otherwise wouldn't reach here. */
+		assert(board_get_atari_neighbor(b, to, other_color));
+#endif
+		return -1;
+	}
 
 	/* In that case, we must be connected to at most one stone,
 	 * or throwin will not destroy any eyes. */
