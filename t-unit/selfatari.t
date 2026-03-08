@@ -580,6 +580,17 @@ X X . X
 bad_selfatari w c3 0
 bad_selfatari w c2 1
 
+% 4 stone nakade (pachi 12.88 bug)
+boardsize 5
+. . . . .
+O O O O .
+X X X O O
+X . X X X
+O O O . X
+
+bad_selfatari w b2 0	# nakade, not throwin
+bad_selfatari w d1 1
+
 % Bad nakade (too many libs)
 boardsize 4
 O O . X

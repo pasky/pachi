@@ -314,30 +314,44 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 	assert(group_libs(b, g) <= 2);
 #endif
 
-	/* Capturing stone at edge of group ? Not a throwin.
-	 * Can still be good, this case is handled by setup_nakade():
-	 *     X X X X O .
-	 *     . X O . X O
-	 *     -----------  */
-	if (group_libs(b, g) == 1) {
-#ifdef EXTRA_CHECKS
-		/* We know it's capture and not suicide otherwise wouldn't reach here. */
-		assert(board_get_atari_neighbor(b, to, other_color));
-#endif
-		return -1;
-	}
+	/* Multi-stone throwin:
+	 * Only 2-stones throw-ins groups are interesting for throw-in
+	 * (can't falsify eyes otherwise).
+	 *
+	 * We are in one of these situations:
+	 * 1) O O O X .  2) . . O O X .  3) . X O O X .  4) O O O X .
+	 *    . X . O .     . . X . O .     . . X . O .     O X . O X
+	 *    ---------     -----------     -----------     ---------
+	 *
+	 * - group has 1 liberty:   4)   (we know it's not suicide, so there is a capture)
+	 * - group has 2 liberties: 1), 2) or 3)  
+	 * We only handle cases like 1), 2) and 3) here. */
 
-	/* In that case, we must be connected to at most one stone,
-	 * or throwin will not destroy any eyes. */
-	if (group_is_onestone(b, g)) {
+	if (group_libs(b, g) == 2) {
+		/* In that case, we must be connected to at most one stone,
+		 * or throwin will not destroy any eyes. */
+		if (!group_is_onestone(b, g))
+			return -1;
+
 		/* Must be somewhat enclosed */
 		coord_t other_lib = group_other_lib(b, g, to);
 		int other_own = neighbor_count_at(b, other_lib, color) - 1;
 		if (immediate_liberty_count(b, other_lib) + other_own < 2)
 			return false;
+		return true;
 	}
 
-	return true;
+	/* Capturing stone at edge of group ? Not a throwin.
+	 * Can still be good, this case is handled by setup_nakade():
+	 *     X X X X O .
+	 *     . X O . X O
+	 *     -----------  */
+#ifdef EXTRA_CHECKS
+	assert(group_libs(b, g) == 1);
+	/* If we reach here we know it's capture and not suicide. */
+	assert(board_get_atari_neighbor(b, to, other_color));
+#endif
+	return -1;
 }
 
 
