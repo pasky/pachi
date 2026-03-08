@@ -1,22 +1,44 @@
 #!/usr/bin/perl
-# Convert ascii board diagrams from board_print() to t-unit board format.
-# (remove borders and just keep the stones basically)
-# Usage: ./board_print_to_tunit > foo.t
-#        copy paste the diagram with header, ^D
+# Convert full ascii board diagrams with coordinates to minimalist t-unit
+# board diagram format.
+#
+# Usage: tools/board_print_to_tunit > foo.t
+#        copy paste board diagram with header, ^D
+#
+# Note: No longer needed since Pachi 12.90 as it handles full board
+#       diagrams in unit test files. But can be useful for regression
+#       testing, to convert newer test files back into old format to
+#       feed into older Pachi versions:
+#           tools/board_print_to_tunit < new_format.t > old_format.t
+#           pachi-12.80 -u old_format.t
+#
+#       or directly:
+#           pachi-12.80 -u <(tools/board_print_to_tunit < new_format.t)
 
 use utf8;
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
 
 my $size = 0, $komi = 7.5, $handicap = 0;
-foreach my $s (<STDIN>)
+foreach my $line (<STDIN>)
 {
-    # Get komi and handicap from board header, if present
-    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
-    {  $komi = $1;  $handicap = $2; next;  }
+    my $s = $line;
     
+    # Get komi and handicap from board header, if present
+    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/) {
+	$komi = $1;  $handicap = $2;
+	next;
+    }
+
+    # Skip board formatting ...
+    if ($s =~ m/^      A B C/ ||
+	$s =~ m/^    \+------/) {  next;  }
+
+    # Convert special characters
     $s =~ s/·/./g;   # color boards
     $s =~ s/\*/./g;  # target move
+
+    # Convert board diagram line
     if ($s =~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]+/)
     {   
 	$s = $2;
@@ -27,7 +49,11 @@ foreach my $s (<STDIN>)
 	    if ($komi != 7.5)   {  print "komi $komi\n";  }
 	    if ($handicap != 0) {  print "handicap $handicap\n";  }
 	}
-	$s =~ s/ *$//;	
+	$s =~ s/ *$//;
 	print "$s\n";
+	next;
     }
+    
+    # Something else, just print.
+    print $line;
 }
