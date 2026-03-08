@@ -1,3 +1,115 @@
+##############################################################################
+# Basic checks
+
+% Open space
+boardsize 3
+. . .
+. X .
+. . .
+
+bad_selfatari w a2 0
+bad_selfatari b a2 0
+
+% Connecting  groups
+boardsize 3
+. O .
+O . O
+. O .
+
+bad_selfatari w b2 0
+bad_selfatari b b2 1
+
+% Selfatari / suicide
+boardsize 3
+O O O
+O . O
+. O O
+
+bad_selfatari w b2 1
+bad_selfatari b b2 1
+
+% Capture / connection
+boardsize 3
+. . .
+. X .
+X O .
+
+bad_selfatari w a2 0
+bad_selfatari b a2 0
+
+% Ko capture
+boardsize 3
+X . .
+. X .
+X O .
+
+bad_selfatari w a2 0
+
+% Capture / connection
+boardsize 3
+X X X
+. O X
+X O .
+
+bad_selfatari w a2 0
+bad_selfatari b a2 1
+
+% Capture group
+boardsize 3
+. O .
+O X .
+O X .
+
+bad_selfatari b a3 0
+bad_selfatari w a3 1
+
+% Capture group (big selfatari)
+boardsize 5
+. . . O X
+X X X O X
+O O . X X
+O X X O O
+O X . . .
+
+bad_selfatari w c3 0
+
+% Capture group (bent-3)
+boardsize 3
+O O O
+X . O
+X X O
+
+bad_selfatari w b2 0
+
+% Capture group (bent-3)
+boardsize 4
+. . . .
+O X X .
+X . X .
+X X O .
+
+bad_selfatari w b2 0
+
+
+% Multiple captures
+boardsize 3
+O O .
+X O O
+. X O
+
+bad_selfatari w a1 0
+bad_selfatari b a1 1	# suicide
+
+% Multiple captures
+boardsize 5
+. . . . .
+X X . . .
+O X X X .
+O O O X .
+X . X O .
+
+bad_selfatari w b1 0
+
 % Basic self-atari check
 boardsize 3
 X X .
@@ -26,6 +138,28 @@ X X X
 
 bad_selfatari w b2 1
 bad_selfatari b b2 0
+
+% Ko throwin, not snapback
+boardsize 5
+. . . . .
+. X O . .
+X . . O .
+. X O . .
+. . . . .
+
+bad_selfatari b c3 1
+snapback b c3 0
+
+% Ko capture
+boardsize 5
+. . . . .
+. X O . .
+X O . O .
+. X O . .
+. . . . .
+
+bad_selfatari b c3 0
+snapback b c3 0
 
 
 ##############################################################################
@@ -925,28 +1059,6 @@ X X X . .
 bad_selfatari b b3 0	# throw-in
 snapback b b3 0
 
-% Ko throwin, not snapback
-boardsize 5
-. . . . .
-. X O . .
-X . . O .
-. X O . .
-. . . . .
-
-bad_selfatari b c3 1
-snapback b c3 0
-
-% Ko capture
-boardsize 5
-. . . . .
-. X O . .
-X O . O .
-. X O . .
-. . . . .
-
-bad_selfatari b c3 0
-snapback b c3 0
-
 % Side snapback
 boardsize 5
 X X X . .
@@ -1222,6 +1334,16 @@ boardsize 5
 . O . X .
 
 bad_selfatari w c1 0
+
+% Not side 2 stones throw-in (no throw-in situation, strong shape)
+boardsize 5
+. . . . .
+. . . . .
+. . . O .
+. X X X .
+. O . X .
+
+bad_selfatari w c1 1
 
 % Side 2 stones throw-in
 boardsize 6
