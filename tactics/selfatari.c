@@ -20,11 +20,11 @@
 /* Selfatari state */
 
 static inline bool
-is_neighbor_group(selfatari_state_t *s, enum stone color, group_t g)
+group_is_selfatari_neighbor(selfatari_state_t *s, board_t *b, group_t g, enum stone color)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
-	assert(sane_coord(g));
+	assert(sane_group(b, g));
 #endif
 	for (int i = 0; i < s->groupcts[color]; i++)
 		if (g == s->groupids[color][i])
@@ -42,21 +42,20 @@ init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	// memset() slower here ...
 	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
 	s->lib = pass;
-	s->friend_has_no_libs = false;
-	s->needs_more_lib = 0;
-	s->needs_more_lib_except = 0;
+	s->extra_lib = pass;
+	s->captures = 0;
 
 	foreach_neighbor(b, to, {
-		enum stone color = board_at(b, c);
-		if (color == S_NONE) {
-			s->lib = c;
-			continue;
-		}
-		group_t group = group_at(b, c);
-		if (!group) { continue; }
+		enum stone col = board_at(b, c);
+		if (col == S_NONE) {  s->lib = c; continue;  }
 
-		if (!is_neighbor_group(s, color, group))
-			s->groupids[color][s->groupcts[color]++] = group;
+		group_t g = group_at(b, c);
+		if (!g)  continue;
+
+		s->captures += (col != color && group_libs(b, g) == 1);
+
+		if (!group_is_selfatari_neighbor(s, b, g, col))
+			s->groupids[col][s->groupcts[col]++] = g;
 	});
 }
 
@@ -171,17 +170,9 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 	assert(board_at(b, to) == S_NONE);
 #endif	
 	for (int i = 0; i < s->groupcts[color]; i++) {
-		/* We can escape by connecting to this group if it's
-		 * not in atari. */
+		/* We can escape by connecting to this group if it's not in atari. */
 		group_t g = s->groupids[color][i];
 
-		if (group_libs(b, g) == 1) {
-			if (!s->needs_more_lib)
-				s->friend_has_no_libs = true;
-			// or we already have a friend with 1 lib
-			continue;
-		}
-		
 		if (group_libs(b, g) > 2) {
 			/* Could we self-atari the group here? */
 			if (flags & SELFATARI_3LIB_SUICIDE &&
@@ -191,26 +182,23 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 			return false;
 		}
 
-		/* We need to have another liberty, and
-		 * it must not be the other liberty of
-		 * the group. */
-		int lib2 = group_other_lib(b, g, to);
-		/* Maybe we already looked at another
-		 * group providing one liberty? */
-		if (s->needs_more_lib && s->needs_more_lib != g
-		    && s->needs_more_lib_except != lib2)
-			return false;
+		if (group_libs(b, g) != 2)
+			continue;
 
-		/* Can we get the liberty locally ?
-		 * Ok if we have one liberty, but not lib2. */
+		/* Group has 2 liberties: It provides an extra liberty.
+		 * We need another liberty besides this one. */
+		int lib2 = group_other_lib(b, g, to);
+
+		/* Do we have the liberty locally ? */
 		if (!is_pass(s->lib) && s->lib != lib2)
 			return false;
 
-		/* ...ok, then we can still contribute a liberty
-		 * later by capturing something. */
-		s->needs_more_lib = g;
-		s->needs_more_lib_except = lib2;
-		s->friend_has_no_libs = false;
+		/* Or another extra liberty ? */
+		if (!is_pass(s->extra_lib) && s->extra_lib != lib2)
+			return false;
+
+		/* Save extra liberty. */
+		s->extra_lib = lib2;
 	}
 
 	return -1;
@@ -228,49 +216,36 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	assert(is_player_color(color));
 	assert(board_at(b, to) == S_NONE);
 #endif
-	/* We may be able to gain a liberty by capturing this group. */
-	group_t can_capture = 0;
-
-	/* Examine enemy groups: */
-	enum stone other_color = stone_other(color);
-	for (int i = 0; i < s->groupcts[other_color]; i++) {
-		/* We can escape by capturing this group if it's in atari. */
-		group_t g = s->groupids[other_color][i];
-		if (group_libs(b, g) > 1)
-			continue;
-
-		/* But we need to get to at least two liberties by this:
-		 * if we already have one outside liberty, or the group is
-		 * more than 1 stone (in that case, capturing is always nice!). */
-		if (!is_pass(s->lib) || !group_is_onestone(b, g))
+	if (s->captures) {
+		/* Capturing gives one liberty, we need another one.
+		 * Do we already have an extra liberty ? */
+		if (!is_pass(s->lib) || !is_pass(s->extra_lib))
 			return false;
-		/* ...or, it's a ko stone, */
-		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
-			/* and we don't have a group to save: then, just taking
-			 * single stone means snapback! */
-			if (!s->friend_has_no_libs)
+
+		/* Ko captures and multiple captures are fine. */
+		int friendly_groups = s->groupcts[color];
+		if (!friendly_groups || s->captures > 1)
+			return false;
+
+		/* Group capture ? */
+		enum stone other_color = stone_other(color);
+		for (int i = 0; i < s->groupcts[other_color]; i++) {
+			group_t g = s->groupids[other_color][i];
+			if (group_libs(b, g) != 1) continue;
+
+			/* Capturing more than one stone is always nice ! */
+			if (!group_is_onestone(b, g))
 				return false;
 		}
-		/* ...or, we already have one indirect liberty provided
-		 * by another group. */
-		if (s->needs_more_lib || (can_capture && can_capture != g))
-			return false;
-		can_capture = g;
-
-	}
-
-	if (DEBUGL(6))
-		fprintf(stderr, "no cap group\n");
-
-	if (!s->needs_more_lib && !can_capture && is_pass(s->lib)) {
-		/* We have no hope for more fancy tactics - this move is simply
-		 * a suicide, not even a self-atari. */
-		if (DEBUGL(6))
-			fprintf(stderr, "suicide\n");
+	} else if (is_pass(s->extra_lib) && is_pass(s->lib)) {
+		/* This move is a suicide, not even a self-atari. */
+		if (DEBUGL(6))  fprintf(stderr, "suicide\n");
 		return true;
 	}
-	/* XXX: I wonder if it makes sense to continue if we actually
-	 * just !s->needs_more_lib. */
+
+	/* Don't catch snapback captures here, some of them are good selfataris
+	 * like throw-in to falsify eye. Let them through, if they don't get
+	 * matched later on they will get rejected anyway. */
 
 	return -1;
 }
@@ -494,7 +469,7 @@ is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_
 	foreach_neighbor(b, lib2, {
 		if (board_at(b, c) != color)  continue;
 		group_t g2 = group_at(b, c);
-		if (!is_neighbor_group(s, color, g2))
+		if (!group_is_selfatari_neighbor(s, b, g2, color))
 			return true;
 	});
 

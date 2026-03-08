@@ -8,19 +8,12 @@
 #include "debug.h"
 
 typedef struct {
-	int     groupcts[S_MAX];	/* number of neighbor groups for each color */
-	group_t groupids[S_MAX][4];	/* and their ids */
-	coord_t lib;			/* liberty after playing selfatari */
-	
-	bool    friend_has_no_libs;	/* This is set if this move puts a group out of _all_
-					 * liberties; we need to watch out for snapback then. */
-	
-	group_t needs_more_lib;		/* We may have one liberty, but be looking for one more.
-					 * In that case, @needs_more_lib is id of group
-					 * already providing one, don't consider it again. */
-	
-	coord_t needs_more_lib_except;  /* ID of the first liberty, providing it again is not interesting. */
-	group_t snapback_group;		/* if snapback, snapbacked group found */
+	int     groupcts[S_MAX];	/* Number of neighbor groups for each color */
+	group_t groupids[S_MAX][4];	/* And their ids */
+	coord_t lib;			/* Selfatari immediate liberty (if any). */
+	coord_t extra_lib;		/* Extra liberty provided by own neighbor group. */
+	int     captures;               /* Neighbor coords captured (0-4) */
+	group_t snapback_group;		/* If snapback, snapbacked group found. */
 } selfatari_state_t;
 
 
