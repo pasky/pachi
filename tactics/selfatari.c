@@ -272,6 +272,9 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 #endif
 	enum stone other_color = stone_other(color);
 
+	/* XXX Should also check crosscut pattern, lets weird stuff through without.
+	 *     Adding it hurts playouts balance quite a bit though, investigate ... */
+
 	/* Throw-in situation ? */
 	if (!(neighbor_count_at(b, to, other_color) + neighbor_count_at(b, to, S_OFFBOARD) == 3 &&
 	      board_is_false_eyelike(b, to, other_color)))
@@ -283,9 +286,9 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 
 	/* Single-stone throw-in may be ok... */
 	if (!own_group) {
-		/*  O X .  There is one problem - when it's
-		 *  . * X  actually not a throw-in!
-		 *  -----  */
+		/*  O X .    . X .   There is one problem:
+		 *  . * X    . * X   When it's actually not a throw-in !
+		 *  -----    -----                                      */
 		foreach_neighbor(b, to, {
 			if (board_at(b, c) != S_NONE) continue;
 			/* Is the empty neighbor an escape path?
@@ -297,9 +300,9 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 				return true;
 			/* Shape must be right also: Stones above/below empty spot
 			 * in example must be either black or offboard. */
-			int diff = board_stride(b) + 1 - abs(c - to);
-			enum stone e1 = board_at(b, c + diff);
-			enum stone e2 = board_at(b, c - diff);
+			int offset = other_offset(c - to);
+			enum stone e1 = board_at(b, c + offset);
+			enum stone e2 = board_at(b, c - offset);
 			if ((e1 != other_color && e1 != S_OFFBOARD) ||
 			    (e2 != other_color && e2 != S_OFFBOARD))
 				return true;
@@ -307,48 +310,32 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 		return false;
 	}
 
-	/* Multi-stone throwin...? */
-	group_t g = own_group;
-
-#ifdef EXTRA_CHECKS
-	assert(group_libs(b, g) <= 2);
-#endif
-
 	/* Multi-stone throwin:
-	 * Only 2-stones throw-ins groups are interesting for throw-in
-	 * (can't falsify eyes otherwise).
-	 *
-	 * We are in one of these situations:
+	 * In that case, we must be connected to at most one stone,
+	 * or throwin will not destroy any eyes. */
+	group_t g = own_group;
+	if (!group_is_onestone(b, g))
+		return -1;
+
+	/* We are in one of these situations:
 	 * 1) O O O X .  2) . . O O X .  3) . X O O X .  4) O O O X .
 	 *    . X . O .     . . X . O .     . . X . O .     O X . O X
 	 *    ---------     -----------     -----------     ---------
 	 *
-	 * - group has 1 liberty:   4)   (we know it's not suicide, so there is a capture)
-	 * - group has 2 liberties: 1), 2) or 3)  
-	 * We only handle cases like 1), 2) and 3) here. */
-
-	if (group_libs(b, g) == 2) {
-		/* In that case, we must be connected to at most one stone,
-		 * or throwin will not destroy any eyes. */
-		if (!group_is_onestone(b, g))
-			return -1;
-
+	 * good: 1), 4)    bad: 2), 3)                               */
+	if (group_libs(b, g) == 2) {  // 1), 2) or 3)
 		/* Must be somewhat enclosed */
 		coord_t other_lib = group_other_lib(b, g, to);
 		int other_own = neighbor_count_at(b, other_lib, color) - 1;
 		if (immediate_liberty_count(b, other_lib) + other_own < 2)
-			return false;
-		return true;
+			return false;  // 1)
+		return true;           // 2), 3)
 	}
 
-	/* Capturing stone at edge of group ? Not a throwin.
-	 * Can still be good, this case is handled by setup_nakade():
-	 *     X X X X O .
-	 *     . X O . X O
-	 *     -----------  */
+	/* 4): Handled later in setup_nakade().
+	 * Just do some sanity checks. */
 #ifdef EXTRA_CHECKS
 	assert(group_libs(b, g) == 1);
-	/* If we reach here we know it's capture and not suicide. */
 	assert(board_get_atari_neighbor(b, to, other_color));
 #endif
 	return -1;
@@ -941,7 +928,11 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 		return false;
 	
 	/* Making 3-stone group or more */	
-	
+
+	// XXX Not in setup_nakade() !
+	//     Makes is_bad_selfatari() and is_really_bad_selfatari() disagree
+	//     which cannot be good. Removing it here or adding it there is
+	//     pretty bad for playouts balance though, investigate ...
 	/* Not always true but for the most part, if we're creating
 	 * a 3+ stone group in atari and we could have captured
 	 * something instead it's really stupid, even if shape is
