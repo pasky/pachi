@@ -272,6 +272,10 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 #endif
 	enum stone other_color = stone_other(color);
 
+	/* We cannot sensibly throw-in into a corner. */
+	if (neighbor_count_at(b, to, S_OFFBOARD) == 2)
+		return -1;
+
 	/* XXX Should also check crosscut pattern, lets weird stuff through without.
 	 *     Adding it hurts playouts balance quite a bit though, investigate ... */
 
@@ -279,10 +283,6 @@ check_throwin(board_t *b, enum stone color, coord_t to, group_t own_group)
 	if (!(neighbor_count_at(b, to, other_color) + neighbor_count_at(b, to, S_OFFBOARD) == 3 &&
 	      board_is_false_eyelike(b, to, other_color)))
 		return -1;
-
-	/* We cannot sensibly throw-in into a corner. */
-	if (neighbor_count_at(b, to, S_OFFBOARD) == 2)
-		return true;
 
 	/* Single-stone throw-in may be ok... */
 	if (!own_group) {
