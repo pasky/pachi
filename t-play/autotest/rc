@@ -58,6 +58,18 @@ twogtp_path="/path/to/gogui-1.4.11/bin/gogui-twogtp"
 
 
 ########################################################################################
+# KataGo player
+
+# Lightweight single-threaded KataGo player.
+# Tweak model / katago_player.cfg playouts if you want to make it stronger.
+# Setting sync_workers=y above is highly recommended if you are going to look at results
+# from the first ~600 games (significant time bias as it tends to resign late / play until
+# the end when losing).
+
+player katago "../../katago/cpp/katago_cpu gtp -config katago_player.cfg -model ../../josekifix/katago/g170e-b10c128-s1141046784-d204142634.bin.gz" 0
+
+
+########################################################################################
 # GnuGo player, level 10
 
 # Probably best avoided if possible: doesn't resign lost games (wastes lots
