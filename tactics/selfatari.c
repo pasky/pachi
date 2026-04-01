@@ -1141,6 +1141,38 @@ selfatari_cousin(board_t *b, enum stone color, coord_t coord)
 	}
 	if (q.moves)  return mq_pick(&q);
 
+	/* Or diagonal plays checked by bad_noatari_single_throwin() */
+	if (!s.groupcts[color]) do {
+		foreach_diag_neighbor(b, coord, {
+			if (board_at(b, c) == S_NONE && !bad_approach_move(b, color, c))
+				mq_add_nodup(&q, c);
+		});
+
+		if (is_pass(s.lib)) break;
+		foreach_diag_neighbor(b, s.lib, {
+			if (board_at(b, c) == S_NONE && !bad_approach_move(b, color, c))
+				mq_add_nodup(&q, c);
+		});
+	} while(0);
+
+	/* Or diagonal plays checked by bad_noatari_multiple_throwin() */
+	if (s.groupcts[color] == 1) do {
+		group_t g = s.groupids[color][0];
+		if (group_libs(b, g) != 2) break;
+
+		coord_t other = group_other_lib(b, g, coord);
+		foreach_diag_neighbor(b, coord, {
+			if (c != other && board_at(b, c) == S_NONE && !bad_approach_move(b, color, c))
+				mq_add_nodup(&q, c);
+		});
+
+		foreach_diag_neighbor(b, other, {
+			if (c != coord && board_at(b, c) == S_NONE && !bad_approach_move(b, color, c))
+				mq_add_nodup(&q, c);
+		});
+	} while(0);
+	if (q.moves)  return mq_pick(&q);
+
 	/* Try filling own approach liberties then. */
 	for (int i = 0; i < s.groupcts[color]; i++) {
 		group_t group = s.groupids[color][i];
