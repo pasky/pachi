@@ -43,13 +43,14 @@ bool is_snapback(board_t *b, enum stone color, coord_t to, group_t *snapback_gro
  * Only does the 3lib suicide check of is_bad_selfatari(). */
 bool is_3lib_selfatari(board_t *b, enum stone color, coord_t to);
 
-/* Move (color, coord) is a selfatari; this means that it puts a group of
- * ours in atari; i.e., the group has two liberties now. Return the other
- * liberty of such a troublesome group (optionally stored at *bygroup)
- * if that one is not a self-atari.
- * (In case (color, coord) is a multi-selfatari, consider a randomly chosen
- * candidate.) */
-coord_t selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup);
+/* Move (color, coord) is a selfatari. Pick an alternative move:
+ * - Take away opponent outside liberty if possible (approach from the other side)
+ * - Otherwise play approach move. */
+coord_t selfatari_cousin(board_t *b, enum stone color, coord_t coord);
+
+/* Same as selfatari_cousin() but only consider approach moves.
+ * @bygroup: own 2-lib group on which approach move is played. */
+coord_t selfatari_cousin_approach_moves(board_t *b, enum stone color, coord_t coord, group_t *bygroup);
 
 
 #define SELFATARI_3LIB_SUICIDE		1

@@ -882,7 +882,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 		if (alt && pp->selfatari_other) {
 			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
-			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
+			coord_t c = selfatari_cousin(b, m->color, m->coord);
 			if (!permit_move(c)) return false;
 			if (DEBUGL(5))
 				fprintf(stderr, "Moggy: Redirecting to other lib %s\n", coord2sstr(c));

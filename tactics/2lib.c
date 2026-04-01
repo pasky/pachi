@@ -156,9 +156,10 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 				/* Okay! We are attacker; maybe we just need
 				 * to connect a false eye before atari - this
 				 * is very common in the corner. */
-				coord = selfatari_cousin(b, to_play, lib, &bygroup);
+				coord = selfatari_cousin_approach_moves(b, to_play, lib, &bygroup);
 			}
 			if (is_pass(coord))  continue;
+			assert(bygroup);
 			
 			/* Ok, connect, but prefer not to. */
 			enum stone byowner = board_at(b, bygroup);

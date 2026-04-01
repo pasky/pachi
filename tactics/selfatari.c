@@ -1062,7 +1062,49 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 
 
 coord_t
-selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
+selfatari_cousin_approach_moves(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(coord));
+	assert(board_at(b, coord) == S_NONE);
+#endif
+	group_t groups[4]; int groups_n = 0;
+	foreach_neighbor(b, coord, {
+		/* Consider own groups only. */
+		if (board_at(b, c) != color)  continue;
+		group_t g = group_at(b, c);
+		if (g && group_libs(b, g) == 2) {
+			groups[groups_n++] = g;
+		}
+	});
+	if (!groups_n)  return pass;
+
+	int gn = fast_random(groups_n);
+	int gl = gn;
+	for (; gn - gl < groups_n; gn++) {
+		int gnm = gn % groups_n;
+		group_t group = groups[gnm];
+
+		coord_t lib2;
+		/* Can we get liberties by capturing a neighbor? */
+		mq_t ccq;  mq_init(&ccq);
+		if (can_countercapture(b, group, &ccq))
+			lib2 = mq_pick(&ccq);
+		else {
+			lib2 = group_other_lib(b, group, coord);
+			if (board_is_one_point_eye(b, lib2, color) ||
+			    is_bad_selfatari(b, color, lib2))
+				continue;
+		}
+		*bygroup = group;
+		return lib2;
+	}
+	return pass;
+}
+
+coord_t
+selfatari_cousin(board_t *b, enum stone color, coord_t coord)
 {
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(color));
@@ -1124,8 +1166,6 @@ found:;
 			if (is_bad_selfatari(b, color, lib2))
 				continue;
 		}
-		if (bygroup)
-			*bygroup = group;
 		return lib2;
 	}
 	return pass;
