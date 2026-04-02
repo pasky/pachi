@@ -151,10 +151,12 @@ Ex: pachipachi kenkong 2025-02-11 08:21
 name = "hoshi kobayashi fuseki"
 around = Q4
 around2 = J3
-external_engine_moves = 20
+external_engine = lower_left lower_right
 
 
-Ex: pachipachi samzhang  2025-10-12 12:48]))
+Ex: pachipachi samzhang  2025-10-12 12:48
+      2026-04-02 12:31
+]))
 (;B[pq]
 (;W[]
 (;B[qk]
