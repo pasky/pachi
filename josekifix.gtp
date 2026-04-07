@@ -620,9 +620,22 @@ play W c6
 play B b6  
 play W c7  
 play B e7  
-play W b2  
+play W b2  override name=magic sword mega mess|around=D4
 play B d8  
 play W c8  override name=magic sword mega mess|around=D5
+play B c9  
+play W e8  override name=magic sword mega mess|around=D5
+play B g6  
+play W d9  
+play B d3  
+play W c2  
+play B e3  
+play W f4  
+play B f3  
+play W b4  
+play B b5  
+play W a3  
+play B f6  
 
 clear_board
 play B c4  
@@ -1987,6 +2000,16 @@ clear_board
 play B d4  
 play W f3  
 play B h3  
+play W h4  
+play B j4  
+play W g4  
+play B j5  
+play W j3  override name=4-4 keima pincer tsuke|around=G4
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
 play W d6  
 play B f4  
 play W c4  
@@ -2141,11 +2164,11 @@ play W c3
 play B d3  
 play W c4  
 play B c5  
-play W c2  override name=3-3 block overplay|around=C4
+play W c2  override name=3-3 block overplay|around=C2
 play B d2  
-play W d5  override name=3-3 block overplay|around=C4
+play W d5  override name=3-3 block overplay|around=C2
 play B c6  
-play W e4  override name=3-3 block overplay|around=C4
+play W e4  override name=3-3 block overplay|around=C2
 
 clear_board
 play B d4  
@@ -2155,11 +2178,11 @@ play W c3
 play B d3  
 play W c4  
 play B c5  
-play W c2  override name=3-3 block overplay|around=C4
+play W c2  override name=3-3 block overplay|around=C2
 play B d2  
-play W d5  override name=3-3 block overplay|around=C4
+play W d5  override name=3-3 block overplay|around=C2
 play B b5  
-play W e4  override name=3-3 block overplay|around=C4
+play W e4  override name=3-3 block overplay|around=C2
 
 clear_board
 play B d4  
@@ -2993,7 +3016,7 @@ play W r6
 play B q6  
 play W q7  
 play B p6  
-play W pass  override name=hoshi kobayashi fuseki|around=Q4|around2=J3|external_engine_moves=20
+play W pass  override name=hoshi kobayashi fuseki|around=Q4|around2=J3|external_engine=3 2
 
 clear_board
 play B q16  

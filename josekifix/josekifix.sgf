@@ -558,14 +558,28 @@ pachipachi masato3012  2023-05-07  (weird variation)]
 ;B[bn]
 ;W[cm]
 ;B[em]
-;W[br]
+;W[br]C[[override\]]
 ;B[dl]
 ;W[cl]C[[override\]
 name = "magic sword mega mess"
 around = D5
 
 
-spring pachipachi 2023-02-18])
+spring pachipachi 2023-02-18]
+;B[ck]
+;W[el]C[[override\]
+]
+;B[gn]
+;W[dk]
+;B[dq]
+;W[cr]
+;B[eq]
+;W[fp]
+;B[fq]
+;W[bp]
+;B[bo]
+;W[aq]
+;B[fn])
 (;W[do]
 ;B[dn]
 ;W[cn]C[[override\]
@@ -1860,12 +1874,23 @@ around = E3
 
 E5 worse than E6 for black]))))
 (;W[hp]
-;B[]C[[override\]
+(;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
 around = E4
 
 
 Ex: YZ1509 pachipachi  2018-02-19 ])
+(;B[ip]
+;W[gp]
+;B[io]
+;W[iq]C[[override\]
+name = "4-4 keima pincer tsuke"
+around = G4
+
+
+D6 can quickly turn into disaster.
+
+Ex: pachipachi xyh1969  2025-12-18 16:04]))
 (;W[dn]
 (;B[fp]
 ;W[cp]
@@ -2013,7 +2038,7 @@ Ex: mss2 SwissBot3  2025-10-01 04:01]))
 (;B[co]
 ;W[cr]C[[override\]
 name = "3-3 block overplay"
-around = C4
+around = C2
 
 
 b can't block at C5 because of F3]
