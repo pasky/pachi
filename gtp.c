@@ -903,6 +903,10 @@ gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 
 	assert(b->move_history == &gtp->history);
 	assert(b->move_history->moves == n);
+
+	/* Reset timers */
+	ti[S_BLACK].timer_start = 0;
+	ti[S_WHITE].timer_start = 0;
 }
 
 static enum parse_code
