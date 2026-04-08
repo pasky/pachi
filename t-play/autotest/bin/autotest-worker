@@ -31,6 +31,7 @@ pairs=0
 pairing() {
 	eval "pair${pairs}_id='$(pairid "$@")'"
 	eval "pair${pairs}_bsize='$1'"; shift
+	eval "pair${pairs}_handicap='$1'"; shift
 	eval "pair${pairs}_komi='$1'"; shift
 	eval "pair${pairs}_black='$1'"; shift
 
@@ -135,12 +136,24 @@ prun_get() {
 }
 prun_get prun_black "$p_black" $pa_black
 prun_get prun_white "$p_white" $pa_white
-komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
+
+bsize="$(pairing_param $pair bsize)"
+
+handicap="$(pairing_param $pair handicap)"
+if [ "$handicap" = "even" ]; then
+	handicap=""
+else
+	[ ${handicap/[2-9]/} = "h" ] || die "invalid handicap '$handicap', should be even/h2/h3/h4 ..."
+	handicap="-handicap ${handicap#h}"
+fi
+
+komi="$(pairing_param $pair komi)"
+[ "${komi//[-.0-9]/}" = "" ] || die "invalid komi '$komi'"
 
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
-echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
-     $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch" 2> >(tee "c/$clientid/game.log" >&2)
+echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size $bsize -komi $komi $handicap -games 1 -sgffile "c/$clientid/scratch"
+     $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size $bsize -komi $komi $handicap -games 1 -sgffile "c/$clientid/scratch" 2> >(tee "c/$clientid/game.log" >&2)
 
 # Get count of our game
 mkdir -p "c/$clientid/$pairid"

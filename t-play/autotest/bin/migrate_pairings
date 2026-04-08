@@ -1,0 +1,28 @@
+#!/bin/bash
+# List commands to rename pairings after Pachi-12.90 t-play format change.
+# May help to migrate old test data that is still needed.
+
+for d in c/$HOSTNAME-1/*/; do
+    d=${d#c/$HOSTNAME-1/}
+    d=${d%/}
+
+    echo $d | sed -e 's/--/-*/g' |  # reverse komi: hide '-'
+	sed -e 's/-/ /g' |
+	while read bsize komi side player1 player2; do  # assume old format
+	    komi=`echo "$komi" | tr '*' '-'` # reverse komi: put back '-'
+	    side=`echo "$side" | tr '*' '-'` # side is komi in new format...
+	    if [ "${side//[-0-9]/}" = "." ]; then
+		echo "# already in new format:  $d"
+		continue
+	    fi
+	    handicap="even"
+	    if [ "${komi/h[0-9]/h}" = "h" ]; then
+		handicap=$komi
+		komi=0.5
+	    fi
+	    d2="$bsize-$handicap-$komi-$side-$player1-$player2"
+	    echo "bin/autotest-rename  $d   $d2"
+	done
+    
+
+done
