@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+# Show running pachi processes with command line arguments.
+# May be useful while testing multiple pachi versions to check which ones
+# are actually running. For example with different build directories setup
+# might display something like this:
+#
+#   $ running_pachis
+#   879052 /home/go/build/12.86/pachi_15x15 --nodcnn -t =5000:10000 resign_threshold=0.29 threads=1
+#   879225 /home/go/build/12.88/pachi_15x15 --nodcnn -t =5000:10000 resign_threshold=0.29 threads=1
+#   879251 /home/go/build/12.90/pachi_15x15 --nodcnn -t =5000:10000 resign_threshold=0.29 threads=1
+#   879257 /home/go/build/12.90/pachi_15x15 --nodcnn -t =5000:10000 resign_threshold=0.29 threads=1
+
+# ps -o comm = script/exe name
+foreach my $line (`ps -eo pid,comm`) {
+    if ($line !~ m/ pachi/) {  next;  }
+
+    $line =~ s/^ *//;  # remove leading spaces
+    my @t = split(/ /, $line);
+    my $pid = $t[0];
+    my $s = `ps --no-headers -o args $pid`;  chomp($s);
+    my @cmd = split(/ /, $s);
+    my $exe = $cmd[0];  shift @cmd;
+    my $args = join(' ', @cmd);
+
+    # Filter out scripts ...
+    if ($exe !~ m/pachi/) {  next;  }
+
+    # Show cwd for './pachi' processes
+    if ($exe =~ m|^\Q./pachi|) {
+	my $cwd = readlink("/proc/$pid/cwd");
+	$exe =~ s|\Q./||;
+	$exe = "$cwd/$exe";
+    }
+
+    print "$pid $exe $args\n";
+}
