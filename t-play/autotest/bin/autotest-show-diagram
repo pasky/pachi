@@ -6,9 +6,10 @@ use List::Util qw(min max);
 sub usage
 {
 	print "Usage: autotest-show-diagram [pairing-pattern]\n";
-	print "Options: --scale val      diagram scale (default 2.0)\n";
-	print "         --min   val      diagram starts at val% (default 0)\n";
-	print "         --max   val      diagram stops  at val% (default 100)\n";
+	print "Options: --zoom val      diagram scale (default 100)\n";
+	print "             -x val      \n";
+	print "         --min  val      diagram starts at val% (default 0)\n";
+	print "         --max  val      diagram stops  at val% (default 100)\n";
 	print "\n";
 	print "Make sure you run autotest-gather first !\n";
 	exit(1);
@@ -23,9 +24,10 @@ my $diag_min = 0;
 my $diag_max = 100;
 
 for (; $ARGV[0] =~ m/^-/; shift(@ARGV)) {
-	if ($ARGV[0] eq "--scale") {  shift(@ARGV); $scale    = $ARGV[0]; next;  }
-	if ($ARGV[0] eq "--min")   {  shift(@ARGV); $diag_min = $ARGV[0]; next;  }
-	if ($ARGV[0] eq "--max")   {  shift(@ARGV); $diag_max = $ARGV[0]; next;  }
+	if ($ARGV[0] eq "--zoom" || $ARGV[0] eq "-x")
+                                  {  shift(@ARGV); $scale /= $ARGV[0] / 100; next;  }
+	if ($ARGV[0] eq "--min")  {  shift(@ARGV); $diag_min = $ARGV[0]; next;  }
+	if ($ARGV[0] eq "--max")  {  shift(@ARGV); $diag_max = $ARGV[0]; next;  }
 	usage();
 }
 
@@ -66,7 +68,7 @@ foreach my $str (@tab) {
 		my $max = $wr + $ratio * $sd;  $max = min($max, 100);
 
 		# diagram
-		my @diag = split("", " " x 200);
+		my @diag = split("", " " x 1000);
 		my ($mini, $maxi, $wri) = (round($min/$scale), round($max/$scale), round($wr/$scale));
 		for (my $i = $mini; $i < $maxi; $i++)  {  $diag[$i] = "-";  }
 		$diag[$mini] = "[";
