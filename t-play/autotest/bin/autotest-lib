@@ -5,6 +5,11 @@ set -e # errors are fatal
 
 # Client helpers.  $clientid must be set.
 
+die() {
+	echo "$@"
+	exit 1
+}
+
 log() {
 	printf "$(date)\t$*\n" >>"c/$clientid/log"
 }
@@ -14,4 +19,32 @@ log() {
 
 pairid() {
 	echo "$*" | tr ' ' '-'
+}
+
+# Sync workers functions
+
+worker_running()
+{
+	id="$1"
+	ps aux | grep -q "autotest-client $id\$"
+}
+
+wait_for_other_workers()
+{
+	file="$1"
+	time="$2"
+	msg="$3"
+	for i in `seq 1 16`; do
+		id="$HOSTNAME-$i"
+		if [ "$id" = "$clientid" ] || ! worker_running "$id" || [ -f "c/$id/$file" ]; then
+			continue
+		fi
+
+		# Show msg, expanding $i variable
+		eval "echo \"$msg\""
+
+		while ! [ -f "c/$id/$file" ]; do
+			sleep $time
+		done
+	done
 }

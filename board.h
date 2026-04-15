@@ -336,6 +336,9 @@ int board_play(board_t *b, move_t *m);
  * the move coordinate to redirect the move elsewhere. */
 typedef bool (*ppr_permit)(board_t *b, move_t *m, void *data);
 bool board_permit(board_t *b, move_t *m, void *data);
+/* Pick a move at random that passes permit() policy. */
+coord_t board_pick_random_move(board_t *b, enum stone color, ppr_permit permit, void *permit_data);
+/* Pick and play a move at random that passes permit() policy. */
 coord_t board_play_random(board_t *b, enum stone color, ppr_permit permit, void *permit_data);
 
 /* Returns true if given move can be played. */
@@ -599,17 +602,19 @@ board_is_valid_play_no_suicide(board_t *b, enum stone color, coord_t coord)
 	if (board_is_eyelike(b, coord, stone_other(color)) &&
 	    b->ko.coord == coord && b->ko.color == color)  return false;
 
-	// Capturing something ?
+	enum stone other_color = stone_other(color);
 	foreach_neighbor(b, coord, {
-		if (board_at(b, c) == stone_other(color) &&
-		    group_libs(b, group_at(b, c)) == 1)
-			return true;
-	});
+		group_t g = group_at(b, c);
+		if (!g)  continue;
 
-	// Neighbour with 2 libs ?
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) == color &&
-		    group_libs(b, group_at(b, c)) > 1)
+		enum stone group_color = board_at(b, c);
+
+		// Capturing something ?
+		if (group_color == other_color && group_libs(b, g) == 1)
+			return true;
+
+		// Neighbour with 2 libs ?
+		if (group_color == color && group_libs(b, g) > 1)
 			return true;
 	});
 

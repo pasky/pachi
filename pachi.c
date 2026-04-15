@@ -192,12 +192,12 @@ usage(char *arg)
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
-		"      --kgs                         use this when playing on kgs, \n"
+		"      --kgs                         use this when playing on kgs \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
 		"      --kgs-chat                    enable kgs-chat cmd (kgsGtp 3.5.11 only, crashes 3.5.20+) \n"
 		"      --nopassfirst                 don't pass first when playing chinese \n"
 		"      --banner BANNER               kgs game start message (default: \"Have a good game !\") \n"
-		"                                    can use '+' instead of ' ' if you are wrestling with kgsGtp:"
+		"                                    can use '+' instead of ' ' if you are wrestling with kgsGtp: \n"
 		"                                      pachi --kgs --banner Have+a+good+game! \n"
 		" \n"
 		"Logs / IO: \n"
@@ -262,10 +262,10 @@ usage(char *arg)
 		"  _SECS           absolute time: use fixed number of seconds for the whole game\n"
 		" \n"
 		"Engine args: \n"
-		"  Comma/space separated engine specific options as in:\n"
+		"  Comma/space separated engine specific options as in: \n"
 		"      pachi threads=8 resign_threshold=0.25 pondering \n"
 		"      pachi threads=8,resign_threshold=0.25,pondering            (pachi < 12.50) \n"
-		"\n"
+		" \n"
 		"  See respective engines for details. Most common options for uct: \n"
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      reportfreq=1s                 show search progress every second (default: 1000 playouts) \n"
@@ -581,7 +581,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	fast_srandom(seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, seed);
 	
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
 	if (log_port)            open_log_port(log_port);

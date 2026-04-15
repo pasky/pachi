@@ -201,7 +201,7 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 		});
 
 	/* Check countercaptures */
-	mq_t ccq;
+	mq_t ccq;  mq_init(&ccq);
 	can_countercapture(b, laddered, &ccq);
 	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))

@@ -13,6 +13,13 @@ typedef int coord_t;
 #define offset_horiz (1)
 #define offset_vert  (the_board_stride())
 
+/* Swap offset: horizontal <-> vertical.
+ * Handles negative input also (-offset_horiz / -offset_vert),
+ * so can be used on neighbor coords delta to find the other direction:
+ *     other_offset(c2 - c1)
+ * gives perpendicular offset to c1 -> c2 offset. */
+#define other_offset(offset)  (offset_horiz + offset_vert - abs(offset));
+
 #define offset_left  (-offset_horiz)
 #define offset_right (offset_horiz)
 #define offset_down  (-offset_vert)

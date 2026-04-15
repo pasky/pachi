@@ -29,7 +29,31 @@ X . X . .
 X O X . .
 . X X . .
 
-!two_eyes b1 1		# FIXME
+two_eyes b1 1
+
+
+% Connecting suicide = extra eye
+boardsize 5
+. . . . .
+. . . . .
+O O . . .
+X O O . .
+. X O . .
+
+!two_eyes b2 1		# FIXME
+
+
+% Big eye and false eye
+boardsize 7
+. X X X X X .
+X X O O O O O
+X . O O). . O
+X . O O . . O
+X . . O . O .
+X X X O O O O
+. . X X X X .
+
+two_eyes c4 1
 
 
 % Diag connection
@@ -126,18 +150,29 @@ X X . . .
 two_eyes b1 1
 
 
-% False eye
+% Side false eye
 boardsize 5
-X O O . .
-. X O . .
-X X . O .
-. X . O .
-. X . . .
+. . . . .
+X O O O O
+. X O . O
+X X O . O
+. X O O .
 
 two_eyes b1 0
 
 
-% Ok
+% 2 eyes (eye corner = tiger mouth)
+boardsize 5
+. . . . .
+X . X . .
+. X . . .
+X X . . .
+. X . . .
+
+two_eyes b1 1
+
+
+% 2 eyes (eye corner = eye)
 boardsize 5
 X . X . .
 . X . . .
@@ -148,7 +183,7 @@ X X . . .
 two_eyes b1 1
 
 
-% Ok too
+% 2 eyes (eye corner = selfatari)
 boardsize 5
 X . . . .
 . X . . .
@@ -159,7 +194,7 @@ X X . . .
 two_eyes b1 1
 
 
-% Not ok
+% Can become false eye
 boardsize 5
 X . O . .
 . X . O .
@@ -195,7 +230,7 @@ two_eyes c2 0
 two_eyes c1 0		# 2pt eye not real yet
 
 
-% Open
+% Open big eye
 boardsize 5
 X X . X .
 . X X X .
@@ -219,5 +254,29 @@ boardsize 7
 two_eyes d2 1
 
 
+% Test no pseudo-liberties issues
+boardsize 19
+. X O X X X X X X X X X X X X X . X .
+X X O . . . . . . . . . . . . X X X X
+. X O . . . . . . . . . . . . . O O O
+X X . O . . . . . . . . . . . O . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . . . . . . . . . . . . . . . . X
+X . . O . . . . . . . . . . . O . X X
+O O O . . . . . . . . . . . . . O X .
+X X X X . . . . . . . . . . . . O X X
+. X . X X X X X X X X X X X X X O X .
 
-
+two_eyes k19 1
+two_eyes k1  1
+two_eyes a10 1
+two_eyes t10 1

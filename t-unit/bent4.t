@@ -1,3 +1,4 @@
+# Test playout bent-four logic
 
 % Test bent-four (all 4 corners dead)
 boardsize 9

@@ -15,6 +15,7 @@
 #include "tactics/util.h"
 #include "tactics/1lib.h"
 #include "tactics/ladder.h"
+#include "tactics/selfatari.h"
 #include "timeinfo.h"
 #include "uct/prior.h"
 #include "uct/internal.h"
@@ -135,7 +136,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
-		tree_node_criticality(tree, node), node->descents,
+		tree_node_criticality(node), node->descents,
 		node->hints, children, node->hash);
 #else
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d\n",
@@ -143,7 +144,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
-		tree_node_criticality(tree, node), node->descents,
+		tree_node_criticality(node), node->descents,
 		node->hints, children);
 #endif
 
@@ -755,8 +756,10 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	for (int i = 0; i < consider.moves; i++, ni++) {
 		coord_t c = consider.move[i];
 		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
-		
+
 		tree_setup_node(t, ni, c, node->depth + 1);
+		if (!board_playing_ko_threat(b) && is_selfatari(b, color, c))
+			ni->hints |= TREE_HINT_SELFATARI;
 		ni->parent = node;
 		ni->prior = map.prior[c];
 
@@ -797,6 +800,7 @@ tree_promote_node(tree_t *t, tree_node_t *node, board_t *b, enum promote_reason 
 	    (t->nodes_size >= t->max_tree_size / 10 && node->u.playouts < SMALL_TREE_PLAYOUTS))
 		tree_garbage_collect(t);
 
+	t->avg_score.value = 0;
 	t->avg_score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,

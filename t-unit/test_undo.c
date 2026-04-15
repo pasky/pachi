@@ -186,6 +186,7 @@ board_undo_stress_test(board_t *board, char *arg)
 	// Light policy better to test wild multi-group suicides
 	playout_policy_t *policy = playout_light_init(NULL, board);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	
 	// Hijack policy permit()
 	policy_permit = policy->permit;  policy->permit = permit_hook;
@@ -194,7 +195,7 @@ board_undo_stress_test(board_t *board, char *arg)
 	for (int i = 0; i < games; i++)  {
 		board_t b;
 		board_copy(&b, board);		
-		playout_play_game(&setup, &b, color, NULL, NULL, policy);
+		playout_play_game(&playout, &b, color, NULL, NULL);
 		board_done(&b);
 	}
 	

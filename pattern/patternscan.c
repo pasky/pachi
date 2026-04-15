@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -24,14 +26,13 @@
 
 /* Internal engine state. */
 typedef struct {
-	int debug_level;
+	int threads;
 
 	pattern_config_t pc;
 	bool spat_split_sizes;
 	int color_mask;
 
 	bool gen_spat_dict;
-	bool mcowner_fast;
 	int spat_threshold;	  /* Minimal number of occurences for spatial to be saved. */	
 	int loaded_spatials;      /* Number of loaded spatials; checkpoint for saving new sids
 				   * in case gen_spat_dict is enabled. */
@@ -195,7 +196,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 		}
 		
 		/* Show stats from time to time */
-		if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32))
+		if (DEBUGL(2) && !fast_random(65536) && !fast_random(32))
 			fprintf(stderr, "%d spatials\n", spat_dict->nspatials);
 			
 		/* Global pattern count (including multiple hits per game) */
@@ -241,14 +242,9 @@ patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *boar
 	if (ps->gen_spat_dict)
 		process_pattern(ps, b, m, true, genspatial_process_move, NULL);
 	else {
-		ownermap_t ownermap;
-		if (ps->mcowner_fast)  mcowner_playouts_fast(b, m->color, &ownermap);
-		else		       mcowner_playouts(b, m->color, &ownermap); /* slooow */
-		
-		pattern_context_t ct;
-		pattern_context_init(&ct, &ps->pc, &ownermap);
-
-		process_pattern(ps, b, m, true, mm_process_move, &ct);
+		pattern_context_t *ct = pattern_context_new2(ps->threads, b, m->color, &ps->pc);
+ 		process_pattern(ps, b, m, true, mm_process_move, ct);
+ 		pattern_context_free(ct);
 	}
 
 	return ps->buf.str;
@@ -343,11 +339,7 @@ patternscan_setoption(engine_t *e, board_t *b, const char *optname, char *optval
 	static_strbuf(ebuf, 256);
 	patternscan_t *ps = (patternscan_t*)e->data;
 
-	if (!strcasecmp(optname, "debug")) {
-		if (optval)  ps->debug_level = atoi(optval);
-		else         ps->debug_level++;
-	}
-	else if (!strcasecmp(optname, "gen_spat_dict")) {
+	if (!strcasecmp(optname, "gen_spat_dict")) {
 		/* If set, re-generate the spatial patterns
 		 * dictionary; you need to have a dictionary
 		 * of spatial stone configurations in order
@@ -377,11 +369,10 @@ patternscan_setoption(engine_t *e, board_t *b, const char *optname, char *optval
 		 * handicap games.) */
 		ps->color_mask = atoi(optval);
 	}
-	else if (!strcasecmp(optname, "mcowner_fast") && optval) {
-		/* Use mcowner_fast=0 for better ownermap accuracy
-		 * when generating mm patterns. Will take hours though.
-		 * Default: mcowner_fast=1 */
-		ps->mcowner_fast = atoi(optval);
+	else if (!strcasecmp(optname, "threads") && optval) {
+		/* Set number of threads to use for ownermap, criticality feature.
+		 * Default: use all cores available. */
+		ps->threads = atoi(optval);
 	}
 	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
 		patterns_init(&ps->pc, optval, ps->gen_spat_dict, false);
@@ -401,12 +392,11 @@ patternscan_state_init(engine_t *e, board_t *b)
 	
 	bool pat_setup = false;
 
-	ps->debug_level = 1;
 	ps->color_mask = S_BLACK | S_WHITE;
+	ps->threads = MAX_THREADS;  /* Default: use all cores */
 
 	/* Default mode: match patterns and generate output for mm tool. */
 	ps->spat_split_sizes = 1;
-	ps->mcowner_fast = true;
 
 	/* Process engine options. */
 	for (int i = 0; i < options->n; i++) {

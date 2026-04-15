@@ -1,0 +1,59 @@
+for pachi <= 12.88:
+
+gtp bug:
+final_score would refuse to score games if there were unclear groups,
+even if engine was ok with it...
+
+this would result in games scored as '?' in t-play / gogui-twogtp
+
+if foo.gtp doesn't result in unclear groups try bar.gtp
+
+
+-------------------------------------------------------------------------------------------
+IN: genmove b
+
+Move:  47  Komi: 0.5  Handicap: 2  Captures B: 1 W: 0  [0 0 0 0]  
+      A B C D E F G H J        A B C D E F G H J  
+    +-------------------+    +-------------------+
+  9 | . . . O X . . . . |  9 | : : : : : : : : : |
+  8 | . . O O X X X X . |  8 | : : : : : : : : : |
+  7 | O O . . O O X . X |  7 | : : : : : : : : : |
+  6 | O X O O . O X X X |  6 | : : : : : : : : : |
+  5 | X X X X O . O O X |  5 | : : : : : : : : : |
+  4 | . . X O X O . . O |  4 | : : : : : : : : : |
+  3 | . X X . X O . . . |  3 | : : : : : : : : : |
+  2 | . . . . X O . O . |  2 | : : : : : : : : : |
+  1 | . . . . X X O . . |  1 | : : : : : : : : : |
+    +-------------------+    +-------------------+
+
+mcowner 0.05s
+patterns = [ H4  J3  D3  H3  C1  G2  A2  D7  C7  B1  A4  D2  B4  G3  G9  A1  D1  J9  J8  F9  ]
+           [ 31  18  14  9   5   2   2   1   1   1   1   0   0   0   0   0   0   0   0   0   ]
+[1000] best 100.0% xkomi 2.0 | seq  H4  J3  H3  J2  D3 | can b  H4(100.0)                               
+[2000] best 83.0% xkomi 0.0 | seq  H4  J3  H3  J2  D3 | can b  H4(83.0)                               
+[3000] best 84.5% xkomi 0.0 | seq  H4  J3  H3  J2  D3 | can b  H4(84.5)  D7(99.8)                     
+[4000] best 84.5% xkomi 0.0 | seq  H4  J3  H3  J2  D3 | can b  H4(84.5)  D7(99.9)                     
+[5000] best 100.0% xkomi 0.0 | seq  D7  C7  H4  J3  H3 | can b  D7(100.0)  H4(84.5)                     
+(avg score 5.305006/5344; dynkomi's 5.305006/5344 value 0.908496/5344)
+*** WINNER is D7 with score 0.9996 (2755/5344:5344/5344 games), extra komi 0.000000
+<Will rather pass, looks safe enough. Final score: B+2.5>
+genmove in 0.81s, mcts 0.75s (7109 games/s, 3554 games/s/thread)
+[5344] best 100.0% xkomi 0.0 | seq  D7  C7  H4  J3  H3 | can b  D7(100.0)  H4(84.5)                     
+Move:  48  Komi: 0.5  Handicap: 2  Captures B: 1 W: 0  [0 0 0 0]  Score Est: B+4.5
+      A B C D E F G H J        A B C D E F G H J  
+    +-------------------+    +-------------------+
+  9 | . . . O X . . . . |  9 | O O O O X X X X X |
+  8 | . . O O X X X X . |  8 | O O O O X X X X X |
+  7 | O O . . O O X . X |  7 | O O O O O O X X X |
+  6 | O X O O . O X X X |  6 | O X O O O O X X X |
+  5 | X X X X O . O O X |  5 | X X X X O O O O X |
+  4 | . . X O X O . . O |  4 | X X X X X O O , , |
+  3 | . X X . X O . . . |  3 | X X X X X O O O , |
+  2 | . . . . X O . O . |  2 | X X X X X O O O O |
+  1 | . . . . X X O . . |  1 | X X X X X X O O O |
+    +-------------------+    +-------------------+
+
+= pass
+
+IN: final_score
+? unclear groups

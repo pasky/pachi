@@ -11,7 +11,9 @@
  * Returns pass if the area is not a nakade shape or not internal. */
 coord_t nakade_point(board_t *b, coord_t around, enum stone color);
 
-/* big eyespace can be reduced to one eye */
+/* Big eyespace can be reduced to one eye */
 bool nakade_dead_shape(board_t *b, coord_t around, enum stone color);
+/* Check given nakade area (must be single all-connected area) */
+bool nakade_area_dead_shape(board_t *b, mq_t *area);
 
 #endif

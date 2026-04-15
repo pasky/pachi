@@ -1,0 +1,10 @@
+#!/bin/bash
+# Usage: autotest-monitor <pairing_mask>
+# Show results matching pairing_mask every minute,
+# or everything without argument.
+
+while true; do
+	bin/autotest-gather
+	bin/autotest-show "$@"
+	sleep 60
+done

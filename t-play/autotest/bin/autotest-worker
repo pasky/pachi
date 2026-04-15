@@ -31,6 +31,7 @@ pairs=0
 pairing() {
 	eval "pair${pairs}_id='$(pairid "$@")'"
 	eval "pair${pairs}_bsize='$1'"; shift
+	eval "pair${pairs}_handicap='$1'"; shift
 	eval "pair${pairs}_komi='$1'"; shift
 	eval "pair${pairs}_black='$1'"; shift
 
@@ -62,20 +63,58 @@ pairing_param() { # Accessor method
 	eval "echo \$$pairvar"
 }
 
+pick_pairing()
+{
+	# XXX RANDOM is bash-specific
+	pair="$((RANDOM % $pairs))"
+	pairid="$(pairing_param $pair id)"
+}
+
 . ./rc
 
 
 echo "Loaded $pairs pairings"
 if [ "$pairs" = "0" ]; then
-    echo "Nothing to do, exiting."
-    sleep 1; exit 0
+	echo "Nothing to do, exiting."
+	sleep 1; exit 0
 fi
 
-# XXX RANDOM is bash-specific
-pair="$((RANDOM % $pairs))"
-pairid="$(pairing_param $pair id)"
-echo "Picked pairing #$pair: $pairid"
+if [ "$sync_workers" = "y" ]; then
+	if [ "$clientid" = "$HOSTNAME-1" ]; then
+		# First worker waits until other workers are ready ...
+		msg='Sync workers: Waiting for worker #$i ...'
+		wait_for_other_workers "round_ready" .1 "$msg"
+		echo "Sync workers: Picking pairing for next round."
+		echo ""
 
+		# And picks pairing for next round.
+		pick_pairing
+		echo "$pair"   > c/pair
+		echo "$pairid" > c/pairing
+
+		rm -f c/$clientid/round_done
+		touch c/$clientid/round_ready
+	else
+		# Other workers signal they're ready, wait for others ...
+		touch "c/$clientid/round_ready"
+		msg='Sync workers: Waiting for worker #$i ...'
+		wait_for_other_workers "round_ready" .1 "$msg"
+		echo "Sync workers: Ready for next round."
+		echo ""
+		rm -f c/$clientid/round_done
+
+		# And use common pairing for this round.
+		[ -f "c/pair" ]    || die "Sync workers: c/pair missing !"
+		[ -f "c/pairing" ] || die "Sync workers: c/pairing missing !"
+		pair=`cat c/pair`
+		pairid=`cat c/pairing`
+	fi
+else
+	# Each worker picks its own pairing.
+	pick_pairing
+fi
+
+echo "Picked pairing #$pair: $pairid"
 log "starting game with pairing #$pair: $pairid"
 
 
@@ -97,12 +136,24 @@ prun_get() {
 }
 prun_get prun_black "$p_black" $pa_black
 prun_get prun_white "$p_white" $pa_white
-komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
+
+bsize="$(pairing_param $pair bsize)"
+
+handicap="$(pairing_param $pair handicap)"
+if [ "$handicap" = "even" ]; then
+	handicap=""
+else
+	[ ${handicap/[2-9]/} = "h" ] || die "invalid handicap '$handicap', should be even/h2/h3/h4 ..."
+	handicap="-handicap ${handicap#h}"
+fi
+
+komi="$(pairing_param $pair komi)"
+[ "${komi//[-.0-9]/}" = "" ] || die "invalid komi '$komi'"
 
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
-echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
-     $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch" 2> >(tee "c/$clientid/game.log" >&2)
+echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size $bsize -komi $komi $handicap -games 1 -sgffile "c/$clientid/scratch"
+     $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size $bsize -komi $komi $handicap -games 1 -sgffile "c/$clientid/scratch" 2> >(tee "c/$clientid/game.log" >&2)
 
 # Get count of our game
 mkdir -p "c/$clientid/$pairid"

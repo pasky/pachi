@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "debug.h"
 #include "board.h"
@@ -99,6 +100,7 @@ static coord_t
 montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	montecarlo_t *mc = (montecarlo_t*)e->data;
+	enum stone our_color = stone_other(color);
 
 	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
@@ -130,6 +132,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 		board_t b2;
 		board_copy(&b2, b);
 
+		/* Play one random move first. */
 		coord_t coord = board_play_random(&b2, color, NULL, NULL);
 		if (!is_pass(coord) && !group_at(&b2, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
@@ -146,11 +149,21 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord), coord_y(coord), color);
 
 		playout_setup_t ps = playout_setup(mc->gamelen, 0);
-		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
+		playout_t playout = { &ps, mc->playout };
+		floating_t score = playout_play_game(&playout, &b2, color, NULL, NULL);
+
+		if (MCDEBUGL(3))
+			fprintf(stderr, "\tresult: %s+%.1f\n", (score > 0 ? "W" : "B"), fabs(score));
+
+		/* Get result from our perspective (was white's). */
+		if (our_color == S_BLACK)
+			score = -score;
 
 		board_done(&b2);
 
-		if (result == 0) {
+#if 0		/* XXX we don't check superko in playouts anymore.
+		 *     If we did it would set board superko_violation, not return 0. */
+		if (score == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
 			if (unlikely(superko > 2 * stop.desired.playouts)) {
@@ -165,17 +178,15 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			i--, superko++;
 			continue;
 		}
-
-		if (MCDEBUGL(3))
-			fprintf(stderr, "\tresult for other player: %d\n", result);
+#endif
 
 		int pos = is_pass(coord) ? 0 : coord;
 
 		good_games++;
 		moves[pos].games++;
 
-		losses += result > 0;
-		moves[pos].wins += 1 - (result > 0);
+		losses += (score < 0);
+		moves[pos].wins += (score > 0);
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
@@ -190,7 +201,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
 			board_print(b, stderr);
 		}
-pass_wins:
+//pass_wins:
 		top_coord = pass; top_ratio = 0.5;
 		goto move_found;
 	}

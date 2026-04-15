@@ -1,0 +1,54 @@
+# pachi options: --gtp-fatal --nodcnn -t =3000
+kgs-rules chinese
+boardsize 9
+clear_board
+komi 0.5
+set_free_handicap c3 g7
+play W d4
+play B c4
+play W d6
+play B d5
+play W e5
+play B c5
+play W f6
+play B e8
+play W c6
+play B e4
+play W f4
+play B e3
+play W f3
+play B e2
+play W f7
+play B f8
+play W h7
+play B g6
+play W g5
+play B h6
+play W h5
+play B h8
+play W f2
+play B b6
+play W b7
+play B b5
+play W c8
+play B f1
+play W g1
+play B e1
+play W h2
+play B b3
+play W e7
+play B j5
+play W j4
+play B j6
+play W d8
+play B e9
+play W a6
+play B a5
+play W a7
+play B g8
+play W d9
+play B j7
+play W pass
+
+genmove b
+final_score

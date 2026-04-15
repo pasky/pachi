@@ -20,6 +20,7 @@
 #include "playout.h"
 #include "timeinfo.h"
 #include "ownermap.h"
+#include "pattern3.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
 #include "uct/internal.h"
@@ -32,6 +33,10 @@ static bool board_printed;
 static bool last_move_set;
 static char *current_cmd = NULL;
 static char *next = NULL;
+
+
+/**************************************************************************************************/
+/* Argument parsing */
 
 /* Get next argument (must be there) */
 #define next_arg(to_)   do { \
@@ -79,6 +84,10 @@ args_end()
 {
 	if (*next)  die("Invalid extra arg: '%s'\n", next);
 }
+
+
+/**************************************************************************************************/
+/* Unit test command parsing etc */
 
 static void
 remove_comments(char *line)
@@ -152,32 +161,119 @@ set_handicap(board_t *b, char *arg)
 }
 
 static void
-board_load(board_t *b, FILE *f, char *arg)
+skip_board_edge_line(FILE *f)
 {
-	next_arg(arg);
-	assert(isdigit(*arg));
-	int size = atoi(arg);
-	move_t last_move = move(pass, S_NONE);
+	char buf[256];
+	if (!fgets(buf, sizeof(buf), f))      die("Premature EOF.\n");
+	if (!str_prefix("    +------", buf))  die("Board diagram: missing board edge.\n");
+}
+
+/* Full board diagram: Find board size from header */
+static int
+fullboard_size_from_header(char *line)
+{
+	int size = 0;
+	for (int i = 6; isupper(line[i]) && line[i+1] == ' '; i += 2)
+		size++;
+	return size;
+}
+
+#define fullboard_header(line)	str_prefix("      A B C", line)
+
+/* Parse board diagram from file.
+ * Diagram can be either minimalist or board_print() format with coordinates:
+ *                                 A B C D E  
+ *       boardsize 5             +-----------+
+ *       . X . O .             5 | . X . O . |
+ *       X . X O .             4 | X . X O . |
+ *       X X X O .             3 | X X X O . |
+ *       O O O X O             2 | O O O X O |
+ *       . . O)X .             1 | . . O)X . |
+ *                               +-----------+
+ *
+ * Other board attributes (komi, rules, passes, handicap) are set via commands:
+ *                             komi 6.5
+ *       boardsize 5               A B C D E  
+ *       komi 6.5                +-----------+
+ *       . X . O .             5 | . X . O . |
+ *       X . X O .             4 | X . X O . |
+ *       X X X O .             3 | X X X O . |
+ *       O O O X O             2 | O O O X O |
+ *       . . O)X .             1 | . . O)X . |
+ *                               +-----------+
+ */
+static void
+board_load(board_t *b, FILE *f, char *line, char *arg)
+{
+	/* Full board diagram with coordinates ? */
+	bool fullboard = false;
+
+	/* Find board size */
+	int size = 0;
+	if (str_prefix("boardsize", line)) {
+		init_arg(line);
+		next_arg(arg);
+		assert(isdigit(*arg));
+		size = atoi(arg);
+	} else if (fullboard_header(line)) {
+		fullboard = true;
+		current_cmd = "board_load";
+		size = fullboard_size_from_header(line);
+		skip_board_edge_line(f);
+	}
+
+	/* last_move[1]: last move
+	 * last_move[2]: second last move
+	 * last_move[3]: third last move
+	 * last_move[4]: fourth last move */
+	move_t last_move[5];
+	move_t pass_move = move(pass, S_NONE);
+	for (int i = 1; i <= 4; i++)
+		last_move[i] = pass_move;
 	last_move_set = false;
+
 	board_resize(b, size);
 	b->rules = RULES_CHINESE;  /* reset rules in case they got changed */
 	board_clear(b);
-	for (int y = size - 1; y >= 0; y--) {
-		char line[256];
-		if (!fgets(line, sizeof(line), f))  die("Premature EOF.\n");
+
+	for (int y = size - 1; y >= 0; ) {
+		char buf[256];
+		char *line = buf;
+		if (!fgets(buf, sizeof(buf), f))  die("Premature EOF.\n");
 		chomp(line);
 		remove_comments(line);
 
+		/* Board header commands */
 		char *cmd = line;
 		if ('a' <= line[0] && line[0] <= 'z')  init_arg(line);
-		if (!strcmp("komi", cmd))     {  set_komi(b, next);     y++; continue;  }
-		if (!strcmp("rules", cmd))    {  set_rules(b, next);    y++; continue;  }
-		if (!strcmp("passes", cmd))   {  set_passes(b, next);   y++; continue;  }
-		if (!strcmp("handicap", cmd)) {  set_handicap(b, next); y++; continue;  }
+		if (!strcmp("komi", cmd))     {  set_komi(b, next);      continue;  }
+		if (!strcmp("rules", cmd))    {  set_rules(b, next);     continue;  }
+		if (!strcmp("passes", cmd))   {  set_passes(b, next);    continue;  }
+		if (!strcmp("handicap", cmd)) {  set_handicap(b, next);  continue;  }
 
-		if ((int)strlen(line) != size * 2 - 1 && 
-		    (int)strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
+		/* boardsize command + full board diagram ? */
+		if (fullboard_header(line)) {
+			if (size != fullboard_size_from_header(line))
+				die("boardsize %i given but board is of size %i.\n", size, fullboard_size_from_header(line));
+			fullboard = true;
+			skip_board_edge_line(f);
+			continue;
+		}
 		
+		/* Full diagram: trim coordinates / edge */
+		if (fullboard) {
+			int len = strlen(line);
+			if (len != size * 2 + 7 || line[4] != '|' || line[len - 1] != '|')
+				die("Doesn't look like a valid board diagram: '%s'\n", line);
+			line[len - 1] = 0;
+			line += 6;
+		}
+
+		int len = strlen(line);
+		if (len != size * 2 - 1 && len != size * 2)
+			die("Board line not %d char long: '%s'\n", size * 2 - 1, line);
+
+		/* Parse board line */
 		for (int i = 0; i < size * 2; i++) {
 			enum stone s;
 			switch (line[i]) {
@@ -187,25 +283,56 @@ board_load(board_t *b, FILE *f, char *arg)
 				default : die("Invalid stone '%c'\n", line[i]);
 			}
 			i++;
-			if (line[i] && line[i] != ' ' && line[i] != ')')
-				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
+			char nc = line[i];
+			bool is_last_move = (nc == ')' || nc == '2' || nc == '3' || nc == '4');
+			if (nc && nc != ' ' && !is_last_move)
+				die("No space after stone %i: '%c'\n", i/2 + 1, nc);
 
 			move_t m = move(coord_xy(i/2 + 1, y + 1), s);
-			if (line[i] == ')') {
+
+			/* Store last moves */
+			if (is_last_move) {
+				int j = (nc == ')' ? 1 : nc - '0');
+				assert(j >= 1 && j <= 4);
+				move_t *last = &last_move[j];
 				assert(s == S_BLACK || s == S_WHITE);
-				assert(last_move.coord == pass);
-				last_move = m;
-				last_move_set = true;
-				continue;	/* Play last move last ... */
+				if (last->coord != pass)
+					die("Last move #%i given multiple times !\n", j);
+				*last = m;
+				if (j == 1)
+					last_move_set = true;
+				continue;			/* Play last moves last ... */
 			}
 
 			if (s == S_NONE) continue;
 
 			check_play_move(b, &m);
 		}
+		y--;
 	}
-	if (last_move.coord != pass)
-		check_play_move(b, &last_move);
+
+	if (fullboard)
+		skip_board_edge_line(f);
+
+	/* Play last moves at the end (or passes if not given). */
+	if (last_move_set) {
+		int passes[S_MAX];  memcpy(passes, b->passes, sizeof(passes));
+		enum stone color = stone_other(last_move[1].color);
+		for (int j = 4; j >= 1; j--) {
+			move_t *last = &last_move[j];
+
+			/* Check alternating colors... */
+			if (last->coord != pass && last->color != color)
+				die("Bad color for last move #%i: should be %s\n", j, stone2str(color));
+
+			last->color = color;
+			check_play_move(b, last);
+			color = stone_other(color);
+		}
+		/* Don't mess up japanese score ... */
+		memcpy(b->passes, passes, sizeof(passes));
+	}
+
 	int suicides = b->captures[S_BLACK] || b->captures[S_WHITE];
 	assert(!suicides);
 }
@@ -267,6 +394,73 @@ show_title_if_needed()
 		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
 } while(0)
 
+
+/**************************************************************************************************/
+/* Stress test tool:
+ * Play some games and call handler at every move. */
+
+typedef void (*stress_test_handler_t)(board_t *b, void *data);
+
+typedef struct {
+	playoutp_permit		permit;		/* Original playout policy permit() */
+	stress_test_handler_t   handler;
+	void *			data;
+	int			game;		/* Current game number */
+	int			games;		/* Number of games that will be played */
+} stress_test_t;
+
+static stress_test_t stress_test = { 0, };
+
+/* Own permit() handler proxy. */
+static bool
+stress_test_permit(playout_policy_t *playout_policy, board_t *b, move_t *m, bool alt, bool rnd)
+{
+	static int move = 0;
+
+	/* Run once per move. */
+	if (b->moves != move) {
+		move = b->moves;
+		stress_test.handler(b, stress_test.data);
+	}
+
+	return stress_test.permit(playout_policy, b, m, alt, rnd);
+}
+
+/* Play some games calling handler at every move.
+ * @move_handler is called for each move.
+ * @game_handler is called before game start (if given).
+ * Single-thread only, uses static variables. */
+static void
+stress_test_foreach_playout_move(int games, board_t *b,
+				 stress_test_handler_t move_handler, void *data,
+				 stress_test_handler_t game_handler)
+{
+	stress_test.handler = move_handler;
+	stress_test.data = data;
+	stress_test.games = games;
+
+	playout_policy_t *policy = playout_moggy_init(NULL, b);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
+
+	/* Hijack policy permit() to run at every move. */
+	stress_test.permit = policy->permit;
+	policy->permit = stress_test_permit;
+
+	for (int i = 0; i < games; i++)  {
+		stress_test.game = i;
+		board_t b2;
+		board_copy(&b2, b);
+		if (game_handler)
+			game_handler(&b2, data);
+		playout_play_game(&playout, &b2, S_BLACK, NULL, NULL);
+		board_done(&b2);
+	}
+	// XXX free playout policies
+}
+
+
+/**************************************************************************************************/
 
 static bool
 test_bad_selfatari(board_t *b, char *arg)
@@ -380,7 +574,7 @@ test_false_eye_seki(board_t *b, char *arg)
 }
 
 static bool
-test_breaking_3_stone_seki(board_t *b, char *arg)
+test_breaking_nakade_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -390,10 +584,10 @@ test_breaking_3_stone_seki(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "breaking_3_stone_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "breaking_nakade_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
-	int rres = breaking_3_stone_seki(b, c, color);
+	int rres = breaking_nakade_seki(b, c, color);  // XXX
 
 	PRINT_RES();
 	return   (rres == eres);
@@ -565,7 +759,7 @@ test_atari(board_t *b, char *arg)
 	args_end();
 
 	ownermap_t ownermap;
-	mcowner_playouts(b, color, &ownermap);
+	mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap);
 	board_print_ownermap(b, stderr, &ownermap);
 	board_printed = true;
 
@@ -914,6 +1108,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 {
 	playout_policy_t *policy = playout_moggy_init(NULL, b);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	ownermap_init(ownermap);
 	
 	int wr = 0;
@@ -921,10 +1116,11 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 	for (int i = 0; i < games; i++)  {
 		board_t b2;
 		board_copy(&b2, b);
-		
-		int score = playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
-		if (color == S_WHITE)
-			score = -score;
+
+		/* Get score from black's perspective. */
+		floating_t score = playout_play_game(&playout, &b2, color, NULL, ownermap);
+		score = -score;
+
 		wr += (score > 0);
 		board_done(&b2);
 	}
@@ -1025,6 +1221,152 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+
+/**************************************************************************************************/
+/* Bad selfatari stats */
+
+typedef struct {
+	int selfataris;				/* Number of selfataris seen */
+	int bad_selfataris;			/* Number of bad selfataris seen */
+	hash3_t last_pat3[BOARD_MAX_COORDS];	/* Last selfatari 3x3 hash for each point */
+} selfatari_stats_t;
+
+/* Keep track of bad selfatari stats:
+ * Percentage of playable selfataris classified as bad selfataris during
+ * playout. Remember 3x3 pattern at each point so we only check new ones. */
+static void
+bad_selfatari_stats(board_t *b, void *data)
+{
+	selfatari_stats_t *s = (selfatari_stats_t *)data;
+
+	foreach_free_point(b) {
+		for (int color = S_BLACK; color <= S_WHITE; color++) {
+			if (!board_is_valid_play(b, color, c))  continue;
+			if (!is_selfatari(b, color, c))  continue;
+
+			/* New selfatari or same situation as last time ? */
+			hash3_t h = pattern3_hash(b, c);
+			if (h == s->last_pat3[c])  continue;
+			s->last_pat3[c] = h;
+
+			if (is_bad_selfatari(b, color, c))
+				s->bad_selfataris++;
+			s->selfataris++;
+		}
+	} foreach_free_point_end;
+}
+
+static void
+selfatari_stats_game_start(board_t *b, void *data)
+{
+	selfatari_stats_t *s = (selfatari_stats_t *)data;
+
+	/* Clear hashes for new game */
+	memset(s->last_pat3, 0, sizeof(s->last_pat3));
+
+	/* Show current stats */
+	if (stress_test.game) {
+		float pc = (float)s->bad_selfataris * 100 / s->selfataris;
+		fprintf(stderr, "Playing games: %i/%i     selfataris: %.1f%% bad\r", stress_test.game + 1, stress_test.games, pc);
+		fflush(stderr);
+	}
+}
+
+/* Measure is_bad_selfatari() filtering:
+ * Percentage of playable selfataris classified as bad selfataris
+ * during playouts.
+ *
+ * Values for previous versions of Pachi:
+ *      now            91.1%  (allow nakades helping semeais)
+ *     12.88           91.9%  (snapback, throw-in, nakade fixes)
+ *     12.00 - 12.86   88.9%
+ *     11.00           95.1%  (only nakades making atari allowed)  */
+static bool
+test_bad_selfatari_stats(board_t *b, char *arg)
+{
+	args_end();
+
+	selfatari_stats_t s;
+	memset(&s, 0, sizeof(s));
+
+	stress_test_foreach_playout_move(300, b, bad_selfatari_stats, (void*)&s, selfatari_stats_game_start);
+	if (DEBUGL(2))  fprintf(stderr, "\n");
+
+	float pc = (float)s.bad_selfataris * 100 / s.selfataris;
+	fprintf(stderr, "\nSelfatari filtering:  %.1f%% bad\n\n", pc);
+
+	return (pc > 90.0);
+}
+
+
+/**************************************************************************************************/
+/* is_selfatari() stress test */
+
+static bool
+real_is_selfatari(board_t *b, enum stone color, coord_t to)
+{
+#ifdef EXTRA_CHECKS
+	assert(is_player_color(color));
+	assert(sane_coord(to));
+	assert(board_at(b, to) == S_NONE);
+#endif
+	/* More than one immediate liberty, thumbs up! */
+	if (immediate_liberty_count(b, to) > 1)
+		return false;
+
+	bool r = true;
+	with_move(b, to, color, {
+		group_t g = group_at(b, to);
+		if (g && group_libs(b, g) > 1)
+			r = false;
+	});
+
+	return r;
+}
+
+/* Double check is_selfatari() at every move on the board. */
+static void
+is_selfatari_sanity_checks(board_t *b, void *data)
+{
+	static int checks = 0;
+
+	foreach_free_point(b) {
+		enum stone colors[] = { S_BLACK, S_WHITE };
+		for (int i = 0; i < 2; i++) {
+			enum stone color = colors[i];
+			checks++;
+
+			if (is_selfatari(b, color, c) != real_is_selfatari(b, color, c)) {
+				board_print(b, stderr);
+				fprintf(stderr, "is_selfatari(%s, %s) = %i   should be %i\n",
+					stone2str(color), coord2sstr(c),
+					is_selfatari(b, color, c), real_is_selfatari(b, color, c));
+				assert(0);
+			}
+
+			/* Show stats from time to time. */
+			if (checks % 16384 == 0) {
+				fprintf(stderr, "Checking moves ...  %i   %i games\r", checks, stress_test.game);
+				fflush(stderr);
+			}
+		}
+	} foreach_free_point_end;
+}
+
+/* Play some games and double check is_selfatari() at every move on the board. */
+static bool
+is_selfatari_stress_test(board_t *b, char *arg)
+{
+	args_end();
+	board_print_test(b);
+	stress_test_foreach_playout_move(100, b, is_selfatari_sanity_checks, NULL, NULL);
+	if (DEBUGL(2))  fprintf(stderr, "\n");
+	return true;
+}
+
+
+/**************************************************************************************************/
+
 /* Run playout showing board, candidate moves and playout logic behind
  * each move. Useful to visualize / debug / investigate what's going on
  * in playouts in a real game. Other tools give either candidate moves
@@ -1039,6 +1381,7 @@ moggy_debug_game(board_t *board, char *arg)
 	int prev_debug_level = debug_level;
 	playout_policy_t *policy = playout_moggy_init(NULL, board);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	
 	board_t b2;
 	board_t *b = &b2;
@@ -1074,7 +1417,7 @@ moggy_debug_game(board_t *board, char *arg)
 		/* Show chosen move and playout thinking logic */
 		fprintf(stderr, "picked move:\n");
 		debug_level = 6;
-		coord_t coord = playout_play_move(&setup, b, color, policy);
+		coord_t coord = playout_play_move(&playout, b, color);
 		debug_level = prev_debug_level;
 		fprintf(stderr, "\n");
 
@@ -1238,7 +1581,7 @@ test_dcnn_blunder(board_t *b, char *arg)
 	/***********************************************************************/
 	/* Get ownermap */
 	ownermap_t ownermap;  ownermap_init(&ownermap);
-	mcowner_playouts(b, color, &ownermap);
+	mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap);
 
 	/* Get dcnn output */
 	float result[19 * 19];
@@ -1332,9 +1675,11 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
+	{ "bad_selfatari_stats",    test_bad_selfatari_stats    },
+	{ "is_selfatari_stress_test", is_selfatari_stress_test  },
 	{ "moggy debug_game",       moggy_debug_game,           },
 	{ "false_eye_seki",         test_false_eye_seki,        },
-	{ "breaking_3_stone_seki",  test_breaking_3_stone_seki,},
+	{ "breaking_nakade_seki",   test_breaking_nakade_seki,  },
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
 	{ "genmove",		    test_genmove                },
@@ -1418,10 +1763,11 @@ unit_test(char *filename)
 			case  0 : continue;
 		}
 
-		if (str_prefix("boardsize ", line)) {  init_arg(line); board_load(b, f, next); continue;  }
-		if (str_prefix("rules ", line))     {  init_arg(line); set_rules(b, next); continue;  }
-		if (str_prefix("komi ", line))      {  init_arg(line); set_komi(b, next); continue;  }
-		if (str_prefix("ko ", line))	    {  init_arg(line); set_ko(b, next); continue;  }
+		if (str_prefix("boardsize ", line) ||
+		    str_prefix("      A B C", line)) {  board_load(b, f, line, next); continue;  }
+		if (str_prefix("rules ", line))      {  init_arg(line); set_rules(b, next); continue;  }
+		if (str_prefix("komi ", line))       {  init_arg(line); set_komi(b, next); continue;  }
+		if (str_prefix("ko ", line))	     {  init_arg(line); set_ko(b, next); continue;  }
 		
 		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
 		else           {  total++;      passed     += unit_test_cmd(b, line); }

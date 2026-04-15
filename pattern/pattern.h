@@ -4,8 +4,9 @@
 /* Matching of multi-featured patterns. */
 
 #include "board.h"
-#include "ownermap.h"
 #include "move.h"
+#include "ownermap.h"
+#include "mcowner.h"
 
 /* When someone says "pattern", you imagine a configuration of stones in given
  * area (e.g. as matched very efficiently by pattern3 in case of 3x3 area).
@@ -131,7 +132,7 @@ enum feature_id {
 
 	/* Monte-carlo owner */
 	FEAT_MCOWNER,
-	
+
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
 	/* Payload: Index in the spatial_dict. */
@@ -164,7 +165,7 @@ typedef struct {
 	feature_t f[FEAT_MAX];
 } pattern_t;
 
-typedef struct {
+typedef struct pattern_config {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
 	unsigned int bdist_max;
 
@@ -185,10 +186,16 @@ typedef struct {
 	struct engine *engine;	/* optional, pattern_context_new() only */
 } pattern_context_t;
 
+
+/* Pattern init */
+
 bool using_patterns();
 void disable_patterns();
 void require_patterns();
 void patterns_init(pattern_config_t *pc, char *arg, bool create, bool load_prob);
+
+
+/* Feature helpers */
 
 /* Append feature to string. */
 char *feature2str(char *str, feature_t *f);
@@ -203,6 +210,9 @@ static int feature_gamma_number(feature_t *f);
 /* Get total number of gammas for all features */
 int pattern_gammas(void);
 
+
+/* Pattern helpers */
+
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, pattern_t *p);
 /* Returns static string. */
@@ -216,25 +226,26 @@ int pattern_biggest_spatial(pattern_t *p);
 /* Compare two patterns for equality. Assumes fixed feature order. */
 static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 
+
+/* Pattern context */
+
 /* Initialize context from existing parts. */
 void pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ownermap);
 /* Allocate and setup new context and all required parts (expensive) */
-pattern_context_t *pattern_context_new(board_t *b, enum stone color, bool mcowner_fast);
+pattern_context_t *pattern_context_new(int threads, board_t *b, enum stone color);
 /* Same if you already have a pattern config */
-pattern_context_t *pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast);
+pattern_context_t *pattern_context_new2(int threads, board_t *b, enum stone color, pattern_config_t *pc);
 /* Free context created with pattern_context_new() */
 void pattern_context_free(pattern_context_t *ct);
+
+
+/* Pattern matching */
 
 /* Initialize p and fill it with features matched by the given board move. 
  * @locally: Looking for local moves ? Distance features disabled if false. */
 void pattern_match(board_t *b, move_t *m, pattern_t *p, pattern_context_t *ct, bool locally);
 /* For testing purposes: no prioritized features, check every feature. */
 void pattern_match_vanilla(board_t *b, move_t *m, pattern_t *p, pattern_context_t *ct);
-
-/* Fill ownermap for mcowner feature. */
-void mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap);
-/* Faster version with few playouts, don't use for anything reliable. */
-void mcowner_playouts_fast(board_t *b, enum stone color, ownermap_t *ownermap);
 
 /* Low-level functions for unit-tests and outside tactical checks */
 int pattern_match_l1_blunder_punish(board_t *b, move_t *m);

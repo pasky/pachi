@@ -10,7 +10,74 @@
 #include "engine.h"
 #include "move.h"
 #include "ownermap.h"
+#include "tactics/bent4.h"
 #include "playout.h"
+
+void
+amaf_init(amafmap_t *amaf)
+{
+	amaf->gamelen = amaf->game_baselen = 0;
+}
+
+void
+amaf_record_move(amafmap_t *amaf, board_t *b)
+{
+	assert(amaf->gamelen < MAX_GAMELEN);
+
+	int flags = 0;
+	if (unlikely(board_playing_ko_threat(b)))
+		flags |= AMAF_KO_CAPTURE;
+
+	coord_t last = last_move(b).coord;
+	if (likely(last != pass)) {
+		group_t g = group_at(b, last);
+		if (g && group_libs(b, g) == 1)
+			flags |= AMAF_SELFATARI;
+	}
+
+	amaf->flags[amaf->gamelen] = flags;
+	amaf->game[amaf->gamelen++] = last;
+}
+
+/* Find first play at each location in the playout. */
+int *
+amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp)
+{
+	int *first_play = &fp->data[1];  /* Make room for pass */
+
+	/* Initialize first_play */
+	first_play[pass] = INT_MAX;
+	foreach_point(b) {
+		first_play[c] = INT_MAX;
+	} foreach_point_end;
+
+	assert(map->gamelen > 0);
+	for (int move = map->gamelen - 1; move >= map->game_baselen; move--)
+		first_play[map->game[move]] = move;
+
+	return first_play;
+}
+
+/* Return the length of the current ko (number of moves up to to the last ko capture),
+ * 0 if the sequence is empty or doesn't start with a ko capture.
+ *   B captures a ko
+ *   W plays a ko threat
+ *   B answers ko threat
+ *   W re-captures the ko  <- return 4
+ *   B plays a ko threat
+ *   W connects the ko */
+int
+amaf_ko_length(amafmap_t *map, int move)
+{
+	if (move >= map->gamelen || !amaf_is_ko_capture(map, move))
+		return 0;
+
+	int length = 1;
+	while (move + length + 2 < map->gamelen &&
+	       amaf_is_ko_capture(map, move + length + 2))
+		length += 3;
+	return length;
+}
 
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
@@ -66,179 +133,48 @@ random_permit_handler(board_t *b, move_t *m, void *data)
 	return playout_permit_move(policy, b, m, true, true);
 }
 
-
 coord_t
-playout_play_move(playout_setup_t *setup,
-		  board_t *b, enum stone color,
-		  playout_policy_t *policy)
+playout_get_move(playout_t *playout, board_t *b, enum stone color)
 {
-	coord_t coord = pass;
-	
-	coord = policy->choose(policy, setup, b, color);
-	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(coord));
-	coord = playout_check_move(policy, b, coord, color);
+	playout_setup_t *setup = playout->setup;
+	playout_policy_t *policy = playout->policy;
+	coord_t coord, playout_coord;
 
-	if (!is_pass(coord)) {
-		move_t m = move(coord, color);
-		int r = board_play(b, &m);
-		if (unlikely(r < 0)) {
-			board_print(b, stderr);
-			die("Picked playout move %s %s is ILLEGAL:\n", stone2str(color), coord2sstr(coord));
-		}
+	playout_coord = policy->choose(policy, setup, b, color);
+	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(playout_coord));
+	coord = playout_check_move(policy, b, playout_coord, color);
+
+	/* Show if playout move is rejected. */
+	if (DEBUGL(5) && coord != playout_coord)
+		fprintf(stderr, "Playout move %s was invalid !\n", coord2sstr(playout_coord));
+
+	if (!is_pass(coord))
 		return coord;
-	}
 
 	/* Defer to uniformly random move choice if policy failed to produce a move.
 	 * This must never happen if the policy is tracking internal board state, obviously. */
-	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
+#ifdef EXTRA_CHECKS
 	assert(!policy->setboard || policy->setboard_randomok);
-	coord = board_play_random(b, color, random_permit_handler, policy);
+#endif
+	if (DEBUGL(5))  fprintf(stderr, "Playout random move:\n");
+	coord = board_pick_random_move(b, color, random_permit_handler, policy);
 	if (DEBUGL(5))  fprintf(stderr, "Playout random move: %s\n", coord2sstr(coord));
 	return coord;
 }
 
-static bool
-check_bent_four_surrounding(board_t *b, enum stone other_color, coord_t lib, group_t wanted_surrounding)
+coord_t
+playout_play_move(playout_t *playout, board_t *b, enum stone color)
 {
-	group_t surrounding = 0;
-	foreach_neighbor(b, lib, {
-		if (board_at(b, c) == other_color) {
-			surrounding = group_at(b, c);
-			if (surrounding != wanted_surrounding)
-				return false;
-		}
-	});
-	return (surrounding != 0);
-}
-
-/* Fill bent-four in the corner:
- * 
- *   | . . . . . .       | O O O . . .              | X X O O . .     | . . . . . .
- *   | O O O O O .   or  | X X O . . .	   but not  | . X X O . .     | O O . . . .
- *   | X X X X O .       | * X O O O .	            | O . X O . .     | . O O O O O
- *   | * X . X O .       | O X X X O .              | O X X O . .     | O X X X . O
- *   | O O O X O .       | O O . X O .	            | O X O O . .     | O O . X O O
- *   +-------------      +------------	            +------------     +-------------
- *   
- *   color       : bent-four stones color         (white here, color to play)
- *   other_color : surrounding group color        (black here)
- *
- *   returns coord to fill to make bent-four (first found, pass if none).
- *   @bent4_lib:  bent-four last liberty
- *   @bent4_kill: killing move after capture  */
-static coord_t
-fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_kill)
-{
-	enum stone other_color = stone_other(color);
-	int s = board_rsize(b);
-	coord_t xs[] = { 1, 1, s, s },  dx[] = { 1,  1, -1, -1 };
-	coord_t ys[] = { 1, s, 1, s },  dy[] = { 1, -1,  1, -1 };
-	
-	for (int i = 0; i < 4; i++) {
-		coord_t corner = coord_xy(xs[i], ys[i]);
-		group_t g = group_at(b, corner);
-		if (!g || board_at(b, corner) != color ||
-		    group_stone_count(b, g, 4) != 3 || group_libs(b, g) != 2)
-			continue;
-
-		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
-		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
-			continue;
-
-		/* check really surrounding */
-		if (!check_bent_four_surrounding(b, other_color, group_lib(b, g, 0), surrounding) ||
-		    !check_bent_four_surrounding(b, other_color, group_lib(b, g, 1), surrounding))
-			continue;
-
-		/* find suitable lib to fill  (first line and other coord == 2 or 3)  */
-		coord_t fill;
-		for (int j = 0; j < 2; j++) {
-			fill = group_lib(b, g, j);
-			int x = coord_x(fill),  y = coord_y(fill);
-			
-			if (x == xs[i] && (y == ys[i] + dy[i]  ||  y == ys[i] + 2 * dy[i])) {
-				if (y == ys[i] + dy[i])   *bent4_kill = coord_xy(xs[i] + dx[i], ys[i]);   /* 3 in line horizontally */
-				else			  *bent4_kill = coord_xy(xs[i], ys[i] + dy[i]);   /* bent-three */
-				break;
-			}
-			
-			if (y == ys[i] && (x == xs[i] + dx[i]  ||  x == xs[i] + 2 * dx[i])) {
-				if (x == xs[i] + dx[i])   *bent4_kill = coord_xy(xs[i], ys[i] + dy[i]);   /* 3 in line vertically */
-				else                      *bent4_kill = coord_xy(xs[i] + dx[i], ys[i]);   /* bent-three */
-				break;
-			}
-			
-			fill = pass;
-		}
-		if (fill == pass)  continue;
-		
-		move_t m = move(fill, color);
-		if (board_permit(b, &m, NULL)) {
-			*bent4_lib = group_other_lib(b, g, fill);
-			return fill;
-		}
+	coord_t coord = playout_get_move(playout, b, color);
+	move_t m = move(coord, color);
+	int r = board_play(b, &m);
+	if (unlikely(r < 0)) {
+		board_print(b, stderr);
+		die("Picked playout move %s %s is ILLEGAL.\n", stone2str(color), coord2sstr(coord));
 	}
-
-	return pass;
+	return coord;
 }
 
-/* Fill bent-three in the corner:   (leads to bent-four)
- * 
- *   | O O O . . . 
- *   | X X O . . . 
- *   | . X O O O . 
- *   | O X X X O . 
- *   | * O . X O . 
- *   +-------------
- *   
- *   color       : bent-three stones color        (white here, color to play)
- *   other_color : surrounding group color        (black here)
- *
- *   returns coord to fill (first found, pass if none). */
-static coord_t
-fill_bent_three(board_t *b, enum stone color)
-{
-	enum stone other_color = stone_other(color);
-	int s = board_rsize(b);
-	coord_t xs[] = { 1, 1, s, s },  dx[] = { 1,  1, -1, -1 };
-	coord_t ys[] = { 1, s, 1, s },  dy[] = { 1, -1,  1, -1 };
-	
-	for (int i = 0; i < 4; i++) {
-		coord_t corner = coord_xy(xs[i], ys[i]);
-		if (board_at(b, corner) != S_NONE)
-			continue;
-		
-		coord_t c1 = coord_xy(xs[i], ys[i] + dy[i]);
-		coord_t c2 = coord_xy(xs[i] + dx[i], ys[i]);
-		if (board_at(b, c1) != color || board_at(b, c2) != color)
-			continue;
-
-		group_t g1 = group_at(b, c1);
-		group_t g2 = group_at(b, c2);
-		if (!group_is_onestone(b, g1) || !group_is_onestone(b, g2) ||
-		    group_libs(b, g1) != 2 || group_libs(b, g2) != 2)
-			continue;
-
-		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
-		group_t surrounding = group_at(b, twotwo);
-		if (!surrounding || board_at(b, twotwo) != other_color || group_libs(b, surrounding) != 2)
-			continue;
-
-		/* Check really surrounding */
-		coord_t libs[] = { coord_xy(xs[i], ys[i] + 2 * dy[i]),  coord_xy(xs[i] + 2 * dx[i], ys[i]) };
-		assert(board_at(b, libs[0]) == S_NONE && board_at(b, libs[1]) == S_NONE);
-		if (!check_bent_four_surrounding(b, other_color, libs[0], surrounding) ||
-		    !check_bent_four_surrounding(b, other_color, libs[1], surrounding))
-			continue;
-		
-		move_t m = move(corner, color);
-		if (board_permit(b, &m, NULL))
-			return corner;
-	}
-
-	return pass;
-}
 
 #define random_game_loop_stuff  \
 		if (DEBUGL(5)) board_print(b, stderr); \
@@ -246,11 +182,7 @@ fill_bent_three(board_t *b, enum stone color)
 		if (unlikely(is_pass(coord)))  passes++; \
 		else                           passes = 0; \
 \
-		if (amafmap) { \
-			assert(amafmap->gamelen < MAX_GAMELEN); \
-			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b); \
-			amafmap->game[amafmap->gamelen++] = coord; \
-		} \
+		if (amafmap)  amaf_record_move(amafmap, b); \
 \
 		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin) \
 			break; \
@@ -258,20 +190,21 @@ fill_bent_three(board_t *b, enum stone color)
 		color = stone_other(color);
 
 
-
-int
-playout_play_game(playout_setup_t *setup,
-		  board_t *b, enum stone starting_color,
-		  playout_amafmap_t *amafmap,
-		  ownermap_t *ownermap,
-		  playout_policy_t *policy)
+floating_t
+playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
+		  amafmap_t *amafmap, ownermap_t *ownermap)
 {
+	if (DEBUGL(5))  fprintf(stderr, "------------------------------- playout start -------------------------------\n\n");
+
+	assert(playout && playout->setup && playout->policy);
+	playout_setup_t *setup = playout->setup;
+	playout_policy_t *policy = playout->policy;
+	
 	b->playout_board = true;   // don't need board hash, history ...
 
 	int starting_passes[S_MAX];
 	memcpy(starting_passes, b->passes, sizeof(starting_passes));
 
-	assert(setup && policy);
 	int gamelen = setup->gamelen - b->moves;
 
 	if (policy->setboard)
@@ -282,46 +215,17 @@ playout_play_game(playout_setup_t *setup,
 
 	/* Play until both sides pass, or we hit threshold. */
 	while (gamelen-- > 0 && passes < 2) {
-		coord_t coord = playout_play_move(setup, b, color, policy);		
+		coord_t coord = playout_play_move(playout, b, color);
 		random_game_loop_stuff
-	}	
+	}
 
-	int bent4_moves = -2;
-	coord_t bent4_lib = pass;
-	coord_t bent4_kill = pass;
+	if (DEBUGL(5))  fprintf(stderr, "------------------------------- bent4 handling -------------------------------\n\n");
 
-	/* Play some more, handling bent-fours this time ...
-	 * FIXME bent-four code really belongs in moggy but needs to be handled here.
-	 *       Add some hooks and move this to moggy.c ... */
+	/* Play some more, handling bent-fours this time ... */
+	bent4_t b4;  bent4_init(&b4, b);
 	passes = 0;
 	while (gamelen-- > 0 && passes < 2) {
-		coord_t coord;
-		
-		/* Kill bent-four group after filling. */
-		if (b->moves == bent4_moves + 2) {
-			/* Kill group (or capture if opponent didn't take) */
-			//fprintf(stderr, "bent-four: capture / kill ...\n");
-			coord = (board_at(b, bent4_lib) == S_NONE ? bent4_lib : bent4_kill);
-			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r >= 0);
-		}
-		else    coord = playout_play_move(setup, b, color, policy);
-		
-		/* Fill bent-fours */
-		if (coord == pass && (coord = fill_bent_four(b, color, &bent4_lib, &bent4_kill)) != pass) {
-			//fprintf(stderr, "bent-four: filling ...\n");
-			bent4_moves = b->moves;
-			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r >= 0);
-		}
-
-		/* Fill bent-threes */
-		if (coord == pass && (coord = fill_bent_three(b, color)) != pass) {
-			//fprintf(stderr, "bent-three: filling ...\n");
-			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r >= 0);
-		}
-		
+		coord_t coord = bent4_play_move(&b4, playout, b, color);
 		random_game_loop_stuff
 	}
 	
@@ -334,18 +238,17 @@ playout_play_game(playout_setup_t *setup,
 		memcpy(b->passes, starting_passes, sizeof(starting_passes));
 		last_move(b).color = stone_other(starting_color);
 	}
-	
-	floating_t score = board_fast_score(b);
-	int result = (starting_color == S_WHITE ? score * 2 : - (score * 2));
 
-	if (DEBUGL(6)) {
-		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
-		if (DEBUGL(7))  board_print(b, stderr);
+	floating_t score = board_fast_score(b);
+
+	if (DEBUGL(5)) {
+		fprintf(stderr, "Playout finished: score: %s+%.1f\n\n", (score > 0 ? "W" : "B"), fabs(score));
+		fprintf(stderr, "------------------------------- playout end -------------------------------\n\n");
 	}
 
-	if (ownermap)  ownermap_fill(ownermap, b);
+	if (ownermap)  ownermap_fill(ownermap, b, score);
 
-	return result;
+	return score;
 }
 
 

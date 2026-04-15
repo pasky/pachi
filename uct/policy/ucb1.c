@@ -73,7 +73,9 @@ ucb1_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, bool 
 }
 
 static void
-ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_color, enum stone player_color, playout_amafmap_t *map, board_t *final_board, floating_t result)
+ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
+	    enum stone node_color, enum stone player_color,
+	    amafmap_t *map, board_t *final_board, floating_t result)
 {
 	/* it is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since

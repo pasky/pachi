@@ -162,7 +162,7 @@ engine_options_add(options_t *options, const char *name, const char *val)
 	options->n++;
 }
 
-static void
+void
 engine_options_copy(options_t *dest, options_t *src)
 {
 	memcpy(dest, src, sizeof(*src));
@@ -201,7 +201,7 @@ engine_options_concat(strbuf_t *buf, options_t *options)
 /* Engine init */
 
 /* init from scratch, preserving options. */
-static void
+void
 engine_init_(engine_t *e, int id, board_t *b)
 {
 	assert(id >= 0 && id < E_MAX);
@@ -305,19 +305,22 @@ print_dead_groups(board_t *b, mq_t *dead)
 }
 
 /* Ask engine for dead stones */
-void
+bool
 engine_dead_groups(engine_t *e, board_t *b, mq_t *q)
 {
 	mq_init(q);
 
 	/* Tell engine to stop pondering, the game is probably over. */
 	if (e->stop)  e->stop(e);
-	
-	if (e->dead_groups)  e->dead_groups(e, b, q);
+
+	bool safe = true;
+	if (e->dead_groups)
+		safe = e->dead_groups(e, b, q);
 	/* else we return empty list - i.e. engine not supporting
 	 * this assumes all stones alive at the game end. */
 
 	print_dead_groups(b, q);  /* log output */
+	return safe;
 }
 
 /* For engines internal use, ensures optval is properly strdup'ed / freed

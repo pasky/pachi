@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "stats.h"
 
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(board_t *b, coord_t coord, int distance);
@@ -65,13 +66,24 @@ int fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int q);
 int fuseki_stone_heights_diff(board_t *b, enum stone color);
 bool playing_against_influence_fuseki(board_t *b);
 
+/* Evaluate value of point for color @color at playout end given by @b:
+ *   1.0 = point controlled by color
+ *   0.0 = point controlled by opponent
+ * Note that unlike move_local_value(false) which is used by ucb1amaf
+ * an eye of the right color counts as 1.0. */
+static float board_local_value(board_t *b, coord_t coord, enum stone color);
+
 /* Tactical evaluation of move @coord by color @color, given
  * simulation end position @b. I.e., a move is tactically good
  * if the resulting group stays on board until the game end.
  * The value is normalized to [0,1]. */
 /* We can also take into account surrounding stones, e.g. to
  * encourage taking off external liberties during a semeai. */
-static double board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color);
+static double rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color);
+
+/* Point criticality  (ownership criticality)
+ * Measure how owning the point at the end of playouts and winning the game are correlated. */
+static floating_t point_criticality(move_stats_t *playouts, move_stats_t *winner_owner, move_stats_t *black_owner);
 
 
 static inline int
@@ -98,8 +110,26 @@ coord_gridcular_distance(coord_t c1, coord_t c2)
 	return dx + dy + (dx > dy ? dx : dy);
 }
 
+static inline float
+board_local_value(board_t *b, coord_t c, enum stone color)
+{
+#ifdef EXTRA_CHECKS
+	assert(sane_coord(c));
+	assert(is_player_color(color));
+#endif
+	if (board_at(b, c != S_NONE))
+		return (board_at(b, c) == color ? 1.0 : 0.0);
+
+	if (board_is_eyelike(b, c, color))
+		return 1.0;
+	if (board_is_eyelike(b, c, stone_other(color)))
+		return 0.0;
+
+	return 0.5;
+}
+
 static inline double
-board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
+rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
 {
 #ifdef EXTRA_CHECKS
 	assert(sane_coord(coord));
@@ -116,5 +146,21 @@ board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
 		return (board_at(b, coord) == color) ? 1.f : 0.f;
 	}
 }
+
+/* The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins is valid way to obtain
+ * winner_gets. The more correlated it is, the more distorted the result.
+ *
+ * point criticality = cov(player_gets, player_wins)
+ *                   = player_gets_player_wins - player_gets * player_wins
+ *                   = winner_gets - (b_gets * b_wins + w_gets * w_wins)
+ *                   = winner_gets - (b_gets * b_wins + (1 - b_gets) * (1 - b_wins))
+ *                   = winner_gets - (b_gets * b_wins + 1 - b_gets - b_wins + b_gets * b_wins)
+ *                   = winner_gets - (2 * b_gets * b_wins - b_gets - b_wins + 1) */
+static inline floating_t
+point_criticality(move_stats_t *playouts, move_stats_t *winner_owner, move_stats_t *black_owner)
+{
+	return (winner_owner->value - (2 * black_owner->value * playouts->value - black_owner->value - playouts->value + 1));
+}
+
 
 #endif

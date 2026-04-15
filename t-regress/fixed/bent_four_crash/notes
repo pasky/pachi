@@ -1,0 +1,32 @@
+pachi-12.88 vs pachi-12.89  (mm_lib2)
+nodcnn 15x15
+
+Move:  166  Komi: 6.5  Handicap: 0  Captures B: 8 W: 10
+      A B C D E F G H J K L M N O P        A B C D E F G H J K L M N O P
+    +-------------------------------+    +-------------------------------+
+ 15 | . . O X X X . . O X O . O . . | 15 | : : : : : : : : : : : : : : : |
+ 14 | X O O O X O O O O X X O O X . | 14 | : : : : : : : : : : : : : : : |
+ 13 | X . O X X . X O X X O . . O O | 13 | : : : : : : : : : : : : : : : |
+ 12 | O O O X . . X X X . O O O O X | 12 | : : : : : : : : : : : : : : : |
+ 11 | O X X O . . X O O X . O X O X | 11 | : : : : : : : : : : : : : : : |
+ 10 | X . X X . X O . O X X O X X . | 10 | : : : : : : : : : : : : : : : |
+  9 | . X . . X . X O X . O X X . X |  9 | : : : : : : : : : : : : : : : |
+  8 | O). O X O X X . . X O O O X . |  8 | : : : : : : : : : : : : : : : |
+  7 | . . O X O O . . . O X X X . X |  7 | : : : : : : : : : : : : : : : |
+  6 | X O . O . O . O O O . . O X . |  6 | : : : : : : : : : : : : : : : |
+  5 | . O O . . O . . X O X X . X . |  5 | : : : : : : : : : : : : : : : |
+  4 | X X O O . O O . X X O X X O . |  4 | : : : : : : : : : : : : : : : |
+  3 | . X X X O X X X . O O O O O . |  3 | : : : : : : : : : : : : : : : |
+  2 | O X . X O O O . . . . . . . . |  2 | : : : : : : : : : : : : : : : |
+  1 | . O O X . X . . . . . . . . . |  1 | : : : : : : : : : : : : : : : |
+    +-------------------------------+    +-------------------------------+
+
+2 bent-four situations: lower-left and upper-left
+
+this would often crash pachi-12.88 with EXTRA_CHECKS on.
+
+bent-four bug:
+kill bent-four part either kills or plays lib to capture,
+but doesn't check playing lib really captures and is not suicide actually.
+
+fixed in pachi-12.90

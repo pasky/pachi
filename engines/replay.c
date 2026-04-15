@@ -39,23 +39,24 @@ replay_sample_moves(engine_t *e, board_t *b, enum stone color,
 {
 	replay_t *r = (replay_t*)e->data;
 	playout_policy_t *policy = r->playout;
-	playout_setup_t setup;	        memset(&setup, 0, sizeof(setup));
+	playout_setup_t setup;	   memset(&setup, 0, sizeof(setup));
+	playout_t playout = { &setup, policy };
 	move_t m = move(pass, color);
 	int most_played = 0;
-	
+
 	/* Find out what moves policy plays most in this situation */
         for (int i = 0; i < r->runs; i++) {
 		board_t b2;
 		board_copy(&b2, b);
-		
+
 		if (policy->setboard)
 			policy->setboard(policy, &b2);
-		
-		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
-		coord_t c = playout_play_move(&setup, &b2, color, r->playout);		
+
+		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");
+		coord_t c = playout_play_move(&playout, &b2, color);
 		assert(!is_resign(c));
 		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c));
-		
+
 		played[c]++;
 		if (played[c] > most_played) {
 			most_played++;  m.coord = c;

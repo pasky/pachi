@@ -9,12 +9,32 @@
 ########################################################################################
 # General parameters
 
-# twogtp path
+# Synchronize workers ?
+# Without this each worker will just play one game after the other as fast as
+# possible. This maximizes cpu usage but can create significant winrate bias
+# initially if one player tends to win faster than the other (or if it never
+# resigns but the other player does !): wins accumulate faster for that player
+# resulting in an inflated winrate that slowly drops over time as losses catch
+# up. It will stabilize around the actual winrate eventually but can take
+# hundreds of games to do so.
+# The alternative is to synchronize workers: next round doesn't begin until all
+# games for current round have finished. This removes time asymmetry between
+# players at the cost of a little down time. You can still add/remove workers at
+# any time, they will sync with each other automatically. However don't remove
+# first worker, it's the one that picks pairings for each round.
+# Recommended with players like KataGo or GnuGo which resign late or play until
+# the end when losing.
+
+sync_workers=y
+
+
+# gogui-twogtp path
 # We need the gogui twogtp variant (the one that takes -black, not --black as parameter).
-# If you want handicap support you need gogui-1.4.10:
+# If you want handicap support you need gogui >= 1.4.10:
 #   https://github.com/lemonsqueeze/gogui/releases
 # (or patch gogui: http://pasky.or.cz/dev/pachi/gogui-handicap.diff)
-twogtp_path="/path/to/gogui-1.4.10/bin/gogui-twogtp"
+
+twogtp_path="/path/to/gogui-1.4.11/bin/gogui-twogtp"
 
 
 ########################################################################################
@@ -35,6 +55,18 @@ twogtp_path="/path/to/gogui-1.4.10/bin/gogui-twogtp"
 # Warning! If you change player definition, you WILL NOT be able to determine
 # what definition your historical results used. Once you define a player of
 # some id, it's bad idea to tweak the definition in any way.
+
+
+########################################################################################
+# KataGo player
+
+# Lightweight single-threaded KataGo player.
+# Tweak model / katago_player.cfg playouts if you want to make it stronger.
+# Setting sync_workers=y above is highly recommended if you are going to look at results
+# from the first ~600 games (significant time bias as it tends to resign late / play until
+# the end when losing).
+
+player katago "../../katago/cpp/katago_cpu gtp -config katago_player.cfg -model ../../josekifix/katago/g170e-b10c128-s1141046784-d204142634.bin.gz" 0
 
 
 ########################################################################################
@@ -82,13 +114,14 @@ player pachi_nodcnn		"runpachi ~/build/master/pachi --nodcnn -t =10000" 0
 # Pairings
 
 # Pairing syntax:
-#   pairing BOARDSIZE KOMI BLACK PLAYER1 PLAYER1ARGS PLAYER2 PLAYER2ARGS
+#   pairing BOARDSIZE HANDICAP KOMI BLACK PLAYER1 PLAYER1ARGS PLAYER2 PLAYER2ARGS
 # 
-# BOARDSIZE: 9, 19, or whatever flavor you fancy...
-# KOMI: 7.5, 0.5, ... OR h2, h6, ... (handicap amount, komi is forced to 0.5)
-# BLACK: 'a' - black is chosen randomly, useful only if komi is 7.5
-#	 '1' - black is PLAYER1,  '2' - black is PLAYER2
-# PLAYER: Name of the player as defined above.
+# BOARDSIZE:  9, 19, or whatever flavor you fancy...
+# HANDICAP:   'even', 'h2', 'h3' ...
+# KOMI:       7.5, 0.5, -7.5 ...
+# BLACK:      'a' - black is chosen randomly, useful only if komi is 7.5
+#             '1' - black is PLAYER1,  '2' - black is PLAYER2
+# PLAYER:     Name of the player as defined above.
 # PLAYERARGS: Parameters for the player, substituted for $1, $2, ...
 #             Parameters must not contain whitespace.
 #
@@ -101,13 +134,13 @@ player pachi_nodcnn		"runpachi ~/build/master/pachi --nodcnn -t =10000" 0
 
 
 # self-play:       19x19 even game  (second player is black)
-#pairing 19  7.5 2 pachi1280  pachi
+#pairing 19 even 7.5 2 pachi1280  pachi
 
 
 # dcnn vs nodcnn:  15x15 H4
-#pairing 15  h4  2 pachi1280  pachi_nodcnn
+#pairing 15 h4 0.5 2 pachi1280  pachi_nodcnn
 
 
 # gnugo vs pachi,  15x15 reverse komi (pachi is white)
-#pairing 15 -7.5 1 gnugo10  pachi_nodcnn
+#pairing 15 even -7.5 1 gnugo10  pachi_nodcnn
 

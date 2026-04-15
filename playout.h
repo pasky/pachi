@@ -66,38 +66,72 @@ struct playout_setup {
 #define playout_setup(gamelen, mercymin)  { gamelen, mercymin }
 
 typedef struct {
-	/* We keep record of the game so that we can
-	 * examine nakade moves; really going out of our way to
-	 * implement nakade AMAF properly turns out to be crucial
-	 * when reading some tactical positions in depth (even if
-	 * they are just one-stone-snapback). */
-	coord_t game[MAX_GAMELEN];
-	bool is_ko_capture[MAX_GAMELEN];
+	playout_setup_t  *setup;
+	playout_policy_t *policy;
+} playout_t;
+
+
+/* We keep record of the game so that we can examine nakade moves; really going
+ * out of our way to implement nakade AMAF properly turns out to be crucial when
+ * reading some tactical positions in depth (even if they are just one-stone
+ * snapback). */
+typedef struct {
 	int gamelen;
-	/* Our current position in the game sequence; in AMAF, we search
-	 * the range [game_baselen, gamelen[ */
-	int game_baselen;
-} playout_amafmap_t;
+	int game_baselen;		/* Start of the playout part of the record.
+					 * in AMAF, we search the range [game_baselen, gamelen[ */
+	coord_t game[MAX_GAMELEN];	/* Playout record */
+	int    flags[MAX_GAMELEN];	/* Move flags */
+} amafmap_t;
+
+/* amafmap move flags */
+#define AMAF_KO_CAPTURE 1
+#define AMAF_SELFATARI  2
+
+#define amaf_is_ko_capture(map, index)  ((map)->flags[index] & AMAF_KO_CAPTURE)
+#define amaf_is_selfatari(map, index)   ((map)->flags[index] & AMAF_SELFATARI)
 
 
-/* >0: starting_color wins,
- * <0: starting_color loses; returned number is DOUBLE the score difference.
- *  0: superko inside the game tree (XXX: jigo not handled) */
-int playout_play_game(playout_setup_t *setup,
-		      board_t *b, enum stone starting_color,
-		      playout_amafmap_t *amafmap,
-		      ownermap_t *ownermap,
-		      playout_policy_t *policy);
+/* AMAF first play data */
+typedef struct {
+	int data[BOARD_MAX_COORDS + 1];  /* coords + pass */
+} first_play_t;
 
-/* Play move returned by playout policy, or a randomly picked move if there was none. */
-coord_t playout_play_move(playout_setup_t *setup,
-			  board_t *b, enum stone color,
-			  playout_policy_t *policy);
+
+void amaf_init(amafmap_t *map);
+
+/* Record last move in amafmap. */
+void amaf_record_move(amafmap_t *amaf, board_t *b);
+
+/* Find first play at each coord in amaf record:
+ *    int *first_play = amafmap_first_play(map, b, fp);
+ * For each coord + pass, first_play[coord] is the map index of the first play at this
+ * coordinate in the playout, or INT_MAX if the move was not played.
+ * Only the playout part of the map is considered (map->game_baselen to the end). */
+int *amaf_first_play(amafmap_t *map, board_t *b, first_play_t *fp);
+
+/* Return the length of the current ko in the amaf record
+ * (number of moves up to to the last ko capture). */
+int amaf_ko_length(amafmap_t *map, int move);
+
+/* Run one simulation and return score from white's perspective:
+ *   >0: white wins
+ *   <0: black wins
+ *    0: jigo (shouldn't happen with komi)
+ * Note: superko not checked during playouts. */
+floating_t playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
+			     amafmap_t *amafmap, ownermap_t *ownermap);
+
+/* Get move from playout policy, or a randomly picked move if there was none. */
+coord_t playout_get_move(playout_t *playout, board_t *b, enum stone color);
+
+/* Get + play move returned by playout policy, or a randomly picked move if there was none. */
+coord_t playout_play_move(playout_t *playout, board_t *b, enum stone color);
 
 /* Is *this* move permitted ? 
  * Called by policy permit() to check something so never the main permit() call. */
 bool playout_permit(playout_policy_t *p, board_t *b, coord_t coord, enum stone color, bool rnd);
 
 void playout_policy_done(playout_policy_t *p);
+
 
 #endif

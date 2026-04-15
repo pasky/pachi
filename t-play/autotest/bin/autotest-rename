@@ -8,28 +8,28 @@ bin=`dirname $0`
 from="$1"
 to="$2"
 if [ -z "$from" ] || [ -z "$to" ]; then
-    echo "Usage: $0 old_pairing new_pairing" >&2
-    echo "Rename old_pairing to new_pairing" >&2
-    exit 1
+	echo "Usage: $0 old_pairing new_pairing" >&2
+	echo "Rename old_pairing to new_pairing" >&2
+	exit 1
 fi
 . $bin/autotest-lib
 
 # Make sure source exists
 if ! find c -type d -name $from | grep -q . ; then
-    echo "Source pairing not found." >&2
-    exit 1
+	echo "Source pairing not found." >&2
+	exit 1
 fi
 
 
 # Make sure destination doesn't exist
 if find c -type d -name $to | grep -q . ; then
-    echo "Destination already exists." >&2
-    exit 1
+	echo "Destination already exists." >&2
+	exit 1
 fi
 
-rm -f r/$from.dat r/$from.summary.dat r/$from.html r/$from.beacon r/$from.error
+rm -f r/$from.*
 
 for dir in c/*; do
-    [ -d $dir/$from ] || continue
-    mv $dir/$from  $dir/$to
+	[ -d $dir/$from ] || continue
+	mv $dir/$from  $dir/$to
 done

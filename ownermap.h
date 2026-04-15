@@ -5,6 +5,7 @@
  * information from the map. */
 
 #include <signal.h> // sig_atomic_t
+#include "stats.h"
 #include "mq.h"
 
 /* How many games to consider at minimum before judging groups. */
@@ -33,20 +34,23 @@ typedef struct {
 	enum gj_state *gs; // [bsize2]
 } group_judgement_t;
 
+/* Map of final owners of all intersections on the board.
+ * This may be shared between multiple threads!
+ * XXX  We assume sig_atomic_t is thread-atomic. This may not be true in pathological cases.
+ * TODO We may want to switch to a dedicated struct for playout stats at some point. */
 typedef struct ownermap {
-	/* Map of final owners of all intersections on the board. */
-	/* This may be shared between multiple threads! */
-	/* XXX: We assume sig_atomic_t is thread-atomic. This may not
-	 * be true in pathological cases. */
-	sig_atomic_t playouts;
-	/* At the final board position, for each coordinate increase the
-	 * counter of appropriate color. */
-	sig_atomic_t map[BOARD_MAX_COORDS][S_MAX];
+	sig_atomic_t playouts;				/* Number of playouts */
+	sig_atomic_t map[BOARD_MAX_COORDS][S_MAX];	/* Counts of final position colors for each coordinate. */
+
+	move_stats_t avg_score;				/* Average score (white perspective) */
+	move_stats_t score_sq_dev;			/* Average score squared deviations */
 } ownermap_t;
 
 void ownermap_init(ownermap_t *ownermap);
+/* Display board and ownermap with score estimate from ownermap and playouts. */
 void board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap);
-void ownermap_fill(ownermap_t *ownermap, board_t *b);
+/* Fill ownermap at the end of playout */
+void ownermap_fill(ownermap_t *ownermap, board_t *b, floating_t score);
 
 /* Coord ownermap status: dame / black / white / unclear */
 enum point_judgement ownermap_judge_point(ownermap_t *ownermap, coord_t c, floating_t thres);
@@ -66,8 +70,17 @@ void groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, mq_
 float ownermap_score_est(board_t *b, ownermap_t *ownermap);
 /* Score estimate from color point of view (positive: color wins) */
 float ownermap_score_est_color(board_t *b, ownermap_t *ownermap, enum stone color);
+/* Score estimate as string */
 char *ownermap_score_est_str(board_t *b, ownermap_t *ownermap);
+/* Judge single coord for score estimation */
 enum point_judgement ownermap_score_est_coord(board_t *b, ownermap_t *ownermap, coord_t c);
+
+/* Playouts score estimate (average score) */
+float playouts_score_est(ownermap_t *ownermap);
+/* Playouts score estimate as string */
+char *playouts_score_est_str(ownermap_t *ownermap);
+/* Playouts score standard deviation */
+float playouts_score_std_dev(ownermap_t *ownermap);
 
 /* Raw count for each color. */
 void ownermap_scores(board_t *b, ownermap_t *ownermap, int *scores);

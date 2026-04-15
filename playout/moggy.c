@@ -1,5 +1,4 @@
-/* Heuristical playout (and tree prior) policy modelled primarily after
- * the description of the Mogo engine. */
+/* Heuristical playout policy modeled primarily after the description of the Mogo engine. */
 
 #include <assert.h>
 #include <math.h>
@@ -56,8 +55,17 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 typedef struct {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
+	unsigned int lcapturerate, atarirate, nlibrate, patternrate, korate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
+#ifdef MOGGY_GLOBAL_ATARI
+	unsigned int capturerate;
+#endif
+#ifdef MOGGY_LADDER
+	unsigned int ladderrate;
+#endif
+#ifdef MOGGY_JOSEKI
+	unsigned int josekirate;
+#endif
 	unsigned int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
@@ -74,10 +82,6 @@ typedef struct {
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
-	/* Prior stone weighting. Weight of each stone between
-	 * cap_stone_min and cap_stone_max is (assess*100)/cap_stone_denom. */
-	int cap_stone_min, cap_stone_max;
-	int cap_stone_denom;
 
 	/* 2lib settings: */
 	bool atari_def_no_hopeless;
@@ -258,44 +262,42 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 }
 #endif /* MOGGY_JOSEKI */
 
+#ifdef MOGGY_GLOBAL_ATARI
 static void
 global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, mq_t *q)
 {
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+
 	if (b->clen == 0)
 		return;
 
-	moggy_policy_t *pp = (moggy_policy_t*)p->data;
-	if (pp->capcheckall) {
+	/* Moggy seqchoose (or fullchoose with capcheckall): pick from all available moves. */
+	if (!pp->fullchoose || pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (DEBUGL(5) && q->moves)
 			mq_print_line(q, "Moggy global atari: ");
-		if (pp->fullchoose)
-			return;
+		return;
 	}
 
+	/* Moggy fullchoose (without capcheckall): pick moves from one group only. */
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
-			/* XXX: Try carrying on. */
-			if (DEBUGL(5))
-				mq_print_line(q, "Moggy global atari: ");
-			if (pp->fullchoose)
-				return;
+			if (DEBUGL(5))  mq_print_line(q, "Moggy global atari: ");
+			return;
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
 		group_atari_check(pp->alwaysccaprate, b, group_at(b, b->c[g]), to_play, q, pp->middle_ladder);
 		if (q->moves > 0) {
-			/* XXX: Try carrying on. */
-			if (DEBUGL(5))
-				mq_print_line(q, "Moggy global atari: ");
-			if (pp->fullchoose)
-				return;
+			if (DEBUGL(5))  mq_print_line(q, "Moggy global atari: ");
+			return;
 		}
 	}
 }
+#endif  /* MOGGY_GLOBAL_ATARI */
 
 static int
 local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
@@ -333,7 +335,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	return 0;
 }
 
-
+#ifdef MOGGY_LADDER
 static void
 local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 {
@@ -351,6 +353,7 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, mq_t *q)
 	if (DEBUGL(5) && q->moves)
 		mq_print_line(q, "Moggy ladder: ");
 }
+#endif
 
 
 static void
@@ -623,6 +626,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 				return mq_pick(&q);
 		}
 
+#ifdef MOGGY_LADDER
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > fast_random(100)) {
 			mq_t q;  mq_init(&q);
@@ -630,6 +634,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
+#endif
 
 		/* Did we just reject selfatari move as opponent ?
 		 * Check if his group can be laddered / put in atari */
@@ -687,6 +692,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 
 	/* Global checks */
 
+#ifdef MOGGY_GLOBAL_ATARI
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
 		mq_t q;  mq_init(&q);
@@ -694,6 +700,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
+#endif
 
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
@@ -739,7 +746,7 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mtmq_t *q)
 	total += double_to_fixp(pp->tenuki_prob);
 
 	/* Finally, pick a move! */
-	fixp_t stab = fast_irandom(total);
+	fixp_t stab = fast_random(total);
 	if (DEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
 		for (int i = 0; i < q->moves; i++)
@@ -787,9 +794,11 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 		if (pp->lcapturerate > 0)
 			FULLCHOOSE_ADD_TAGGED(local_atari_check(p, b, &last_move(b), &q), 1<<MQ_LATARI);
 
+#ifdef MOGGY_LADDER
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > 0)
 			FULLCHOOSE_ADD_TAGGED(local_ladder_check(p, b, &last_move(b), &q), 1<<MQ_LADDER);
+#endif
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > 0)
@@ -823,9 +832,11 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 
 	/* Global checks */
 
+#ifdef MOGGY_GLOBAL_ATARI
 	/* Any groups in atari? */
 	if (pp->capturerate > 0)
 		FULLCHOOSE_ADD_TAGGED(global_atari_check(p, b, to_play, &q), 1<<MQ_GATARI);
+#endif
 
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
@@ -882,7 +893,7 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 		if (alt && pp->selfatari_other) {
 			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
-			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
+			coord_t c = selfatari_cousin(b, m->color, m->coord);
 			if (!permit_move(c)) return false;
 			if (DEBUGL(5))
 				fprintf(stderr, "Moggy: Redirecting to other lib %s\n", coord2sstr(c));
@@ -933,11 +944,12 @@ playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool 
 eyefill_skip:
 	/* Check special sekis moggy would break. */
 	if (check_special_sekis(b, m)) {
-		if (breaking_3_stone_seki(b, m->coord, m->color))
+		if (breaking_nakade_seki(b, m->coord, m->color) ||
+		    (check_endgame_sekis(b, m, random_move) &&
+		     breaking_false_eye_seki(b, m->coord, m->color))) {
+			if (DEBUGL(5))  fprintf(stderr, "Moggy: Rejecting %s, breaking seki.\n", coord2sstr(m->coord));
 			return false;
-		if (check_endgame_sekis(b, m, random_move) &&
-		    breaking_false_eye_seki(b, m->coord, m->color))
-			return false;
+		}
 	}
 	return true;
 }
@@ -970,12 +982,15 @@ playout_moggy_init(char *arg, board_t *b)
 
 	pp->patternrate = pp->eyefixrate = 100;
 	pp->lcapturerate = 90;
-	pp->atarirate = pp->josekirate = -1U;
+	pp->atarirate = -1U;
 	pp->nakaderate = 80;
 	pp->korate = 40; pp->koage = 3;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;
 	pp->nlibrate = 25;
+#ifdef MOGGY_JOSEKI
+	pp->josekirate = -1U;
+#endif
 
 	/* selfatarirate is slightly special, since to avoid playing some
 	 * silly move that stays on the board, it needs to block it many
@@ -990,10 +1005,6 @@ playout_moggy_init(char *arg, board_t *b)
 	pp->selfatari_other = true;
 
 	pp->pattern2 = true;
-
-	pp->cap_stone_min = 2;
-	pp->cap_stone_max = 15;
-	pp->cap_stone_denom = 200;
 
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
@@ -1034,17 +1045,21 @@ playout_moggy_init(char *arg, board_t *b)
 
 			if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
+#ifdef MOGGY_LADDER
 			} else if (!strcasecmp(optname, "ladderrate") && optval) {
 				/* Note that ladderrate is considered obsolete;
 				 * it is ineffective and superseded by the
 				 * prune_ladders prior. */
 				pp->ladderrate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nlibrate") && optval) {
 				pp->nlibrate = atoi(optval);
+#ifdef MOGGY_GLOBAL_ATARI
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
@@ -1053,8 +1068,10 @@ playout_moggy_init(char *arg, board_t *b)
 				pp->eyefillrate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
+#ifdef MOGGY_JOSEKI
 			} else if (!strcasecmp(optname, "josekirate") && optval) {
 				pp->josekirate = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "nakaderate") && optval) {
 				pp->nakaderate = atoi(optval);
 			} else if (!strcasecmp(optname, "eyefixrate") && optval) {
@@ -1073,12 +1090,6 @@ playout_moggy_init(char *arg, board_t *b)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "cap_stone_min") && optval) {
-				pp->cap_stone_min = atoi(optval);
-			} else if (!strcasecmp(optname, "cap_stone_max") && optval) {
-				pp->cap_stone_max = atoi(optval);
-			} else if (!strcasecmp(optname, "cap_stone_denom") && optval) {
-				pp->cap_stone_denom = atoi(optval);
 			} else if (!strcasecmp(optname, "atari_miaisafe")) {
 				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
@@ -1113,16 +1124,22 @@ playout_moggy_init(char *arg, board_t *b)
 	if (pp->lcapturerate == -1U) pp->lcapturerate = rate;
 	if (pp->atarirate == -1U) pp->atarirate = rate;
 	if (pp->nlibrate == -1U) pp->nlibrate = rate;
-	if (pp->capturerate == -1U) pp->capturerate = rate;
 	if (pp->patternrate == -1U) pp->patternrate = rate;
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->eyefillrate == -1U) pp->eyefillrate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
-	if (pp->josekirate == -1U) pp->josekirate = rate;
-	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
 	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
+#ifdef MOGGY_GLOBAL_ATARI
+	if (pp->capturerate == -1U) pp->capturerate = rate;
+#endif
+#ifdef MOGGY_LADDER
+	if (pp->ladderrate == -1U) pp->ladderrate = rate;
+#endif
+#ifdef MOGGY_JOSEKI
+	if (pp->josekirate == -1U) pp->josekirate = rate;
+#endif
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
 

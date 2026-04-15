@@ -673,16 +673,20 @@ static enum parse_code
 cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	ownermap_t *o = engine_ownermap(e, b);
-	if (o && !board_position_final(b, o, &msg)) {
-		gtp_error(gtp, msg);
-		return P_OK;
-	}
 
 	mq_t q;
-	engine_dead_groups(e, b, &q);
-	char *score_str = board_official_score_str(b, &q);
+	bool safe = engine_dead_groups(e, b, &q);
 
+	/* Try to guard against final_score calls in the middle of a game. */
+	if (!safe) {
+		ownermap_t *o = engine_ownermap(e, b);
+		if (o && !board_position_final(b, o, &msg)) {
+			gtp_error(gtp, msg);
+			return P_OK;
+		}
+	}
+
+	char *score_str = board_official_score_str(b, &q);
 	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
 	gtp_printf(gtp, "%s\n", score_str);
 
@@ -903,6 +907,10 @@ gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 
 	assert(b->move_history == &gtp->history);
 	assert(b->move_history->moves == n);
+
+	/* Reset timers */
+	ti[S_BLACK].timer_start = 0;
+	ti[S_WHITE].timer_start = 0;
 }
 
 static enum parse_code
@@ -1129,6 +1137,8 @@ static gtp_command_t gtp_commands[] =
 	{ "time_settings",		cmd_kgs_time_settings },
 	{ "tunit",			cmd_pachi_tunit },
 								/* GoGui commands */
+	{ "gogui-amaf_criticality",     cmd_gogui_amaf_criticality },
+	{ "gogui-amaf_playouts",	cmd_gogui_amaf_playouts },
 	{ "gogui-analyze_commands",	cmd_gogui_analyze_commands },
 	{ "gogui-bad_selfatari",        cmd_gogui_bad_selfatari },
 	{ "gogui-best_moves",		cmd_gogui_best_moves },
@@ -1147,12 +1157,15 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-josekifix_show_pattern",   cmd_gogui_josekifix_show_pattern },
 #endif
 	{ "gogui-livegfx",		cmd_gogui_livegfx },
+	{ "gogui-move_criticality",	cmd_gogui_move_criticality },
+	{ "gogui-point_criticality",	cmd_gogui_point_criticality },
 	{ "gogui-pattern_best",		cmd_gogui_pattern_best },
 	{ "gogui-pattern_colors",	cmd_gogui_pattern_colors },
 	{ "gogui-pattern_features",	cmd_gogui_pattern_features },
 	{ "gogui-pattern_gammas",	cmd_gogui_pattern_gammas },
 	{ "gogui-pattern_rating",	cmd_gogui_pattern_rating },
 	{ "gogui-playout_moves",	cmd_gogui_playout_moves },
+	{ "gogui-set_criticality_filters", cmd_gogui_set_criticality_filters },
 	{ "gogui-score_est",		cmd_gogui_score_est },
 	{ "gogui-show_spatial",		cmd_gogui_show_spatial },
 	{ "gogui-spatial_size",		cmd_gogui_spatial_size },

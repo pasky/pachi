@@ -35,20 +35,20 @@ my $prev_kind = 0;
 my $line = 0;
 my $interleaved = 0;
 foreach my $s (<STDIN>) {
-    $line++;
-    
-    my $kind = 0;    
-    if    ($s =~ m|IN: genmove|)  {  $kind = 1;  }
-    elsif ($s =~ m|^Move:|)       {  $kind = 2;  }
-    elsif ($s =~ m|WINNER is|)    {  $kind = 3;  }
-    else {  next;  }
+	$line++;
 
-    if ($prev_kind == $kind) {
-	print "line $line: interleaved log file\n";
-	$interleaved = 1;
-    }
+	my $kind = 0;
+	if    ($s =~ m|IN: genmove|)  {  $kind = 1;  }
+	elsif ($s =~ m|^Move:|)       {  $kind = 2;  }
+	elsif ($s =~ m|WINNER is|)    {  $kind = 3;  }
+	else {  next;  }
 
-    $prev_kind = $kind;
+	if ($prev_kind == $kind) {
+		print "line $line: interleaved log file\n";
+		$interleaved = 1;
+	}
+
+	$prev_kind = $kind;
 }
 
 

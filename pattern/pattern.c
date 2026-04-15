@@ -15,17 +15,10 @@
 #include "tactics/1lib.h"
 #include "tactics/2lib.h"
 #include "tactics/util.h"
-#include "playout.h"
-#include "playout/moggy.h"
 #include "ownermap.h"
 #include "engine.h"
 #include "pattern/pattern_engine.h"
 #include "mq.h"
-
-/* Number of playouts for mcowner_fast().
- * Anything reliable uses much more (GJ_MINGAMES).
- * Lower this to make patternplay super fast (and mcowner even more unreliable). */
-#define MM_MINGAMES 100
 
 static bool patterns_enabled = true;
 static bool patterns_required = false;
@@ -265,24 +258,24 @@ pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ow
 }
 
 pattern_context_t*
-pattern_context_new(board_t *b, enum stone color, bool mcowner_fast)
+pattern_context_new(int threads, board_t *b, enum stone color)
 {
 	engine_t *engine = new_engine(E_PATTERN, "", b);
 	pattern_config_t *pc = pattern_engine_get_pc(engine);
 
-	pattern_context_t *ct = pattern_context_new2(b, color, pc, mcowner_fast);
+	pattern_context_t *ct = pattern_context_new2(threads, b, color, pc);
 	ct->engine = engine;
 	return ct;
 }
 
 pattern_context_t*
-pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast)
+pattern_context_new2(int threads, board_t *b, enum stone color, pattern_config_t *pc)
 {
 	pattern_context_t *ct = calloc2(1, pattern_context_t);
 	
-	ownermap_t *ownermap = malloc2(ownermap_t);	
-	if (mcowner_fast)  mcowner_playouts_fast(b, color, ownermap);
-	else		   mcowner_playouts(b, color, ownermap);
+	ownermap_t *ownermap = malloc2(ownermap_t);
+
+	mcowner_playouts(threads, 500, b, color, ownermap);
 	
 	pattern_context_init(ct, pc, ownermap);
 	return ct;
@@ -298,6 +291,9 @@ pattern_context_free(pattern_context_t *ct)
 }
 
 #define have_last_move(b)  (!is_pass(last_move(b).coord))
+
+/***************************************************************************************/
+/* Feature matching */
 
 static bool
 is_neighbor_group(board_t *b, coord_t coord, group_t g)
@@ -364,7 +360,7 @@ pattern_match_capture(board_t *b, move_t *m)
 		/* Capture group contiguous to new group in atari ? */
 		foreach_atari_neighbor(b, last_move, m->color) {
 			group_t own_atari = g;
-			mq_t q;
+			mq_t q;  mq_init(&q);
 			countercapturable_groups(b, own_atari, &q);
 			for (int i = 0; i < q.moves; i++)
 				if (capg == q.move[i])
@@ -474,7 +470,7 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m,
 		if (!cutting_stones(b, atariable))		break;
 		if (!cutting_stones(b, other))			break;
 		
-		mq_t mq;
+		mq_t mq;  mq_init(&mq);
 		coord_t lib = group_lib(b, atariable, 0);
 		can_countercapture(b, atariable, &mq);
 		mq_add(&mq, lib);
@@ -543,7 +539,7 @@ cutting_stones_and_can_capture_nearby_after_atari_(board_t *b, move_t *m, group_
 	//fprintf(stderr, "found %i targets\n", targets.moves);
 	
 	/* Find possible atari answers */
-	mq_t q;
+	mq_t q;  mq_init(&q);
 	coord_t lib = group_lib(b, atariable, 0);
 	can_countercapture(b, atariable, &q);
 	mq_add(&q, lib);
@@ -1294,42 +1290,10 @@ pattern_match_spatial(board_t *b, move_t *m, pattern_t *p,
 static int
 pattern_match_mcowner(board_t *b, move_t *m, ownermap_t *o)
 {
-	assert(o->playouts >= MM_MINGAMES);
+	assert(o->playouts >= 100);
 	int r = o->map[m->coord][m->color] * 8 / (o->playouts + 1);
 	return MIN(r, 8);   // multi-threads count not exact, can reach 9 sometimes...
 }
-
-static void
-mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playouts)
-{
-	static playout_policy_t *policy = NULL;
-	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
-	
-	if (!policy)  policy = playout_moggy_init(NULL, b);
-	ownermap_init(ownermap);
-	
-	for (int i = 0; i < playouts; i++)  {
-		board_t b2;
-		board_copy(&b2, b);		
-		playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
-		board_done(&b2);
-	}
-	//fprintf(stderr, "pattern ownermap:\n");
-	//board_print_ownermap(b, stderr, ownermap);
-}
-
-void
-mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap)
-{
-	mcowner_playouts_(b, color, ownermap, GJ_MINGAMES);
-}
-
-void
-mcowner_playouts_fast(board_t *b, enum stone color, ownermap_t *ownermap)
-{
-	mcowner_playouts_(b, color, ownermap, MM_MINGAMES);
-}
-
 
 /* Keep track of features hits stats ? */
 #ifdef PATTERN_FEATURE_STATS

@@ -1,0 +1,25 @@
+#!/bin/bash
+# Usage: bin/find_scoring_bugs <pairing>
+#
+# Find games where players disagree on scoring.
+
+pairing="$1"
+
+list_clientids()
+{
+	for id in c/*/; do
+		id="${id%/}"; id="${id#c/}"
+		echo "$id"
+	done
+}
+
+ids="`list_clientids`"
+
+for id in $ids; do
+    cat "c/$id/$pairing/game.dat" | cut -f 1,2,3 |
+	while read number score1 score2; do
+	    if [ "$score1" != "$score2" ]; then
+		printf "c/$id/$pairing/game-%-4s %-6s != %-6s\n" "$number:" "$score1" "$score2"
+	    fi
+	done
+done

@@ -111,7 +111,8 @@ worker_thread(void *ctx_)
 	uct_t *u = ctx->u;
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
-	fast_srandom(ctx->seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, ctx->seed);
 	int restarted = search_restarted(u);
 
 	/* Compute initial ownermap */
@@ -196,7 +197,8 @@ thread_manager(void *ctx_)
 	uct_thread_ctx_t *mctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = mctx->u;
 	tree_t *t = mctx->t;
-	fast_srandom(mctx->seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, mctx->seed);
 
 	int played_games = 0;
 	pthread_t threads[u->threads + 1];
@@ -827,11 +829,15 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 	*best_coord = node_coord(best);
 	floating_t winrate = tree_node_get_value(u->t, 1, best->u.value);
 
-	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(node_coord(best)), winrate,
+	if (UDEBUGL(3))
+		fprintf(stderr, "*** WINNER is %s with score %.1f%% (%d/%d games, %d new), extra komi %.1f\n",
+			coord2sstr(node_coord(best)), winrate * 100,
 			best->u.playouts, u->t->root->u.playouts,
-			u->t->root->u.playouts - base_playouts, played_games,
+			played_games, u->t->extra_komi);
+	else if (UDEBUGL(1))
+		fprintf(stderr, "*** WINNER is %s with score %.1f%% (%d/%d games), extra komi %.1f\n",
+			coord2sstr(node_coord(best)), winrate * 100,
+			best->u.playouts, u->t->root->u.playouts,
 			u->t->extra_komi);
 
 	/* Do not resign if we're so short of time that evaluation of best

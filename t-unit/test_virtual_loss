@@ -4,8 +4,6 @@
 
 playouts=2000
 
-abs() {  echo $[ $1 < 0 ? -$1 : $1 ];  }
-
 get_expanded_nodes()
 {
     color=$1
@@ -16,11 +14,19 @@ get_expanded_nodes()
 [ -n "$1" ] || exit 1
 
 nodes=`get_expanded_nodes $1`
-#echo "expanded nodes:  $nodes"
+#echo "playouts: $playouts      expanded nodes:  $nodes"
 
-diff=`abs $[ $playouts - $nodes ]`
-pc=$[ $diff * 100 / $playouts ]
-#echo "percentage away from $playouts:  $pc%"
+# Should get close to number of playouts nodes.
+
+# More nodes than playouts ? great.
+if [ $nodes -gt $playouts ]; then
+    exit 0
+fi
 
 # Should get less than 5% difference
-exit $[ ($pc >= 5)  ] 
+diff=$[ $playouts - $nodes ]
+pc=$[ $diff * 100 / $playouts ]
+#echo "percentage diff from playouts:  $pc%"
+
+fail=$[$pc >= 5]
+exit $fail

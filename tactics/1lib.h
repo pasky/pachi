@@ -6,21 +6,21 @@
 #include "board.h"
 #include "debug.h"
 
-/* Can capture group g (not snapback) */
+/********************************************************************************/
+/* 1 lib tactical checks */
+
+/* Can capture group g (not snapback).
+ * Note: if capturing group is not in atari use board_is_valid_play() instead, faster. */
 bool can_capture(board_t *b, group_t g, enum stone to_play);
 
 /* Check if @group capture is a snapback.
  * see also is_snapback(): faster for checking a potential move than
  * with_move(selfatari) + capturing_group_is_snapback() */
 bool capturing_group_is_snapback(board_t *b, group_t group);
-/* Can group @group usefully capture a neighbor ? 
- * (usefully: not a snapback) */
+/* Can group @group usefully capture a neighbor ? (usefully: not a snapback) */
 bool can_countercapture(board_t *b, group_t group, mq_t *q);
-/* Same as can_countercapture() but returns capturable groups instead of moves,
- * queue may not be NULL, and is always cleared. */
+/* Same as can_countercapture() but returns capturable groups instead of moves. */
 bool countercapturable_groups(board_t *b, group_t group, mq_t *q);
-/* Can group @group capture *any* neighbor ? */
-bool can_countercapture_any(board_t *b, group_t group, mq_t *q);
 
 /* Examine given group in atari, suggesting suitable moves for player
  * @to_play to deal with it (rescuing or capturing it). */

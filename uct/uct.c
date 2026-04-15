@@ -60,9 +60,9 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
-		fast_srandom(u->force_seed);
+		fast_srandom(NULL, u->force_seed);
 	if (UDEBUGL(3))
-		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
+		fprintf(stderr, "Fresh board with random seed %" PRIrandom_seed "\n", fast_getseed());
 	if (!u->no_tbook && b->moves == 0) {
 		if (color == S_BLACK) {
 			tree_load(u->t, b);
@@ -325,13 +325,14 @@ void
 uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 {
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
+	playout_t playout = { &ps, u->playout };
 	
 	/* TODO pick random last move, better playouts randomness */
 
 	while (u->ownermap.playouts < GJ_MINGAMES) {
 		board_t b2;
 		board_copy(&b2, b);
-		playout_play_game(&ps, &b2, color, NULL, &u->ownermap, u->playout);
+		playout_play_game(&playout, &b2, color, NULL, &u->ownermap);
 		board_done(&b2);
 	}
 }
@@ -438,7 +439,7 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 			    u->threads, winrate, extra_komi, score_est);
 }
 
-static void
+static bool
 uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
@@ -447,23 +448,24 @@ uct_dead_groups(engine_t *e, board_t *b, mq_t *dead)
 	uct_pondering_stop(u);
 	
 	if (u->pass_all_alive)
-		return; // no dead groups
+		return true; // no dead groups
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
 	 * Don't recompute dead groups here, result could be different this time and
 	 * lead to bad result ! */
 	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
-		return;
+		return true;
 	}
 
-	if (UDEBUGL(1)) fprintf(stderr, "WARNING: Recomputing dead groups\n");
+	if (UDEBUGL(1)) fprintf(stderr, "WARNING: Recomputing dead groups !\n");
 
 	/* Make sure the ownermap is well-seeded. */
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (UDEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	ownermap_dead_groups(b, &u->ownermap, dead, NULL);
+	return false;
 }
 
 static void
@@ -495,6 +497,46 @@ uct_done(engine_t *e)
 #endif
 }
 
+/* Preserve saved dead groups on reset:
+ * Fixes scoring loopholes on kgs if we pass first and opponent disagrees.
+ * If we pass second and opponent disagrees no problem, we'll get 2 undo
+ * commands and another genmove, so dead groups will recomputed safely.
+ * But if we pass first, opponent disagrees and passes immediately:
+ *   genmove b			(engine passes, saves dead groups)
+ *   play w pass
+ *   final_status_list dead	(safe, uses saved dead groups)
+ *   undo			(reset engine)
+ *   play w pass
+ *   final_status_list dead	(unsafe if reset clears saved dead groups)
+ * No genmove command and we have lost saved dead groups, scoring will be
+ * unsafe if there are unclear groups. So preserve saved dead groups on
+ * reset and clear them in uct_genmove_setup() so they don't affect next
+ * game. */
+static void
+uct_reset(engine_t *e, board_t *b)
+{
+	uct_t *u = (uct_t*)e->data;
+	int engine_id = e->id;
+	options_t options;
+	mq_t dead_groups;
+	int pass_moveno;
+
+	/* Copy saved dead groups */
+	mq_copy(&dead_groups, &u->dead_groups);
+	pass_moveno = u->pass_moveno;
+
+	engine_options_copy(&options, &e->options);  /* Save options. */
+
+	e->options.n = 0;
+	engine_done(e);
+
+	engine_options_copy(&e->options, &options);  /* Restore options. */
+	engine_init_(e, engine_id, b);
+
+	/* Restore saved dead groups */
+	mq_copy(&u->dead_groups, &dead_groups);
+	u->pass_moveno = pass_moveno;
+}
 
 
 /* Run time-limited MCTS search on foreground. */
@@ -542,11 +584,18 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		tree_dump(t, u->dumpthres);
 		fprintf(stderr, "expanded nodes: %i\n", u->expanded_nodes);
 	}
-	if (UDEBUGL(2))
-		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
+	if (UDEBUGL(3))
+		fprintf(stderr, "(avg score %.1f/%d dev %.1f) (xkomi avg score %.1f/%d dynkomi score %.1f/%d value %.1f)\n",
+			-u->ownermap.avg_score.value,  /* ownermap score is from white perspective */
+			u->ownermap.avg_score.playouts,
+			playouts_score_std_dev(&u->ownermap),
 			t->avg_score.value, t->avg_score.playouts,
-			u->dynkomi->score.value, u->dynkomi->score.playouts,
-			u->dynkomi->value.value, u->dynkomi->value.playouts);
+			u->dynkomi->score.value, u->dynkomi->score.playouts, u->dynkomi->value.value);
+	else if (UDEBUGL(2))
+		fprintf(stderr, "(avg score %s/%d dev %.1f)\n",
+			playouts_score_est_str(&u->ownermap), u->ownermap.avg_score.playouts,
+			playouts_score_std_dev(&u->ownermap));
+
 	if (print_progress)
 		uct_progress_status(u, t, b, color, 0, NULL);
 
@@ -686,6 +735,10 @@ uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 
 	assert(u->t);
 	u->my_color = color;
+
+	/* Clear saved dead groups */
+	u->pass_moveno = -1;
+	mq_init(&u->dead_groups);
 
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
@@ -845,6 +898,27 @@ uct_get_best_sequence(uct_t *u, board_t *board, enum stone color, tree_node_t *b
 
 		best = u->policy->choose(u->policy, best, b, color, resign);
 	}
+}
+
+/* Get RAVE best moves with at least @min_playouts.
+ * If @winrates is true @best_r returns winrates instead of visits.
+ * (moves remain in best-visited order) */
+void
+uct_get_rave_best_moves(uct_t *u, best_moves_t *best, bool winrates, int min_playouts)
+{
+	tree_node_t* best_n[best->size];
+	best->d = (void**)best_n;
+
+	/* Find RAVE best moves */
+	for (tree_node_t *n = u->t->root->children; n; n = n->sibling)
+		if (n->amaf.playouts >= min_playouts)
+			best_moves_add_full(best, node_coord(n), n->amaf.playouts, n);
+
+	if (winrates)  /* Get RAVE winrates */
+		for (int i = 0; i < best->n; i++) {
+			tree_node_t *n = best->d[i];
+			best->r[i] = tree_node_get_value(u->t, 1, n->amaf.value);
+		}
 }
 
 /* Same as uct_get_best_moves() for node @parent.
@@ -1670,6 +1744,7 @@ uct_engine_init(engine_t *e, board_t *b)
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
+	e->reset = uct_reset;
 
 	uct_state_init(e, b);
 

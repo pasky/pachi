@@ -16,34 +16,28 @@
 bool
 capturing_group_is_snapback(board_t *b, group_t group)
 {
-	coord_t lib = group_lib(b, group, 0);
-
 #ifdef EXTRA_CHECKS
 	assert(sane_group(b, group));
 	assert(group_libs(b, group) == 1);
-	assert(board_at(b, lib) == S_NONE);
 #endif
+	coord_t lib = group_lib(b, group, 0);
+
 	if (immediate_liberty_count(b, lib) > 0 ||
-	    group_stone_count(b, group, 2) > 1)
+	    !group_is_onestone(b, group))
 		return false;
 
-	enum stone other_color = board_at(b, group);
+	enum stone other_color = board_at(b, group);  // group color
 	if (board_is_eyelike(b, lib, other_color))
 		return false;
-	
+
 	foreach_neighbor(b, lib, {
-		enum stone st = board_at(b, c);
-		if (st == S_NONE || st == S_OFFBOARD)
-			continue;
-
 		group_t g = group_at(b, c);
-		if (g == group)
-			continue;
+		if (!g || g == group)  continue;
 
-		if (st == other_color) {
+		if (board_at(b, c) == other_color) {
 			if (group_libs(b, g) == 1)  // capture more than one group
 				return false;
-		} else  // to_play
+		} else                              // another group of our color
 			if (group_libs(b, g) > 1)
 				return false;
 	});
@@ -59,137 +53,90 @@ capturing_group_is_snapback(board_t *b, group_t group)
 bool
 can_capture(board_t *b, group_t g, enum stone to_play)
 {
-	coord_t lib = group_lib(b, g, 0);
-
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(to_play));
 	assert(sane_group(b, g));
 	assert(group_libs(b, g) == 1);
-	assert(board_at(b, lib) == S_NONE);
+	assert(to_play == stone_other(board_at(b, g)));
 #endif
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
-	
-	/* Does playing on the liberty usefully capture the group? */
-	if (board_is_valid_play(b, to_play, lib)
-	    && !capturing_group_is_snapback(b, g))
-		return true;
+	coord_t lib = group_lib(b, g, 0);
 
-	return false;
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
+
+	/* Does playing on the liberty usefully capture the group? */
+	return (board_is_valid_play(b, to_play, lib) &&
+		!capturing_group_is_snapback(b, g));
 }
 
 static inline bool
 can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 {
-	coord_t lib = group_lib(b, g, 0);
-
 #ifdef EXTRA_CHECKS
 	assert(is_player_color(to_play));
 	assert(sane_group(b, g));
-	assert(board_at(b, lib) == S_NONE);
+	assert(board_at(b, g) == to_play);
 #endif
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
-	
-	/* Does playing on the liberty usefully capture the group? */
-	if (board_is_valid_play(b, to_play, lib)
-	    && !is_bad_selfatari(b, to_play, lib))
-		return true;
+	coord_t lib = group_lib(b, g, 0);
 
-	return false;
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %s (%s)?\n", coord2sstr(g), coord2sstr(lib));
+
+	/* Can group escape by playing on liberty ? */
+	return (board_is_valid_play_no_suicide(b, to_play, lib) &&
+		!is_selfatari(b, to_play, lib));
 }
 
-/* Checks snapbacks.
- * We can't use b->clen, not maintained by board_quick_play(). */
+/* Find group countercapture moves which are not snapbacks.
+ * Note: We can't use b->clen, not maintained by board_quick_play(). */
 bool
 can_countercapture(board_t *b, group_t group, mq_t *q)
 {
-	enum stone color = board_at(b, group);
-	enum stone other = stone_other(color);
-
 #ifdef EXTRA_CHECKS
 	assert(sane_group(b, group));
-	assert(is_player_color(color));
 #endif
-	if (q) mq_init(q);
-	int qmoves_prev = q ? q->moves : 0;
+	enum stone color = board_at(b, group);  // group color, to play
+	enum stone other_color = stone_other(color);
 
+	bool found = false;
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			group_t g = group_at(b, c);
-			if (board_at(b, c) != other ||
-			    group_libs(b, g) > 1 ||
-			    !can_capture(b, g, color))
-				continue;
+			if (board_at(b, c) != other_color)  continue;
 
-			if (!q) return true;
-			mq_add_nodup(q, group_lib(b, group_at(b, c), 0));
+			group_t g = group_at(b, c);
+			if (group_libs(b, g) == 1 && can_capture(b, g, color)) {
+				if (!q) return true;
+				mq_add_nodup(q, group_lib(b, g, 0));
+				found = true;
+			}
 		});
 	} foreach_in_group_end;
 
-	bool can = q ? q->moves > qmoves_prev : false;
-	return can;
+	return found;
 }
 
-/* Same as can_countercapture() but returns capturable groups instead of moves,
- * queue may not be NULL, and is always cleared. */
+/* Same as can_countercapture() but returns capturable groups instead of moves. */
 bool
 countercapturable_groups(board_t *b, group_t group, mq_t *q)
 {
-	enum stone color = board_at(b, group);
-	enum stone other = stone_other(color);
-
 #ifdef EXTRA_CHECKS
 	assert(sane_group(b, group));
-	assert(is_player_color(color));
 #endif
-	q->moves = 0;
-	// Not checking b->clen, not maintained by board_quick_play()
-	
+	enum stone color = board_at(b, group);  // group color, to play
+	enum stone other_color = stone_other(color);
+
+	bool found = false;
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			group_t g = group_at(b, c);
-			if (likely(board_at(b, c) != other
-				   || group_libs(b, g) > 1) ||
-			    !can_capture(b, g, color))
-				continue;
+			if (board_at(b, c) != other_color)  continue;
 
-			mq_add_nodup(q, group_at(b, c));
+			group_t g = group_at(b, c);
+			if (group_libs(b, g) == 1 && can_capture(b, g, color)) {
+				mq_add_nodup(q, g);
+				found = true;
+			}
 		});
 	} foreach_in_group_end;
 
-	return (q->moves > 0);
-}
-
-/* Doesn't check snapbacks.
- * We can't use b->clen, not maintained by board_quick_play(). */
-bool
-can_countercapture_any(board_t *b, group_t group, mq_t *q)
-{
-	enum stone color = board_at(b, group);
-	enum stone other = stone_other(color);
-
-#ifdef EXTRA_CHECKS
-	assert(sane_group(b, group));
-	assert(is_player_color(color));
-#endif
-	int qmoves_prev = q ? q->moves : 0;
-
-	foreach_in_group(b, group) {
-		foreach_neighbor(b, c, {
-			group_t g = group_at(b, c);
-			if (board_at(b, c) != other ||
-			    group_libs(b, g) > 1)
-				continue;
-			coord_t lib = group_lib(b, g, 0);
-			if (!board_is_valid_play(b, color, lib))
-				continue;
-
-			if (!q) return true;
-			mq_add_nodup(q, group_lib(b, group_at(b, c), 0));
-		});
-	} foreach_in_group_end;
-
-	bool can = q ? q->moves > qmoves_prev : false;
-	return can;
+	return found;
 }
 
 
@@ -201,6 +148,7 @@ can_be_rescued(board_t *b, group_t group, enum stone color)
 	assert(sane_group(b, group));
 	assert(is_player_color(color));
 	assert(group_libs(b, group) == 1);
+	assert(color == board_at(b, group));
 #endif
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(b, group, color))
@@ -215,16 +163,13 @@ void
 group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
                   mq_t *q, bool middle_ladder)
 {
-	enum stone color = board_at(b, group);
-	coord_t lib = group_lib(b, group, 0);
-	
 #ifdef EXTRA_CHECKS
 	assert(sane_group(b, group));
 	assert(is_player_color(to_play));
-	assert(is_player_color(color));
 	assert(group_libs(b, group) == 1);
-	assert(board_at(b, lib) == S_NONE);
 #endif
+	enum stone color = board_at(b, group);
+	coord_t lib = group_lib(b, group, 0);
 
 	if (DEBUGL(6))  fprintf(stderr, "group_atari_check group %s (%s)\n", coord2sstr(group), stone2str(color));
 
@@ -236,27 +181,23 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 		if (!can_be_rescued(b, group, color))
 			return;
 #endif
-		if (can_play_on_lib(b, group, to_play))
+		if (can_capture(b, group, to_play))
 			mq_add_nodup(q, lib);
 		return;
 	}
 
 	/* Can we capture some neighbor? */
-	/* XXX Attempts at using new can_countercapture() here failed so far.
-	 *     Could be because of a bug / under the stones situations
-	 *     (maybe not so uncommon in moggy ?) / it upsets moggy's balance somehow
-	 *     (there's always a chance opponent doesn't capture after taking snapback) */
-	bool ccap = can_countercapture_any(b, group, q);
+	bool ccap = can_countercapture(b, group, q);
 	if (ccap && alwaysccaprate > fast_random(100))
 		return;
 
-	/* Otherwise, do not save kos. */
-	if (group_is_onestone(b, group)
-	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4) {
+	/* Otherwise, do not save kos.
+	 * XXX Proper ko check should also check against multiple captures */
+	if (group_is_onestone(b, group) && board_is_eyelike(b, lib, color)) {
 		/* Except when the ko is for an eye! */
 		bool eyeconnect = false;
 		foreach_diag_neighbor(b, lib, {
-			if (board_at(b, c) == S_NONE && neighbor_count_at(b, c, color) + neighbor_count_at(b, c, S_OFFBOARD) == 4) {
+			if (board_at(b, c) == S_NONE && board_is_eyelike(b, c, color)) {
 				eyeconnect = true;
 				break;
 			}

@@ -51,13 +51,14 @@ typedef struct {
 	/* Give 0 or negative rave bonus to ko threats before taking the ko.
 	   1=normal bonus, 0=no bonus, -1=invert rave bonus, -2=double penalty... */
 	int threat_rave;
+	/* Exclude selfatari moves which were not selfataris when played ? */
+	bool filter_selfataris;
 	/* Coefficient of criticality embedded in RAVE. */
 	floating_t crit_rave;
 	int crit_min_playouts;
 	floating_t crit_plthres_coef;
 	bool crit_negative;
 	bool crit_negflip;
-	bool crit_amaf;
 	bool crit_lvalue;
 } ucb1_policy_amaf_t;
 
@@ -131,7 +132,7 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 	if (b->crit_rave > 0 && (b->crit_plthres_coef > 0
 				 ? node->u.playouts > tree->root->u.playouts * b->crit_plthres_coef
 				 : node->u.playouts > b->crit_min_playouts)) {
-		floating_t crit = tree_node_criticality(tree, node);
+		floating_t crit = tree_node_criticality(node);
 		if (b->crit_negative || crit > 0) {
 			floating_t val = 1.0f;
 			if (b->crit_negflip && crit < 0) {
@@ -216,39 +217,13 @@ ucb1rave_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, b
 	return uctd_get_best_child(node);
 }
 
-
-/* Return the length of the current ko (number of moves up to to the last ko capture),
- * 0 if the sequence is empty or doesn't start with a ko capture.
- *   B captures a ko
- *   W plays a ko threat
- *   B answers ko threat
- *   W re-captures the ko  <- return 4
- *   B plays a ko threat
- *   W connects the ko */
-static inline int ko_length(bool *ko_capture_map, int map_length)
-{
-	if (map_length <= 0 || !ko_capture_map[0]) return 0;
-	int length = 1;
-	while (length + 2 < map_length && ko_capture_map[length + 2]) length += 3;
-	return length;
-}
-
 void
 ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		enum stone node_color, enum stone player_color,
-		playout_amafmap_t *map, board_t *final_board,
-		floating_t result)
+		amafmap_t *map, board_t *final_board, floating_t result)
 {
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
-
-	/* Record of the random playout - for each intersection coord,
-	 * first_move[coord] is the index map->game of the first move
-	 * at this coordinate, or INT_MAX if the move was not played.
-	 * The parity gives the color of this move.
-	 */
-	int first_map[board_max_coords(final_board)+1];
-	int *first_move = &first_map[1]; // +1 for pass
 
 #if 0
 	for (tree_node_t *ni = node; ni; ni = ni->parent)
@@ -257,22 +232,24 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			node_color, result, player_color);
 #endif
 
-	/* Initialize first_move */
-	for (int i = pass; i < board_max_coords(final_board); i++) first_move[i] = INT_MAX;
-	int move;
-	assert(map->gamelen > 0);
-	for (move = map->gamelen - 1; move >= map->game_baselen; move--)
-		first_move[map->game[move]] = move;
+	/* Record of the random playout - for each intersection coord,
+	 * first_move[coord] is the index map->game of the first move
+	 * at this coordinate, or INT_MAX if the move was not played.
+	 * The parity gives the color of this move. */
+	first_play_t fp;
+	int *first_move = amaf_first_play(map, final_board, &fp);
 
+	/* Start of amaf range considered (start of playout range initially).
+	 * Index of current tree node move is (start - 1). */
+	int start = map->game_baselen;
 	while (node) {
-		if (!b->crit_amaf && !is_pass(node_coord(node))) {
-			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
-			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
+		if (!is_pass(node_coord(node))) {
+			stats_add_result(&node->winner_owner, rave_board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
+			stats_add_result(&node->black_owner, rave_board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
 		stats_add_result(&node->u, result, 1);
 
-		bool *ko_capture_map = &map->is_ko_capture[move+1];
-		int max_threat_dist = b->threat_rave <= 0 ? ko_length(ko_capture_map, map->gamelen - (move+1)) : -1;
+		int max_threat_dist = (b->threat_rave <= 0 ? amaf_ko_length(map, start) : -1);
 
 		assert(map->game_baselen >= 0);
 		for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {
@@ -281,42 +258,37 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			/* Use the child move only if it was first played by the same color. */
 			int first = first_move[node_coord(ni)];
 			if (first == INT_MAX) continue;
-			assert(first > move && first < map->gamelen);
-			int distance = first - (move + 1);
+			assert(first >= start && first < map->gamelen);
+			int distance = first - start;
 			if (distance & 1) continue;
+
+			/* Exclude selfatari moves which were not selfataris when played
+			 * (typically a case of amaf logic confusing cause and effect). */
+			if (b->filter_selfataris &&
+			    (ni->hints & TREE_HINT_SELFATARI) && !amaf_is_selfatari(map, first))
+				continue;
 
 			int weight = 1;
 			floating_t res = result;
 
 			/* Don't give amaf bonus to a ko threat before taking the ko.
-			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf
-			 */
+			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf */
 			if (distance <= max_threat_dist && distance % 6 == 4) {
 				weight = - b->threat_rave;
 				res = 1.0 - res;
 			} else if (b->distance_rave != 0) {
-				/* Give more weight to moves played earlier */
-				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
+				/* Give more weight to moves played earlier.
+				 * For distance_rave = 3 we get final weight = 3, 2 or 1. */
+				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - start + 1);
 			}
 			if (weight)
 				stats_add_result(&ni->amaf, res, weight);
-
-			if (b->crit_amaf) {
-				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
-				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
-			}
-#if 0
-			board_t bb; bb.size = 9+2;
-			fprintf(stderr, "* %s<%" PRIhash "> -> %s<%" PRIhash "> [%d/%f => %d/%f]\n",
-				coord2sstr(node_coord(node)), node->hash,
-				coord2sstr(node_coord(ni)), ni->hash,
-				player_color, result, move, res);
-#endif
 		}
 		if (node->parent) {
-			assert(move >= 0 && map->game[move] == node_coord(node) && first_move[node_coord(node)] > move);
-			first_move[node_coord(node)] = move;
-			move--;
+			int tree_move = start - 1;
+			assert(tree_move >= 0 && map->game[tree_move] == node_coord(node) && first_move[node_coord(node)] > tree_move);
+			first_move[node_coord(node)] = tree_move;
+			start--;
 		}
 		node = node->parent;
 	}
@@ -351,11 +323,13 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	b->sylvain_rave = true;
 	b->distance_rave = 3;
 	b->threat_rave = 0;
+	/* XXX Although this removes a lot of bad moves from RAVE and should be beneficial
+	*      it lowers winrate slightly, so off by default for now. Investigate... */
+	b->filter_selfataris = false;
 
 	b->crit_rave = 1.1f;
 	b->crit_min_playouts = 2000;
 	b->crit_negative = 1;
-	b->crit_amaf = 0;
 
 	b->vloss_sqrt = true;
 
@@ -388,6 +362,8 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 				b->distance_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "threat_rave") && optval) {
 				b->threat_rave = atoi(optval);
+			} else if (!strcasecmp(optname, "filter_selfataris") && optval) {
+				b->filter_selfataris = atoi(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
 				b->crit_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_min_playouts") && optval) {
@@ -398,8 +374,6 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 				b->crit_negative = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_negflip")) {
 				b->crit_negflip = !optval || *optval == '1';
-			} else if (!strcasecmp(optname, "crit_amaf")) {
-				b->crit_amaf = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_lvalue")) {
 				b->crit_lvalue = !optval || *optval == '1';
 #ifdef DISTRIBUTED
