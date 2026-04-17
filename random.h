@@ -61,7 +61,7 @@ extern __thread uint64_t pcg32_state;
 
 extern pthread_key_t random_state_key;
 #define pcg32_get_state()	((uint64_t *)pthread_getspecific(random_state_key))
-#define pcg32_set_state(pt)	pthread_setspecific(random_state_key, (pt)))
+#define pcg32_set_state(pt)	pthread_setspecific(random_state_key, (pt))
 
 #endif // NO_THREAD_LOCAL
 #endif // _WIN32
