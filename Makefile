@@ -535,6 +535,13 @@ detlef54.prototxt detlef54.trained:
 	@unzip -q -o detlef54.zip  detlef54.prototxt detlef54.trained
 	@rm detlef54.zip
 
+# Download opening book
+opening.dat:
+	@echo "Get opening book:" ; echo ""
+	wget -c -O opening.dat.zip 'https://github.com/pasky/pachi/releases/download/pachi-10.00-satsugen/opening.dat.zip'
+	@unzip -q -o opening.dat.zip
+	@rm opening.dat.zip
+
 # Download katago 10b model
 josekifix/katago/g170e-b10c128-s1141046784-d204142634.bin.gz:
 	@echo "Get katago model:  (g170e-b10c128)" ; echo ""
