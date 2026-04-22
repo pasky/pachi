@@ -35,6 +35,10 @@ update: FORCE
 
 lib.a: $(OBJS)
 
+# Recompile josekifix engine when Makefile changes in case
+# KATAGO_BINARY, KATAGO_CONFIG or KATAGO_MODEL got changed.
+josekifix_engine.o: ../Makefile
+
 FORCE:
 
 
