@@ -6,3 +6,6 @@ DCNN_LIBS    := -lcaffe -lopenblas -lboost_system -lglog -lstdc++ $(LIBS)
 
 strip: FORCE
 	cd distribute  &&  strip pachi
+        ifeq ($(BUILD_KATAGO), 1)
+	    cd distribute  &&  strip $(KATAGO_BINARY)
+        endif
