@@ -235,6 +235,11 @@ endif
 
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
+PROGRAMS := pachi
+
+ifeq ($(BUILD_KATAGO), 1)
+	PROGRAMS += $(KATAGO_BINARY)
+endif
 
 ifeq ($(GENERIC), 1)
 	TUNE := -mtune=generic
@@ -505,7 +510,7 @@ distribute: FORCE
 # Install everything
 install: install-bin install-data
 
-install-bin: pachi $(KATAGO_BINARY)
+install-bin: $(PROGRAMS)
 	+@make distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
