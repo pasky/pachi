@@ -195,7 +195,7 @@ CXXFLAGS     := -std=c++11
 all: build.h
 	+@make all-recursive pachi
         ifeq ($(BUILD_KATAGO), 1)
-	    +@make katago_cpu
+	    +@make $(KATAGO_BINARY)
         endif
 
 debug fast quick O0:
@@ -469,7 +469,7 @@ katago/cpp/build:
 katago_build: katago_banner katago katago/cpp/build
 
 # Configure and build
-katago/cpp/katago_cpu:
+katago/cpp/$(KATAGO_BINARY):
 	+@make katago_build
 	+@cd katago/cpp && \
           if grep -q ninja build; then \
@@ -477,9 +477,9 @@ katago/cpp/katago_cpu:
 	  else \
 	    echo "[MAKE]"; make $(MAKEJOBS); \
 	  fi
-	@mv  katago/cpp/katago katago/cpp/katago_cpu
+	-@[ "$(KATAGO_BINARY)" != "katago" ] && mv katago/cpp/katago "$@"
 
-katago_cpu: katago/cpp/katago_cpu
+$(KATAGO_BINARY): katago/cpp/$(KATAGO_BINARY)
 
 katago_clean: FORCE
 	-@ [ -f katago/cpp/Makefile ] && cd katago/cpp && make clean
@@ -498,19 +498,19 @@ distribute: FORCE
 	@rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
         ifeq ($(BUILD_KATAGO), 1)
-	    cp katago/cpp/katago_cpu distribute/
+	    cp katago/cpp/$(KATAGO_BINARY) distribute/
         endif
 	+@make strip      # arch specific stuff
 
 # Install everything
 install: install-bin install-data
 
-install-bin: pachi katago_cpu
+install-bin: pachi $(KATAGO_BINARY)
 	+@make distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
         ifeq ($(BUILD_KATAGO), 1)
-	    $(INSTALL) distribute/katago_cpu $(BINDIR)/
+	    $(INSTALL) distribute/$(KATAGO_BINARY) $(BINDIR)/
         endif
 
 install-data: $(DATAFILES)
