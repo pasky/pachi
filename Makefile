@@ -452,44 +452,44 @@ katago_banner:
 	@./spudfrog katago
 
 # Get source
-katago:
+katago_src:
 	@echo "[GIT]"
-	@git clone --depth 1 -b v1.15.3 -c advice.detachedHead=0 "https://github.com/lightvector/KataGo" katago
+	@git clone --depth 1 -b v1.15.3 -c advice.detachedHead=0 "https://github.com/lightvector/KataGo" katago_src
 	@echo ""
 	@echo "[PATCH]"
 	@patch -p1 < josekifix/katago/katago_build.patch
 	@echo ""
 
 # Run cmake and find build type (make or ninja)
-katago/cpp/build:
+katago_src/cpp/build:
 	@echo "[CMAKE]"
 	@echo "cmake $(KATAGO_CMAKE_OPTS) ."
-	@cd katago/cpp  && cmake $(KATAGO_CMAKE_OPTS) .
-	@[ -f katago/cpp/Makefile ]    && echo "make"  > $@; \
-	 [ -f katago/cpp/build.ninja ] && echo "ninja" > $@; \
+	@cd katago_src/cpp  && cmake $(KATAGO_CMAKE_OPTS) .
+	@[ -f katago_src/cpp/Makefile ]    && echo "make"  > $@; \
+	 [ -f katago_src/cpp/build.ninja ] && echo "ninja" > $@; \
 	 [ -f $@ ] || ( echo "Looks like cmake wants to use something other than make or ninja, i don't handle that." ; exit 1 )
 	@echo ""
 
 .NOTPARALLEL: katago_build
-katago_build: katago_banner katago katago/cpp/build
+katago_build: katago_banner katago_src katago_src/cpp/build
 
 # Configure and build
-katago/cpp/$(KATAGO_BINARY):
+katago_src/cpp/$(KATAGO_BINARY):
 	+@make katago_build
-	+@cd katago/cpp && \
+	+@cd katago_src/cpp && \
           if grep -q ninja build; then \
 	    echo "[NINJA]"; ninja; \
 	  else \
 	    echo "[MAKE]"; make $(MAKEJOBS); \
 	  fi
-	-@[ "$(KATAGO_BINARY)" != "katago" ] && mv katago/cpp/katago "$@"
+	-@[ "$(KATAGO_BINARY)" != "katago" ] && mv katago_src/cpp/katago "$@"
 
-$(KATAGO_BINARY): katago/cpp/$(KATAGO_BINARY)
+$(KATAGO_BINARY): katago_src/cpp/$(KATAGO_BINARY)
 
 katago_clean: FORCE
-	-@ [ -f katago/cpp/Makefile ] && cd katago/cpp && make clean
-	-@ [ -f katago/cpp/build.ninja ] && cd katago/cpp && ninja clean
-	-@cd katago/cpp && rm -rf build Makefile build.ninja CMakeFiles CMakeCache.txt  2>/dev/null
+	-@ [ -f katago_src/cpp/Makefile ] && cd katago_src/cpp && make clean
+	-@ [ -f katago_src/cpp/build.ninja ] && cd katago_src/cpp && ninja clean
+	-@cd katago_src/cpp && rm -rf build Makefile build.ninja CMakeFiles CMakeCache.txt  2>/dev/null
 
 
 ############################## Install ##############################
@@ -503,7 +503,7 @@ distribute: FORCE
 	@rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
         ifeq ($(BUILD_KATAGO), 1)
-	    cp katago/cpp/$(KATAGO_BINARY) distribute/
+	    cp katago_src/cpp/$(KATAGO_BINARY) distribute/
         endif
 	+@make strip      # arch specific stuff
 

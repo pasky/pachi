@@ -2,8 +2,8 @@ quiet build, set optimization level through pachi Makefile
 
 diff --git a/cpp/CMakeLists.txt b/cpp/CMakeLists.txt
 index 53d2855..81739b8 100644
---- a/katago/cpp/CMakeLists.txt
-+++ b/katago/cpp/CMakeLists.txt
+--- a/katago_src/cpp/CMakeLists.txt
++++ b/katago_src/cpp/CMakeLists.txt
 @@ -451,20 +451,23 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
    find_package (Threads REQUIRED)
    target_link_libraries(katago Threads::Threads)

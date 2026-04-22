@@ -104,8 +104,8 @@ make_katago_command()
 		binary = "./" KATAGO_BINARY;			/* Local file */
 	else if (file_exists(pachi_dir_binary->str))
 		binary = pachi_dir_binary->str;			/* Exe directory */
-	else if (file_exists("katago/cpp/" KATAGO_BINARY))
-		binary = "katago/cpp/" KATAGO_BINARY;		/* Build tree */
+	else if (file_exists("katago_src/cpp/" KATAGO_BINARY))
+		binary = "katago_src/cpp/" KATAGO_BINARY;		/* Build tree */
 	// else assume it's in PATH.
 
 	static_strbuf(buf, 1024);
