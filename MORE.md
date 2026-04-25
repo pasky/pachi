@@ -187,6 +187,10 @@ Example:
 
 ## Game Analysis
 
+> Note: This hasn't been updated in a long time.  
+> There are much better alternatives these days, check out other projects like [KaTrain](https://github.com/sanderland/katrain) and
+> [GoReviewPartner](https://github.com/pnprog/goreviewpartner).
+
 Pachi can help you analyze your games by being able to provide its
 opinion on various positions. The user interface is very rudimentary,
 but the ability is certainly there.
@@ -257,3 +261,11 @@ easy option to turn that off. The easiest way is to tweak board.c so
 that board_symmetry_update() has goto break_symmetry at the beginning
 and board_clear has board->symmetry.type = SYM_NONE.
 
+
+## Android version
+
+Emmanuel Mathis created an [Android version](https://github.com/emathis11/android-pachi) with ElyGo frontend which was based on Pachi 10.00 (nodcnn).
+
+It used to be available on the [PlayStore](https://play.google.com/store/apps/details?id=net.lrstudios.android.pachi) but hasn't been updated in a long time.
+
+Project page has some [APK releases](https://github.com/emathis11/android-pachi/releases).

@@ -19,6 +19,13 @@ And many others...
 The 54% dcnn was trained by Detlef Schmicker and graciously shared
 with the computer-go community.
 
+Neil McLean contributed early Pachi windows binaries.
+
+Emmanuel Mathis created an Android version with ElyGo frontend.
+
+Many thanks to homebrew team for Mac support, including
+MikeMcQuaid, GunniBusch, Daeho Ro, chenrui333 and many others.
+
 
 
 Pachi contains unpublished methods we claim we have invented
@@ -40,7 +47,5 @@ Jean-loup Gaily
 	Efficient UCT memory allocator
 
 Lemonsqueeze
-	Seki, dcnn, mm patterns
-	Raspberry Pi =)
-
-
+	Seki, dcnn, MM patterns
+	Raspberry Pi version

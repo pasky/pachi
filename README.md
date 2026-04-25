@@ -27,8 +27,12 @@ and deep learning are used to guide tree search.
 
 ## Install
 
-**Linux / Windows**: Download [binary release](https://github.com/pasky/pachi/releases)
-and follow instructions inside.
+- **Linux / Windows**  
+  Download [binary release](https://github.com/pasky/pachi/releases) and follow instructions inside.
+
+- **Mac / Linux**  
+  Install with [homebrew](https://brew.sh):  `brew install pachi`  
+  Full build is now supported, many thanks to homebrew team.
 
 For build instructions see [INSTALL](INSTALL.md).
 
@@ -192,7 +196,7 @@ unexpected happens.
 ## More
 
 See [HACKING](HACKING?raw=true) for a more detailed developer's view of Pachi,  
-[MORE](MORE.md) for more details, other engines and game analysis tools.
+[MORE](MORE.md) for more details, other engines and tools.
 
 Also, if you are interested about Pachi's architecture, algorithms
 etc., consider taking a look at Petr Baudis' Master's Thesis:
